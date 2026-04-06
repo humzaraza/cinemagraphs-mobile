@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { Slot } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
   PlayfairDisplay_400Regular,
@@ -14,17 +14,12 @@ import {
 } from '@expo-google-fonts/dm-sans';
 import 'react-native-reanimated';
 
-import { AuthProvider, useAuth } from '../src/lib/auth';
-
 export { ErrorBoundary } from 'expo-router';
-
-export const unstable_settings = {
-  initialRouteName: '(auth)',
-};
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [timedOut, setTimedOut] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     PlayfairDisplay_400Regular,
     PlayfairDisplay_700Bold,
@@ -33,61 +28,32 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  useEffect(() => {
-    if (fontError) throw fontError;
-  }, [fontError]);
-
-  if (!fontsLoaded) {
-    return null;
-  }
-
-  return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
-  );
-}
-
-function RootLayoutNav() {
-  const { token, isLoading } = useAuth();
-  const segments = useSegments();
-  const router = useRouter();
+  console.log('fonts loaded:', fontsLoaded, 'error:', fontError);
 
   useEffect(() => {
-    if (!isLoading) {
+    const timer = setTimeout(() => {
+      console.log('Font loading timed out, proceeding with system fonts');
+      setTimedOut(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const ready = fontsLoaded || timedOut;
+
+  useEffect(() => {
+    if (ready) {
       SplashScreen.hideAsync();
     }
-  }, [isLoading]);
+  }, [ready]);
 
-  useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-
-    if (token && inAuthGroup) {
-      router.replace('/(tabs)/explore');
-    } else if (!token && !inAuthGroup) {
-      router.replace('/(auth)/landing');
-    }
-  }, [token, isLoading, segments]);
-
-  if (isLoading) {
+  if (!ready) {
     return null;
   }
 
   return (
     <>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          gestureEnabled: false,
-          animation: 'none',
-        }}
-      >
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <Slot />
     </>
   );
 }

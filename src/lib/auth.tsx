@@ -4,7 +4,7 @@ import { getToken, setToken, removeToken } from './api';
 interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
-  signIn: (token: string) => Promise<void>;
+  signIn: (token: string, persist?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -21,8 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const signIn = async (newToken: string) => {
-    await setToken(newToken);
+  const signIn = async (newToken: string, persist = true) => {
+    if (persist) await setToken(newToken);
     setTokenState(newToken);
   };
 
