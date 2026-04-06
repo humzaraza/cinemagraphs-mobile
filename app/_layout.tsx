@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, Redirect, useSegments, useRootNavigationState } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -51,7 +51,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { token, isLoading } = useAuth();
   const segments = useSegments();
-  const navigationState = useRootNavigationState();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading) {
@@ -59,21 +59,26 @@ function RootLayoutNav() {
     }
   }, [isLoading]);
 
-  if (isLoading || !navigationState?.key) {
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (token && inAuthGroup) {
+      router.replace('/(tabs)');
+    } else if (!token && !inAuthGroup) {
+      router.replace('/(auth)/landing');
+    }
+  }, [token, isLoading, segments]);
+
+  if (isLoading) {
     return null;
   }
-
-  const inAuthGroup = segments[0] === '(auth)';
 
   return (
     <>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-      {!token && !inAuthGroup && <Redirect href="/(auth)/landing" />}
-      {token && inAuthGroup && <Redirect href="/(tabs)" />}
+      <Slot />
     </>
   );
 }
