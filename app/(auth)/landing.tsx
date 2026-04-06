@@ -1,19 +1,26 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/lib/auth';
 
+const screenWidth = Dimensions.get('window').width;
+
 function DashedLine() {
-  const dashCount = 8;
-  const dashWidth = 5;
-  const gapWidth = 3;
-  const totalWidth = dashCount * dashWidth + (dashCount - 1) * gapWidth;
+  const lineWidth = screenWidth * 0.6;
+  const dashWidth = 6;
+  const gapWidth = 4;
+  const dashCount = Math.floor((lineWidth + gapWidth) / (dashWidth + gapWidth));
 
   return (
-    <View style={[dashedStyles.container, { width: totalWidth }]}>
+    <View style={[dashedStyles.container, { width: lineWidth }]}>
       {Array.from({ length: dashCount }).map((_, i) => (
         <View
           key={i}
-          style={[dashedStyles.dash, { width: dashWidth, marginRight: i < dashCount - 1 ? gapWidth : 0 }]}
+          style={[
+            dashedStyles.dash,
+            { width: dashWidth, marginRight: i < dashCount - 1 ? gapWidth : 0 },
+          ]}
         />
       ))}
     </View>
@@ -24,7 +31,7 @@ const dashedStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: 14,
   },
   dash: {
     height: 1,
@@ -38,21 +45,25 @@ export default function LandingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topSection}>
-        <Text style={styles.logo}>Cinemagraphs</Text>
-        <DashedLine />
-        <Text style={styles.tagline}>movie reviews visualized</Text>
+        <View style={styles.logoGroup}>
+          <Text style={styles.logo}>Cinemagraphs</Text>
+          <DashedLine />
+          <Text style={styles.tagline}>movie reviews visualized</Text>
+        </View>
       </View>
 
       <View style={styles.bottomSection}>
         <Pressable
           style={({ pressed }) => [styles.googleButton, pressed && styles.buttonPressed]}
         >
+          <AntDesign name="google" size={18} color="#4285F4" style={styles.buttonIcon} />
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.appleButton, pressed && styles.buttonPressed]}
         >
+          <Ionicons name="logo-apple" size={20} color="#FFFFFF" style={styles.buttonIcon} />
           <Text style={styles.appleButtonText}>Continue with Apple</Text>
         </Pressable>
 
@@ -65,6 +76,7 @@ export default function LandingScreen() {
         <Pressable
           style={({ pressed }) => [styles.emailButton, pressed && styles.buttonPressed]}
         >
+          <Ionicons name="mail-outline" size={18} color={colors.gold} style={styles.buttonIcon} />
           <Text style={styles.emailButtonText}>Continue with email</Text>
         </Pressable>
 
@@ -85,12 +97,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 180,
+    paddingHorizontal: 24,
     paddingBottom: 60,
   },
   topSection: {
+    flex: 0.45,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoGroup: {
     alignItems: 'center',
   },
   logo: {
@@ -107,30 +122,39 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   bottomSection: {
+    flex: 0.55,
+    justifyContent: 'flex-end',
     gap: spacing.md,
+  },
+  buttonIcon: {
+    marginRight: 10,
   },
   googleButton: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   googleButtonText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
+    fontSize: 16,
     color: '#1A1A1A',
   },
   appleButton: {
     backgroundColor: '#000000',
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
   appleButtonText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
+    fontSize: 16,
     color: '#FFFFFF',
   },
   orDivider: {
@@ -153,13 +177,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.gold,
   },
   emailButtonText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.gold,
   },
   buttonPressed: {
