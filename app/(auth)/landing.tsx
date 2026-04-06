@@ -1,15 +1,18 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
+import { useAuth } from '../../src/lib/auth';
 
 export default function LandingScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
 
   return (
     <View style={styles.container}>
       <View style={styles.topSection}>
         <Text style={styles.logo}>CINEMAGRAPHS</Text>
-        <Text style={styles.tagline}>Feel the Story</Text>
+        <View style={styles.dashedLine} />
+        <Text style={styles.tagline}>movie reviews, visualized</Text>
       </View>
 
       <View style={styles.bottomSection}>
@@ -32,6 +35,18 @@ export default function LandingScreen() {
         >
           <Text style={styles.secondaryButtonText}>Sign In</Text>
         </Pressable>
+
+        {__DEV__ && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.devSkip,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={() => signIn('dev-token')}
+          >
+            <Text style={styles.devSkipText}>Skip to tabs</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -56,13 +71,23 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
   },
+  dashedLine: {
+    width: 40,
+    height: 0,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.dashedMidline,
+    marginTop: spacing.md,
+  },
   tagline: {
     fontFamily: fonts.body,
-    fontSize: 16,
+    fontSize: 14,
     color: colors.ivory,
-    opacity: 0.6,
+    opacity: 0.45,
     marginTop: spacing.sm,
     textAlign: 'center',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   bottomSection: {
     gap: spacing.md,
@@ -92,5 +117,16 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
+  },
+  devSkip: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginTop: spacing.xs,
+  },
+  devSkipText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.ivory,
+    opacity: 0.25,
   },
 });
