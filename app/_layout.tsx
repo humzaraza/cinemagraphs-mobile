@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -17,6 +17,10 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../src/lib/auth';
 
 export { ErrorBoundary } from 'expo-router';
+
+export const unstable_settings = {
+  initialRouteName: '(auth)',
+};
 
 SplashScreen.preventAutoHideAsync();
 
@@ -61,7 +65,7 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (token && inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/explore');
     } else if (!token && !inAuthGroup) {
       router.replace('/(auth)/landing');
     }
@@ -74,7 +78,16 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" />
-      <Slot />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: false,
+          animation: 'none',
+        }}
+      >
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
     </>
   );
 }
