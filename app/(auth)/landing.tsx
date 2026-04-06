@@ -72,12 +72,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   dashedLine: {
-    width: 40,
-    height: 0,
-    borderTopWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.dashedMidline,
+    width: 60,
+    height: 1,
     marginTop: spacing.md,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(200,169,81,0.4)',
+    borderStyle: 'dashed',
   },
   tagline: {
     fontFamily: fonts.body,
