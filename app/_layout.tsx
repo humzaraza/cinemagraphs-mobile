@@ -18,10 +18,6 @@ import { AuthProvider, useAuth } from '../src/lib/auth';
 
 export { ErrorBoundary } from 'expo-router';
 
-export const unstable_settings = {
-  initialRouteName: '(auth)',
-};
-
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
