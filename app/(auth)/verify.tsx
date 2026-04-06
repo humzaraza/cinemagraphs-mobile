@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, spacing } from '../../src/constants/theme';
 
-export default function ExploreScreen() {
+export default function VerifyScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Explore</Text>
-      <Text style={styles.subtitle}>Discover films and sentiment</Text>
+      <Text style={styles.title}>Verify Email</Text>
+      <Text style={styles.subtitle}>Enter the code sent to your email</Text>
     </View>
   );
 }

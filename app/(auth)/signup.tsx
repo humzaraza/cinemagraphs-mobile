@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, spacing } from '../../src/constants/theme';
 
-export default function ExploreScreen() {
+export default function SignUpScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Explore</Text>
-      <Text style={styles.subtitle}>Discover films and sentiment</Text>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.subtitle}>Join the community</Text>
     </View>
   );
 }

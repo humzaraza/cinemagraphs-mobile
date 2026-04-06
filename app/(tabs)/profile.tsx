@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, spacing } from '../../src/constants/theme';
 
-export default function ExploreScreen() {
+export default function ProfileScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Explore</Text>
-      <Text style={styles.subtitle}>Discover films and sentiment</Text>
+      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.subtitle}>Your reviews and lists</Text>
     </View>
   );
 }
