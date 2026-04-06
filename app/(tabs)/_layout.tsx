@@ -1,15 +1,9 @@
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { colors } from '../../src/constants/theme';
-
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={22} style={{ marginBottom: -2 }} {...props} />;
-}
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, fonts } from '../../src/constants/theme';
 
 export default function TabLayout() {
   return (
@@ -33,21 +27,27 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <TabBarIcon name="film" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="filmstrip" size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="search" size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person-outline" size={22} color={color} />
+          ),
         }}
       />
     </Tabs>
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontFamily: fonts.body,
+    fontSize: 10,
   },
 });
