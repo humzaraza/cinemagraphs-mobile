@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { colors, fonts } from '../../src/constants/theme';
-import { useAuth } from '../../src/lib/auth';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -39,8 +38,6 @@ const dashedStyles = StyleSheet.create({
 });
 
 export default function LandingScreen() {
-  const { signIn } = useAuth();
-
   return (
     <View style={styles.container}>
       <View style={styles.logoGroup}>
@@ -74,14 +71,6 @@ export default function LandingScreen() {
           <Text style={styles.emailButtonText}>Continue with email</Text>
         </Pressable>
 
-        {__DEV__ && (
-          <Pressable
-            style={({ pressed }) => [styles.devSkip, pressed && styles.buttonPressed]}
-            onPress={() => signIn('dev-token')}
-          >
-            <Text style={styles.devSkipText}>Skip to tabs</Text>
-          </Pressable>
-        )}
       </View>
     </View>
   );
@@ -179,16 +168,5 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
-  },
-  devSkip: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginTop: 2,
-  },
-  devSkipText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.ivory,
-    opacity: 0.25,
   },
 });

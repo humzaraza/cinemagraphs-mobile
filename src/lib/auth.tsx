@@ -16,11 +16,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     getToken().then((stored) => {
-      if (__DEV__ && stored === 'dev-token') {
-        // Clear stale dev tokens so app always starts at landing in dev
-        removeToken().then(() => setIsLoading(false));
-        return;
-      }
       setTokenState(stored);
       setIsLoading(false);
     });
