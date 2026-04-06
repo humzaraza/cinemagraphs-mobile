@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import * as SplashScreen from 'expo-splash-screen';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Slot } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -12,15 +11,11 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
-import 'react-native-reanimated';
 
 export { ErrorBoundary } from 'expo-router';
 
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const [timedOut, setTimedOut] = useState(false);
-  const [fontsLoaded, fontError] = useFonts({
+  const [fontsLoaded] = useFonts({
     PlayfairDisplay_400Regular,
     PlayfairDisplay_700Bold,
     DMSans_400Regular,
@@ -28,26 +23,10 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  console.log('fonts loaded:', fontsLoaded, 'error:', fontError);
+  console.log('fonts loaded:', fontsLoaded);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log('Font loading timed out, proceeding with system fonts');
-      setTimedOut(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const ready = fontsLoaded || timedOut;
-
-  useEffect(() => {
-    if (ready) {
-      SplashScreen.hideAsync();
-    }
-  }, [ready]);
-
-  if (!ready) {
-    return null;
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
   }
 
   return (
