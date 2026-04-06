@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, Redirect, useSegments, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -14,6 +14,8 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import 'react-native-reanimated';
+
+import { AuthProvider, useAuth } from '../src/lib/auth';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -37,15 +39,33 @@ export default function RootLayout() {
     if (fontError) throw fontError;
   }, [fontError]);
 
-  useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
   if (!fontsLoaded) {
     return null;
   }
+
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const { token, isLoading } = useAuth();
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
+
+  if (isLoading || !navigationState?.key) {
+    return null;
+  }
+
+  const inAuthGroup = segments[0] === '(auth)';
 
   return (
     <>
@@ -54,6 +74,8 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
+      {!token && !inAuthGroup && <Redirect href="/(auth)/landing" />}
+      {token && inAuthGroup && <Redirect href="/(tabs)" />}
     </>
   );
 }
