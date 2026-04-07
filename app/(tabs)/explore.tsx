@@ -143,8 +143,8 @@ function TickerItem({ film }: { film: Film }) {
       {dataPoints && dataPoints.length >= 2 && (
         <Sparkline
           dataPoints={dataPoints}
-          width={36}
-          height={16}
+          width={40}
+          height={20}
           strokeColor={sparkColor}
           strokeWidth={1.2}
         />
@@ -164,7 +164,7 @@ function MovieTicker({ films }: { films: Film[] }) {
     if (films.length === 0) return;
 
     // Estimate total width of one set of items
-    const itemWidth = 120; // approximate width per ticker item
+    const itemWidth = 140; // approximate width per ticker item
     const totalWidth = films.length * itemWidth;
 
     const anim = Animated.loop(
@@ -223,9 +223,12 @@ function TrendingArcCard({ film }: { film: Film }) {
           <Sparkline
             dataPoints={dataPoints}
             width={sparklineWidth}
-            height={28}
+            height={50}
             strokeColor={colors.gold}
             strokeWidth={1.5}
+            showAxes
+            showMidline
+            runtimeMinutes={film.runtime}
           />
         )}
       </View>
@@ -410,7 +413,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,13,26,0.97)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200,169,81,0.1)',
-    paddingVertical: 6,
+    paddingVertical: 12,
     overflow: 'hidden',
   },
   tickerStrip: {
@@ -422,17 +425,17 @@ const styles = StyleSheet.create({
   tickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   tickerTitle: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.ivory,
-    maxWidth: 80,
+    maxWidth: 100,
   },
   tickerScore: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
     color: colors.gold,
   },
 
