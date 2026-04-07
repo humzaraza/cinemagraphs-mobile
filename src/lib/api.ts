@@ -36,26 +36,24 @@ export async function apiFetch(
   });
 }
 
-export async function fetchTickerFilms(): Promise<Film[]> {
-  const res = await apiFetch('/films?ticker=true&limit=20');
+async function extractFilms(res: Response): Promise<Film[]> {
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.films ?? [];
+}
+
+export async function fetchTickerFilms(): Promise<Film[]> {
+  return extractFilms(await apiFetch('/films?ticker=true&limit=20'));
 }
 
 export async function fetchNowPlayingFilms(): Promise<Film[]> {
-  const res = await apiFetch('/films?nowPlaying=true&limit=10');
-  if (!res.ok) return [];
-  return res.json();
+  return extractFilms(await apiFetch('/films?nowPlaying=true&limit=10'));
 }
 
 export async function fetchTrendingFilms(): Promise<Film[]> {
-  const res = await apiFetch('/films?sort=highest&limit=6');
-  if (!res.ok) return [];
-  return res.json();
+  return extractFilms(await apiFetch('/films?sort=highest&limit=6'));
 }
 
 export async function fetchRecommendedFilms(): Promise<Film[]> {
-  const res = await apiFetch('/films?sort=recent&limit=10');
-  if (!res.ok) return [];
-  return res.json();
+  return extractFilms(await apiFetch('/films?sort=recent&limit=10'));
 }
