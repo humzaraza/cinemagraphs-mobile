@@ -217,7 +217,7 @@ function ViewToggle({
 
 function PosterFallback({ title }: { title: string }) {
   return (
-    <View style={[styles.posterImage, styles.posterFallback]}>
+    <View style={styles.posterFallback}>
       <Text style={styles.posterFallbackText} numberOfLines={3}>
         {title}
       </Text>
@@ -243,16 +243,18 @@ function PosterCell({
       }}
       style={styles.posterCell}
     >
-      {imgError ? (
-        <PosterFallback title={film.title} />
-      ) : (
-        <Image
-          source={{ uri: film.posterUrl }}
-          style={styles.posterImage}
-          resizeMode="cover"
-          onError={() => setImgError(true)}
-        />
-      )}
+      <View style={styles.posterImageContainer}>
+        {imgError ? (
+          <PosterFallback title={film.title} />
+        ) : (
+          <Image
+            source={{ uri: film.posterUrl }}
+            style={styles.posterImageInner}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        )}
+      </View>
       {showSparkline && (
         <>
           <View style={styles.posterSparkline}>
@@ -357,16 +359,18 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
       }}
       style={styles.posterCell}
     >
-      {imgError ? (
-        <PosterFallback title={film.title} />
-      ) : (
-        <Image
-          source={{ uri: film.posterUrl }}
-          style={styles.posterImage}
-          resizeMode="cover"
-          onError={() => setImgError(true)}
-        />
-      )}
+      <View style={styles.posterImageContainer}>
+        {imgError ? (
+          <PosterFallback title={film.title} />
+        ) : (
+          <Image
+            source={{ uri: film.posterUrl }}
+            style={styles.posterImageInner}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -590,11 +594,6 @@ export default function ProfileScreen() {
     );
   };
 
-  // -----------------------------------------------------------------------
-  // Decide collapsed vs full header
-  // -----------------------------------------------------------------------
-  const isHub = subTab === 'profile';
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
@@ -604,33 +603,21 @@ export default function ProfileScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        {isHub ? (
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Profile</Text>
-            <Pressable
-              onPress={() => router.push('/settings' as any)}
-              style={styles.gearButton}
-            >
-              <GearIcon />
-            </Pressable>
+        {/* Header - same on every sub-tab */}
+        <View style={styles.collapsedHeader}>
+          <View style={styles.collapsedCenter}>
+            <Avatar size={44} initial={user.avatarInitial} />
+            <Text style={styles.collapsedName}>{user.name}</Text>
           </View>
-        ) : (
-          <View style={styles.collapsedHeader}>
-            <View style={styles.collapsedCenter}>
-              <Avatar size={44} initial={user.avatarInitial} />
-              <Text style={styles.collapsedName}>{user.name}</Text>
-            </View>
-            <Pressable
-              onPress={() => router.push('/settings' as any)}
-              style={styles.collapsedGear}
-            >
-              <GearIcon />
-            </Pressable>
-          </View>
-        )}
+          <Pressable
+            onPress={() => router.push('/settings' as any)}
+            style={styles.collapsedGear}
+          >
+            <GearIcon />
+          </Pressable>
+        </View>
 
-        {/* Sub-tabs */}
+        {/* Sub-tabs - never moves */}
         <SubTabBar active={subTab} onSelect={setSubTab} />
 
         {/* Content */}
@@ -663,27 +650,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
 
-  // ---- Header (hub) ----
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  headerTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 18,
-    color: colors.ivory,
-  },
-  gearButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // ---- Collapsed header (non-hub) ----
+  // ---- Header (all sub-tabs) ----
   collapsedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -898,16 +865,23 @@ const styles = StyleSheet.create({
     width: POSTER_W,
     marginBottom: 4,
   },
-  posterImage: {
+  posterImageContainer: {
     width: POSTER_W,
     height: POSTER_H,
     borderRadius: 5,
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.12)',
     backgroundColor: 'rgba(30,30,60,0.8)',
+    overflow: 'hidden',
+  },
+  posterImageInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 5,
   },
   posterFallback: {
-    backgroundColor: 'rgba(30,30,60,0.8)',
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
