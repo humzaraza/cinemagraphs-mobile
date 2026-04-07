@@ -18,9 +18,9 @@ import Svg, {
   Circle,
   Text as SvgText,
 } from 'react-native-svg';
+import Slider from '@react-native-community/slider';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { fetchFilmDetail, submitReview } from '../../src/lib/api';
-import RatingSlider from '../../src/components/RatingSlider';
 import type { FilmDetail, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -103,7 +103,17 @@ function OverallRatingCard({
         <Text style={styles.overallLabel}>Overall rating</Text>
         <Text style={styles.overallScore}>{value.toFixed(1)}</Text>
       </View>
-      <RatingSlider value={value} onValueChange={onChange} thumbSize={12} />
+      <Slider
+        value={value}
+        onValueChange={onChange}
+        minimumValue={1}
+        maximumValue={10}
+        step={0.5}
+        minimumTrackTintColor="#C8A951"
+        maximumTrackTintColor="rgba(245,240,225,0.08)"
+        thumbTintColor="#C8A951"
+        style={{ height: 28 }}
+      />
       <View style={styles.scaleRow}>
         <Text style={styles.scaleLabel}>1</Text>
         <Text style={styles.scaleLabel}>5</Text>
@@ -135,7 +145,17 @@ function BeatCard({
         </Text>
         <Text style={styles.beatScore}>{value.toFixed(0)}</Text>
       </View>
-      <RatingSlider value={value} onValueChange={onChange} thumbSize={8} step={1} />
+      <Slider
+        value={value}
+        onValueChange={onChange}
+        minimumValue={1}
+        maximumValue={10}
+        step={1}
+        minimumTrackTintColor="#C8A951"
+        maximumTrackTintColor="rgba(245,240,225,0.08)"
+        thumbTintColor="#C8A951"
+        style={{ height: 24 }}
+      />
       <View style={styles.scaleRow}>
         <Text style={styles.scaleHint}>Hated it</Text>
         <Text style={styles.scaleHint}>Neutral</Text>
