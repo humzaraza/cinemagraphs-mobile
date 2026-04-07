@@ -222,13 +222,13 @@ function MetadataRow({ film }: { film: FilmDetail }) {
 // CTA buttons
 // ---------------------------------------------------------------------------
 
-function CTAButtons() {
+function CTAButtons({ filmId }: { filmId: string }) {
   const router = useRouter();
 
   return (
     <View style={styles.ctaRow}>
       <Pressable
-        onPress={() => router.push('/review' as any)}
+        onPress={() => router.push({ pathname: '/(tabs)/review', params: { filmId } } as any)}
         style={styles.ctaPrimary}
       >
         <Text style={styles.ctaPrimaryText}>Write review</Text>
@@ -659,7 +659,7 @@ export default function FilmDetailScreen() {
 
         <View style={styles.content}>
           <MetadataRow film={film} />
-          <CTAButtons />
+          <CTAButtons filmId={film.id} />
           <SentimentArc film={film} />
           <StoryBeatPills film={film} />
           <PeakLowCards film={film} />

@@ -49,6 +49,15 @@ export interface DetailedSentimentGraph extends SentimentGraph {
   overallSentiment: number;
 }
 
+export interface ReviewSubmission {
+  overallRating: number;
+  beginning?: string;
+  middle?: string;
+  ending?: string;
+  otherThoughts?: string;
+  beatRatings?: Record<string, number>;
+}
+
 export interface FilmDetail extends Film {
   sentimentGraph: DetailedSentimentGraph;
   reviews: FilmReview[];

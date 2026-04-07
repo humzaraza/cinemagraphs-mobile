@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import type { Film, FilmDetail } from '../types/film';
+import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
 
 const API_BASE = 'https://cinemagraphs.ca/api';
 
@@ -74,6 +74,18 @@ export async function fetchAllFilms(): Promise<Film[]> {
     page++;
   }
   return all;
+}
+
+export async function submitReview(filmId: string, data: ReviewSubmission): Promise<any> {
+  const res = await apiFetch(`/films/${filmId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to submit review');
+  }
+  return res.json();
 }
 
 export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {

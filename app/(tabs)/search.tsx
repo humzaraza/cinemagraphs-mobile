@@ -290,20 +290,6 @@ export default function SearchScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search</Text>
-        <Pressable
-          onPress={() => router.push('/review' as any)}
-          style={styles.reviewButton}
-        >
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-            <Path d="M12 20h9" stroke={colors.gold} strokeWidth={1.5} />
-            <Path
-              d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
-              stroke={colors.gold}
-              strokeWidth={1.5}
-            />
-          </Svg>
-          <Text style={styles.reviewButtonText}>Review</Text>
-        </Pressable>
       </View>
 
       {/* Search bar */}
