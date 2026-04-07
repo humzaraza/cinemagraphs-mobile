@@ -25,6 +25,36 @@ import type { FilmDetail, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
+const MAX_BEATS = 8;
+
+/** Select up to MAX_BEATS: peak, lowest, first, last, then evenly spaced. */
+function selectBeats(dataPoints: FilmDataPoint[]): FilmDataPoint[] {
+  if (dataPoints.length <= MAX_BEATS) return dataPoints;
+  const indexed = dataPoints.map((dp, i) => ({ dp, i, score: dp.score ?? 0 }));
+  const picked = new Set<number>();
+  // first and last
+  picked.add(0);
+  picked.add(dataPoints.length - 1);
+  // peak and lowest by score
+  let peakIdx = 0;
+  let lowIdx = 0;
+  indexed.forEach(({ score }, i) => {
+    if (score > indexed[peakIdx].score) peakIdx = i;
+    if (score < indexed[lowIdx].score) lowIdx = i;
+  });
+  picked.add(peakIdx);
+  picked.add(lowIdx);
+  // fill remaining slots evenly
+  const remaining = MAX_BEATS - picked.size;
+  if (remaining > 0) {
+    const candidates = indexed.filter((_, i) => !picked.has(i));
+    const step = candidates.length / (remaining + 1);
+    for (let j = 1; j <= remaining; j++) {
+      picked.add(candidates[Math.round(step * j)].i);
+    }
+  }
+  return [...picked].sort((a, b) => a - b).map((i) => dataPoints[i]);
+}
 
 type ScreenState = 'loading' | 'form-a' | 'form-b' | 'arc-reveal' | 'preview-b' | 'confirmed-b' | 'error';
 
@@ -250,7 +280,6 @@ export default function ReviewScreen() {
   // Form state
   const [overallRating, setOverallRating] = useState(5.5);
   const [beatRatings, setBeatRatings] = useState<Record<string, number>>({});
-  const [otherThoughts, setOtherThoughts] = useState('');
   const [beginning, setBeginning] = useState('');
   const [middle, setMiddle] = useState('');
   const [ending, setEnding] = useState('');
@@ -297,7 +326,10 @@ export default function ReviewScreen() {
     const payload = {
       overallRating,
       beatRatings,
-      otherThoughts: otherThoughts || undefined,
+      beginning: beginning || undefined,
+      middle: middle || undefined,
+      ending: ending || undefined,
+      otherThoughts: otherText || undefined,
     };
     console.log('Submitting review (State A):', JSON.stringify(payload, null, 2));
     setSubmitting(true);
@@ -314,7 +346,7 @@ export default function ReviewScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [film, overallRating, beatRatings, otherThoughts]);
+  }, [film, overallRating, beatRatings, beginning, middle, ending, otherText]);
 
   const handlePreviewB = useCallback(() => {
     setScreenState('preview-b');
@@ -527,9 +559,9 @@ export default function ReviewScreen() {
     );
   }
 
-  // ----- FORM A (beats) -----
+  // ----- FORM A (beats + text) -----
   if (screenState === 'form-a') {
-    const dp = film.sentimentGraph?.dataPoints ?? [];
+    const dp = selectBeats(film.sentimentGraph?.dataPoints ?? []);
 
     return (
       <View style={styles.container}>
@@ -555,12 +587,44 @@ export default function ReviewScreen() {
           </View>
 
           <Text style={styles.sectionLabel}>YOUR THOUGHTS</Text>
+
+          <Text style={styles.fieldLabel}>How did it start?</Text>
           <TextInput
-            style={styles.textField}
-            placeholder="What stood out to you?"
+            style={styles.textFieldSmall}
+            placeholder="Your thoughts on the beginning..."
             placeholderTextColor="rgba(245,240,225,0.2)"
-            value={otherThoughts}
-            onChangeText={setOtherThoughts}
+            value={beginning}
+            onChangeText={setBeginning}
+            multiline
+          />
+
+          <Text style={styles.fieldLabel}>How was the middle?</Text>
+          <TextInput
+            style={styles.textFieldSmall}
+            placeholder="Your thoughts on the middle..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            value={middle}
+            onChangeText={setMiddle}
+            multiline
+          />
+
+          <Text style={styles.fieldLabel}>How did it end?</Text>
+          <TextInput
+            style={styles.textFieldSmall}
+            placeholder="Your thoughts on the ending..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            value={ending}
+            onChangeText={setEnding}
+            multiline
+          />
+
+          <Text style={styles.fieldLabel}>Anything else?</Text>
+          <TextInput
+            style={styles.textFieldSmall}
+            placeholder="Other thoughts..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            value={otherText}
+            onChangeText={setOtherText}
             multiline
           />
 
