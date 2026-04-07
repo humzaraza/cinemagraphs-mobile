@@ -100,6 +100,10 @@ export default function Sparkline({
         x1={chartLeft} y1={midY} x2={chartRight} y2={midY}
         stroke={MIDLINE_COLOR} strokeWidth={1} strokeDasharray="3,3"
       />
+      {/* Y-axis line */}
+      <Line x1={chartLeft} y1={chartTop} x2={chartLeft} y2={chartBottom} stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} />
+      {/* X-axis line */}
+      <Line x1={chartLeft} y1={chartBottom} x2={chartRight} y2={chartBottom} stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} />
       {/* Data line */}
       <Polyline
         points={points} fill="none" stroke={strokeColor}

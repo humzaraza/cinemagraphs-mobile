@@ -171,8 +171,8 @@ function TickerItem({ film }: { film: Film }) {
       <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
       <Sparkline
         dataPoints={dataPoints}
-        width={40}
-        height={20}
+        width={50}
+        height={24}
         strokeColor={trendColor}
         strokeWidth={1.2}
         showMidline
@@ -197,7 +197,7 @@ function MovieTicker({ films }: { films: Film[] }) {
     if (films.length === 0) return;
 
     // Estimate total width of one set of items
-    const itemWidth = 150; // approximate width per ticker item
+    const itemWidth = 180; // approximate width per ticker item
     const totalWidth = films.length * itemWidth;
 
     const anim = Animated.loop(
@@ -444,34 +444,34 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,13,26,0.97)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200,169,81,0.1)',
-    paddingVertical: 12,
+    paddingVertical: 16,
     overflow: 'hidden',
   },
   tickerStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    gap: 28,
+    gap: 36,
   },
   tickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
   tickerTitle: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 15,
     color: colors.ivory,
-    maxWidth: 100,
+    maxWidth: 140,
   },
   tickerScore: {
     fontFamily: fonts.bodyBold,
-    fontSize: 13,
+    fontSize: 15,
     color: colors.gold,
   },
   tickerDelta: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 13,
   },
 
   // Poster cards
@@ -488,8 +488,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   posterImage: {
-    width: 90,
-    height: 130,
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
   },
   posterPlaceholder: {
     flex: 1,
