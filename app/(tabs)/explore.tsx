@@ -255,7 +255,7 @@ function TrendingArcCard({ film }: { film: Film }) {
             width={sparklineWidth}
             height={50}
             strokeColor={colors.gold}
-            strokeWidth={1.5}
+            strokeWidth={1.8}
             showAxes
             showMidline
             runtimeMinutes={film.runtime}
@@ -481,6 +481,8 @@ const styles = StyleSheet.create({
   posterCard: {
     width: POSTER_WIDTH,
     height: POSTER_HEIGHT,
+    minWidth: POSTER_WIDTH,
+    maxWidth: POSTER_WIDTH,
     borderRadius: borderRadius.md,
     borderWidth: 0.5,
     borderColor: colors.cardBorder,
@@ -488,8 +490,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   posterImage: {
-    width: '100%',
-    height: '100%',
+    width: POSTER_WIDTH,
+    height: POSTER_HEIGHT,
+    borderRadius: borderRadius.md,
   },
   posterPlaceholder: {
     flex: 1,

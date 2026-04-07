@@ -61,7 +61,7 @@ export default function Sparkline({
             y1={height / 2}
             x2={width}
             y2={height / 2}
-            stroke="rgba(255,255,255,0.08)"
+            stroke="rgba(255,255,255,0.15)"
             strokeWidth={0.5}
             strokeDasharray="3,3"
           />
@@ -112,7 +112,7 @@ export default function Sparkline({
             y1={svgHeight / 2}
             x2={svgWidth}
             y2={svgHeight / 2}
-            stroke="rgba(255,255,255,0.08)"
+            stroke="rgba(255,255,255,0.15)"
             strokeWidth={0.5}
             strokeDasharray="3,3"
           />
@@ -153,6 +153,6 @@ const axStyles = StyleSheet.create({
   axisLabel: {
     fontFamily: fonts.body,
     fontSize: 8,
-    color: 'rgba(245,240,225,0.25)',
+    color: 'rgba(245,240,225,0.4)',
   },
 });
