@@ -194,39 +194,109 @@ function TickerItem({ film }: { film: Film }) {
 
 function MovieTicker({ films }: { films: Film[] }) {
   const scrollX = useRef(new Animated.Value(0)).current;
+  const setWidth = useRef(0);
+  const offsetRef = useRef(0);
+  const touchStartX = useRef(0);
+  const touchStartOffset = useRef(0);
   const animRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  useEffect(() => {
-    if (films.length === 0) return;
+  const startAutoScroll = useCallback((fromOffset: number) => {
+    if (setWidth.current === 0) return;
+    const w = setWidth.current;
 
-    // Estimate total width of one set of items
-    const itemWidth = 180; // approximate width per ticker item
-    const totalWidth = films.length * itemWidth;
+    // Normalize into [0, -w) range
+    let pos = fromOffset % w;
+    if (pos > 0) pos -= w;
+    offsetRef.current = pos;
+    scrollX.setValue(pos);
 
-    const anim = Animated.loop(
-      Animated.timing(scrollX, {
-        toValue: -totalWidth,
-        duration: TICKER_SPEED,
-        useNativeDriver: true,
-      })
-    );
+    // Distance remaining in this cycle
+    const remaining = -w - pos;
+    const fraction = Math.abs(remaining) / w;
+    const duration = fraction * TICKER_SPEED;
+
+    const anim = Animated.timing(scrollX, {
+      toValue: pos + remaining,
+      duration,
+      useNativeDriver: true,
+      easing: (t: number) => t, // linear
+    });
     animRef.current = anim;
-    anim.start();
+    anim.start(({ finished }) => {
+      if (finished) {
+        // Reset to 0 and loop
+        offsetRef.current = 0;
+        scrollX.setValue(0);
+        startAutoScroll(0);
+      }
+    });
+  }, [scrollX]);
 
-    return () => anim.stop();
-  }, [films, scrollX]);
+  // Measure one copy of the item set
+  const onSetLayout = useCallback(
+    (e: { nativeEvent: { layout: { width: number } } }) => {
+      const w = e.nativeEvent.layout.width;
+      if (w > 0 && setWidth.current === 0) {
+        setWidth.current = w;
+        startAutoScroll(0);
+      }
+    },
+    [startAutoScroll]
+  );
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => { animRef.current?.stop(); };
+  }, []);
 
   if (films.length === 0) return null;
 
-  // Duplicate items for seamless loop
-  const duplicated = [...films, ...films];
+  // Render three copies so there is always content visible during drag
+  const tripled = [...films, ...films, ...films];
 
   return (
-    <View style={styles.tickerContainer}>
+    <View
+      style={styles.tickerContainer}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderGrant={(e) => {
+        animRef.current?.stop();
+        // Capture where the finger started and the current scroll position
+        touchStartX.current = e.nativeEvent.pageX;
+        // Read the current animated value
+        scrollX.stopAnimation((val) => {
+          offsetRef.current = val;
+          touchStartOffset.current = val;
+        });
+      }}
+      onResponderMove={(e) => {
+        const dx = e.nativeEvent.pageX - touchStartX.current;
+        const newPos = touchStartOffset.current + dx;
+        offsetRef.current = newPos;
+        scrollX.setValue(newPos);
+      }}
+      onResponderRelease={() => {
+        startAutoScroll(offsetRef.current);
+      }}
+    >
       <Animated.View style={[styles.tickerStrip, { transform: [{ translateX: scrollX }] }]}>
-        {duplicated.map((film, i) => (
-          <TickerItem key={`${film.id}-${i}`} film={film} />
-        ))}
+        {/* First copy used for measurement */}
+        <View onLayout={onSetLayout} style={styles.tickerSet}>
+          {films.map((film) => (
+            <TickerItem key={`a-${film.id}`} film={film} />
+          ))}
+        </View>
+        {/* Additional copies for seamless wrap */}
+        <View style={styles.tickerSet}>
+          {films.map((film) => (
+            <TickerItem key={`b-${film.id}`} film={film} />
+          ))}
+        </View>
+        <View style={styles.tickerSet}>
+          {films.map((film) => (
+            <TickerItem key={`c-${film.id}`} film={film} />
+          ))}
+        </View>
       </Animated.View>
     </View>
   );
@@ -452,6 +522,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tickerStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tickerSet: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
