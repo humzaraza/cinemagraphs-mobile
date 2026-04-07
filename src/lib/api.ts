@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import type { Film } from '../types/film';
 
 const API_BASE = 'https://cinemagraphs.ca/api';
 
@@ -33,4 +34,28 @@ export async function apiFetch(
     ...options,
     headers,
   });
+}
+
+export async function fetchTickerFilms(): Promise<Film[]> {
+  const res = await apiFetch('/films?ticker=true&limit=20');
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchNowPlayingFilms(): Promise<Film[]> {
+  const res = await apiFetch('/films?nowPlaying=true&limit=10');
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchTrendingFilms(): Promise<Film[]> {
+  const res = await apiFetch('/films?sort=highest&limit=6');
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchRecommendedFilms(): Promise<Film[]> {
+  const res = await apiFetch('/films?sort=recent&limit=10');
+  if (!res.ok) return [];
+  return res.json();
 }
