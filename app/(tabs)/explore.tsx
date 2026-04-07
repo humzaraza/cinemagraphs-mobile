@@ -175,6 +175,7 @@ function TickerItem({ film }: { film: Film }) {
         height={20}
         strokeColor={trendColor}
         strokeWidth={1.2}
+        showMidline
       />
       {score != null && (
         <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
@@ -196,7 +197,7 @@ function MovieTicker({ films }: { films: Film[] }) {
     if (films.length === 0) return;
 
     // Estimate total width of one set of items
-    const itemWidth = 140; // approximate width per ticker item
+    const itemWidth = 150; // approximate width per ticker item
     const totalWidth = films.length * itemWidth;
 
     const anim = Animated.loop(
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    gap: 22,
+    gap: 28,
   },
   tickerItem: {
     flexDirection: 'row',
