@@ -235,16 +235,14 @@ function PosterCell({
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
-  const handlePress = () => {
-    try {
-      router.push(`/(tabs)/film/${film.id}` as any);
-    } catch (e) {
-      console.log('Navigation error:', e);
-    }
-  };
-
   return (
-    <Pressable onPress={handlePress} style={styles.posterCell}>
+    <Pressable
+      onPress={() => {
+        console.log('[Profile] PosterCell tap:', film.id, '->', `/film/${film.id}`);
+        router.push(`/film/${film.id}` as any);
+      }}
+      style={styles.posterCell}
+    >
       {imgError ? (
         <PosterFallback title={film.title} />
       ) : (
@@ -299,16 +297,14 @@ function ArcCard({ film }: { film: MockFilm }) {
 
   const midY = graphH / 2;
 
-  const handlePress = () => {
-    try {
-      router.push(`/(tabs)/film/${film.id}` as any);
-    } catch (e) {
-      console.log('Navigation error:', e);
-    }
-  };
-
   return (
-    <Pressable onPress={handlePress} style={styles.arcCard}>
+    <Pressable
+      onPress={() => {
+        console.log('[Profile] ArcCard tap:', film.id, '->', `/film/${film.id}`);
+        router.push(`/film/${film.id}` as any);
+      }}
+      style={styles.arcCard}
+    >
       <View style={styles.arcHeader}>
         <View style={styles.arcTitleRow}>
           <Text style={styles.arcTitle}>{film.title}</Text>
@@ -353,16 +349,14 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
-  const handlePress = () => {
-    try {
-      router.push(`/(tabs)/film/${film.id}` as any);
-    } catch (e) {
-      console.log('Navigation error:', e);
-    }
-  };
-
   return (
-    <Pressable onPress={handlePress} style={styles.posterCell}>
+    <Pressable
+      onPress={() => {
+        console.log('[Profile] WatchlistCell tap:', film.id, '->', `/film/${film.id}`);
+        router.push(`/film/${film.id}` as any);
+      }}
+      style={styles.posterCell}
+    >
       {imgError ? (
         <PosterFallback title={film.title} />
       ) : (
@@ -402,6 +396,7 @@ export default function ProfileScreen() {
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
     (row: string) => {
+      console.log('[Profile] Row tap:', row);
       switch (row) {
         case 'Reviewed':
           setFilmFilter('reviewed');
@@ -418,7 +413,7 @@ export default function ProfileScreen() {
           setSubTab('lists');
           break;
         default:
-          console.log('Tapped:', row);
+          console.log('[Profile] Unhandled row:', row);
       }
     },
     [],
@@ -703,8 +698,9 @@ const styles = StyleSheet.create({
   collapsedGear: {
     position: 'absolute',
     right: 0,
+    top: 0,
+    bottom: 0,
     width: 44,
-    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
