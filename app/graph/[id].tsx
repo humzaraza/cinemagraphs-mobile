@@ -18,9 +18,9 @@ import Svg, {
   Rect,
   Path,
 } from 'react-native-svg';
-import { colors, fonts, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail } from '../../../src/lib/api';
-import type { FilmDetail, FilmDataPoint } from '../../../src/types/film';
+import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { fetchFilmDetail } from '../../src/lib/api';
+import type { FilmDetail, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const Y_AXIS_WIDTH = 28;

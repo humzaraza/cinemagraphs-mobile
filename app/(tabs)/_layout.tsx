@@ -50,6 +50,8 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="film/[id]" options={{ href: null }} />
+      <Tabs.Screen name="review" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -287,7 +287,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
 
       {/* Graph card */}
       <Pressable
-        onPress={() => router.push(`/film/${film.id}/graph` as any)}
+        onPress={() => router.push(`/graph/${film.id}` as any)}
         style={styles.graphCard}
       >
         {/* SVG Graph */}

@@ -150,17 +150,18 @@ function PosterCard({ film }: { film: Film }) {
 // ---------------------------------------------------------------------------
 
 function TickerItem({ film }: { film: Film }) {
+  const router = useRouter();
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 
   if (!dataPoints || dataPoints.length < 2) {
     return (
-      <View style={styles.tickerItem}>
+      <Pressable onPress={() => router.push(`/film/${film.id}` as any)} style={styles.tickerItem}>
         <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
         {score != null && (
           <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
         )}
-      </View>
+      </Pressable>
     );
   }
 
@@ -169,7 +170,7 @@ function TickerItem({ film }: { film: Film }) {
   const trendColor = isPositive ? colors.positiveGreen : colors.negativeRed;
 
   return (
-    <View style={styles.tickerItem}>
+    <Pressable onPress={() => router.push(`/film/${film.id}` as any)} style={styles.tickerItem}>
       <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
       <Sparkline
         dataPoints={dataPoints}
@@ -187,7 +188,7 @@ function TickerItem({ film }: { film: Film }) {
           {isPositive ? '+' : ''}{delta.toFixed(1)}
         </Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 
