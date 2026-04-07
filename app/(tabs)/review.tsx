@@ -173,14 +173,14 @@ function BeatCard({
           {dp.label}{' '}
           <Text style={styles.beatTimestamp}>{formatTimestamp(dp.timeMidpoint)}</Text>
         </Text>
-        <Text style={styles.beatScore}>{value.toFixed(0)}</Text>
+        <Text style={styles.beatScore}>{value.toFixed(1)}</Text>
       </View>
       <Slider
         value={value}
         onValueChange={onChange}
         minimumValue={1}
         maximumValue={10}
-        step={1}
+        step={0.5}
         minimumTrackTintColor="#C8A951"
         maximumTrackTintColor="rgba(245,240,225,0.08)"
         thumbTintColor="#C8A951"
