@@ -64,6 +64,10 @@ export async function fetchFilmDetail(id: string): Promise<FilmDetail | null> {
   return res.json();
 }
 
+export async function searchFilms(query: string): Promise<Film[]> {
+  return extractFilms(await apiFetch(`/films?search=${encodeURIComponent(query)}`));
+}
+
 export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
   // TODO: If the API doesn't support genre filtering, fall back to /films?limit=6
   return extractFilms(

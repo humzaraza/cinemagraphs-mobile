@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinemagraphs Mobile App - Complete Visual Design Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080f;color:#fff;font-family:'DM Sans',sans-serif;padding:60px 20px 80px;max-width:1600px;margin:0 auto}
+h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;text-align:center;color:#C8A951;margin-bottom:8px}
+.subtitle{text-align:center;color:rgba(255,255,255,0.35);font-size:14px;margin-bottom:60px}
+.section-title{font-family:'Playfair Display',serif;font-size:22px;color:#fff;text-align:center;margin-bottom:12px}
+.section-desc{text-align:center;color:rgba(255,255,255,0.3);font-size:13px;margin-bottom:40px;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.6}
+.section-divider{width:60px;height:1px;background:rgba(200,169,81,0.3);margin:0 auto 80px}
+.mockup-row{display:flex;gap:48px;justify-content:center;flex-wrap:wrap;margin-bottom:80px}
+.mockup-wrapper{display:flex;flex-direction:column;align-items:center}
+.phone{width:300px;height:620px;border-radius:24px;border:2px solid rgba(200,169,81,0.3);background:#0D0D1A;overflow:hidden;position:relative;font-family:'DM Sans',sans-serif;color:#F5F0E1}
+.mockup-label{margin-top:16px;font-size:14px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:0.5px}
+.mockup-note{max-width:300px;margin-top:8px;font-size:12px;line-height:1.5;color:rgba(255,255,255,0.25)}
+.tab-bar{position:absolute;bottom:0;left:0;right:0;background:rgba(13,13,26,0.95);border-top:0.5px solid rgba(200,169,81,0.15);display:flex;justify-content:space-around;padding:10px 0 20px}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.tab-label{font-size:10px}
+.tab-active{color:#C8A951;font-weight:500}
+.tab-inactive{color:rgba(255,255,255,0.35)}
+.note-box{background:rgba(200,169,81,0.08);border-left:3px solid #C8A951;padding:12px 16px;margin:0 auto 60px;max-width:800px;font-size:13px;color:#ccc;line-height:1.6}
+.tb3{position:absolute;bottom:0;left:0;right:0;background:rgba(13,13,26,0.95);border-top:0.5px solid rgba(200,169,81,0.15);display:flex;justify-content:space-around;padding:10px 0 20px}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+
+<h1>Cinemagraphs</h1>
+<p class="subtitle">Mobile App - Complete Visual Design Reference<br>Updated April 6, 2026 - All screens finalized</p>
+
+<div class="note-box">
+<strong>For Claude Code:</strong> Match these mockups exactly when building each screen. The visual is the source of truth for appearance.<br><br>
+<strong>Key rules:</strong> 3 tabs (Explore, Search, Profile). No Review tab. No em dashes. Ticket stub icon for watched. Gold #C8A951, Teal #2DD4A8, Ivory #F5F0E1, Background #0D0D1A. Playfair Display headings, DM Sans body. Scores on lists/explore = merged/overall. Scores on profile reviewed = user's personal.
+</div>
+
+<!-- ===== 1. SPLASH ===== -->
+<p class="section-title">1. Splash / Landing</p>
+<p class="section-desc">Logo + tagline fade-in (no long animation). Dashed line must be clearly visible. Auth buttons pinned to bottom.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="display:flex;flex-direction:column;align-items:center;margin-top:-80px">
+<p style="font-family:'Playfair Display',serif;font-size:26px;color:#C8A951;margin:0 0 12px;font-weight:500;letter-spacing:1.5px">Cinemagraphs</p>
+<div style="width:180px;height:1px;border-top:1.5px dashed rgba(200,169,81,0.4);margin-bottom:12px"></div>
+<p style="font-size:11px;color:rgba(245,240,225,0.4);margin:0;letter-spacing:2.5px">movie reviews visualized</p>
+</div>
+<div style="position:absolute;bottom:0;left:0;right:0;padding:0 28px 32px;display:flex;flex-direction:column;align-items:center;gap:10px">
+<div style="width:100%;background:#F5F0E1;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:14px;font-weight:500;color:#0D0D1A">Continue with Google</span></div>
+<div style="width:100%;background:#000;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;border:0.5px solid rgba(255,255,255,0.1)"><span style="font-size:14px;font-weight:500;color:#fff">Continue with Apple</span></div>
+<div style="display:flex;align-items:center;gap:12px;width:100%;margin:2px 0"><div style="flex:1;height:0.5px;background:rgba(255,255,255,0.1)"></div><span style="font-size:11px;color:rgba(255,255,255,0.3)">or</span><div style="flex:1;height:0.5px;background:rgba(255,255,255,0.1)"></div></div>
+<div style="width:100%;border:1px solid #C8A951;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:14px;font-weight:500;color:#C8A951">Continue with email</span></div>
+</div>
+</div>
+<p class="mockup-label">Splash / Landing</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 2. AUTH ===== -->
+<p class="section-title">2. Auth Flow</p>
+<p class="section-desc">Sign in / Create account toggle. Forgot password is just a button. OTP for new users only.</p>
+<div class="mockup-row">
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:48px 20px 0">
+<div style="text-align:center;margin-bottom:28px"><p style="font-family:'Playfair Display',serif;font-size:20px;font-weight:500;margin:0 0 4px">Welcome back</p><p style="font-size:12px;color:rgba(245,240,225,0.4);margin:0">Sign in to your account</p></div>
+<div style="display:flex;background:rgba(245,240,225,0.06);border-radius:8px;padding:3px;margin-bottom:24px"><div style="flex:1;text-align:center;padding:7px 0;background:#C8A951;border-radius:6px;font-size:12px;font-weight:500;color:#0D0D1A">Sign in</div><div style="flex:1;text-align:center;padding:7px 0;font-size:12px;color:rgba(245,240,225,0.5)">Create account</div></div>
+<div style="margin-bottom:14px"><label style="font-size:11px;color:rgba(245,240,225,0.5);display:block;margin-bottom:5px">Email</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:12px 14px"><span style="font-size:13px;color:rgba(245,240,225,0.3)">you@email.com</span></div></div>
+<div style="margin-bottom:8px"><label style="font-size:11px;color:rgba(245,240,225,0.5);display:block;margin-bottom:5px">Password</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:12px 14px"><span style="font-size:13px;color:rgba(245,240,225,0.2)">Enter your password</span></div></div>
+<div style="text-align:right;margin-bottom:24px"><span style="font-size:11px;color:#C8A951">Forgot password?</span></div>
+<button style="width:100%;padding:12px;background:#C8A951;border:none;border-radius:8px;font-size:14px;font-weight:500;color:#0D0D1A">Sign in</button>
+</div></div>
+<p class="mockup-label">Sign In</p>
+</div>
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:48px 20px 0">
+<div style="text-align:center;margin-bottom:28px"><p style="font-family:'Playfair Display',serif;font-size:20px;font-weight:500;margin:0 0 4px">Create your account</p><p style="font-size:12px;color:rgba(245,240,225,0.4);margin:0">Join the community</p></div>
+<div style="display:flex;background:rgba(245,240,225,0.06);border-radius:8px;padding:3px;margin-bottom:24px"><div style="flex:1;text-align:center;padding:7px 0;font-size:12px;color:rgba(245,240,225,0.5)">Sign in</div><div style="flex:1;text-align:center;padding:7px 0;background:#C8A951;border-radius:6px;font-size:12px;font-weight:500;color:#0D0D1A">Create account</div></div>
+<div style="margin-bottom:14px"><label style="font-size:11px;color:rgba(245,240,225,0.5);display:block;margin-bottom:5px">Profile name</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:12px 14px"><span style="font-size:13px;color:rgba(245,240,225,0.2)">Your display name</span></div></div>
+<div style="margin-bottom:14px"><label style="font-size:11px;color:rgba(245,240,225,0.5);display:block;margin-bottom:5px">Email</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:12px 14px"><span style="font-size:13px;color:rgba(245,240,225,0.2)">you@email.com</span></div></div>
+<div style="margin-bottom:20px"><label style="font-size:11px;color:rgba(245,240,225,0.5);display:block;margin-bottom:5px">Password</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:12px 14px"><span style="font-size:13px;color:rgba(245,240,225,0.2)">Create a password</span></div></div>
+<button style="width:100%;padding:12px;background:#C8A951;border:none;border-radius:8px;font-size:14px;font-weight:500;color:#0D0D1A">Create account</button>
+</div></div>
+<p class="mockup-label">Create Account</p>
+</div>
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:80px 20px 0;text-align:center">
+<div style="width:56px;height:56px;border-radius:50%;background:rgba(200,169,81,0.1);border:0.5px solid rgba(200,169,81,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg></div>
+<p style="font-family:'Playfair Display',serif;font-size:20px;font-weight:500;margin:0 0 6px">Check your email</p>
+<p style="font-size:12px;color:rgba(245,240,225,0.4);margin:0 0 28px;line-height:1.5">We sent a verification code to<br><span style="color:#C8A951">bruce@wayne.com</span></p>
+<div style="display:flex;gap:8px;justify-content:center;margin-bottom:28px">
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500">4</div>
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500">7</div>
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500">2</div>
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500">9</div>
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px"></div>
+<div style="width:42px;height:50px;background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px"></div>
+</div>
+<button style="width:100%;padding:12px;background:rgba(200,169,81,0.3);border:none;border-radius:8px;font-size:14px;font-weight:500;color:rgba(13,13,26,0.5);margin-bottom:16px">Verify</button>
+<span style="font-size:12px;color:rgba(245,240,225,0.4)">Didn't receive a code? </span><span style="font-size:12px;color:#C8A951">Resend</span>
+</div></div>
+<p class="mockup-label">OTP Verification</p>
+</div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 3. EXPLORE TAB ===== -->
+<p class="section-title">3. Explore Tab</p>
+<p class="section-desc">Sticky Movie Market ticker. Featured/For You feed only (no Friends tab in v1). Now Playing, Trending arcs, Recommended. Ticket stub on all posters.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone">
+<div style="position:sticky;top:0;z-index:10;background:rgba(13,13,26,0.97);border-bottom:0.5px solid rgba(200,169,81,0.1);padding:6px 0;overflow:hidden;white-space:nowrap">
+<div style="display:inline-flex;animation:ticker 32s linear infinite">
+<div style="display:flex;gap:22px;padding:0 12px;align-items:center">
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Oppenheimer</span><span style="color:#C8A951;font-weight:500">8.4</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,13 6,11 12,7 18,8 24,5 30,3 36,2" fill="none" stroke="#00E676" stroke-width="1.2"/></svg><span style="color:#00E676;font-size:10px">+0.3</span></span>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Poor Things</span><span style="color:#C8A951;font-weight:500">7.6</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,4 6,6 12,5 18,9 24,11 30,13 36,14" fill="none" stroke="#E24B4A" stroke-width="1.2"/></svg><span style="color:#E24B4A;font-size:10px">-0.2</span></span>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Civil War</span><span style="color:#C8A951;font-weight:500">6.9</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,15 6,11 12,8 18,6 24,4 30,3 36,2" fill="none" stroke="#00E676" stroke-width="1.2"/></svg><span style="color:#00E676;font-size:10px">+0.5</span></span>
+</div>
+<div style="display:flex;gap:22px;padding:0 12px;align-items:center">
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Oppenheimer</span><span style="color:#C8A951;font-weight:500">8.4</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,13 6,11 12,7 18,8 24,5 30,3 36,2" fill="none" stroke="#00E676" stroke-width="1.2"/></svg><span style="color:#00E676;font-size:10px">+0.3</span></span>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Poor Things</span><span style="color:#C8A951;font-weight:500">7.6</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,4 6,6 12,5 18,9 24,11 30,13 36,14" fill="none" stroke="#E24B4A" stroke-width="1.2"/></svg><span style="color:#E24B4A;font-size:10px">-0.2</span></span>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="color:#F5F0E1">Civil War</span><span style="color:#C8A951;font-weight:500">6.9</span><svg width="36" height="16" viewBox="0 0 36 16"><polyline points="0,15 6,11 12,8 18,6 24,4 30,3 36,2" fill="none" stroke="#00E676" stroke-width="1.2"/></svg><span style="color:#00E676;font-size:10px">+0.5</span></span>
+</div>
+</div>
+</div>
+<div style="height:540px;overflow-y:auto;padding:12px 14px 80px">
+<p style="font-family:'Playfair Display',serif;font-size:14px;color:#C8A951;margin:0 0 10px;font-weight:500">Now playing</p>
+<div style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto">
+<div style="min-width:90px;position:relative"><div style="height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div><div style="position:absolute;top:5px;right:5px;width:18px;height:18px;background:rgba(13,13,26,0.7);border:0.5px solid rgba(200,169,81,0.2);border-radius:3px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 8h20"/></svg></div></div>
+<div style="min-width:90px;position:relative"><div style="height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div><div style="position:absolute;top:5px;right:5px;width:18px;height:18px;background:rgba(13,13,26,0.7);border:0.5px solid rgba(200,169,81,0.2);border-radius:3px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 8h20"/></svg></div></div>
+<div style="min-width:90px;position:relative"><div style="height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div><div style="position:absolute;top:5px;right:5px;width:18px;height:18px;background:rgba(13,13,26,0.7);border:0.5px solid rgba(200,169,81,0.2);border-radius:3px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 8h20"/></svg></div></div>
+</div>
+<p style="font-family:'Playfair Display',serif;font-size:14px;color:#C8A951;margin:0 0 10px;font-weight:500">Trending arcs</p>
+<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="width:44px;height:64px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;flex-shrink:0"></div>
+<div style="flex:1"><p style="font-size:13px;color:#F5F0E1;margin:0 0 4px;font-weight:500">Film title</p><svg width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none"><polyline points="0,20 20,18 40,22 60,10 80,14 100,6 120,12 140,8 160,4" fill="none" stroke="#C8A951" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+<p style="font-size:16px;color:#C8A951;margin:0;font-weight:500">7.8</p>
+</div>
+<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="width:44px;height:64px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;flex-shrink:0"></div>
+<div style="flex:1"><p style="font-size:13px;color:#F5F0E1;margin:0 0 4px;font-weight:500">Film title</p><svg width="100%" height="28" viewBox="0 0 160 28" preserveAspectRatio="none"><polyline points="0,14 20,8 40,4 60,12 80,20 100,24 120,18 140,22 160,20" fill="none" stroke="#C8A951" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+<p style="font-size:16px;color:#C8A951;margin:0;font-weight:500">6.4</p>
+</div>
+</div>
+<p style="font-family:'Playfair Display',serif;font-size:14px;color:#C8A951;margin:0 0 10px;font-weight:500">Recommended for you</p>
+<div style="display:flex;gap:8px">
+<div style="min-width:90px;height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div>
+<div style="min-width:90px;height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div>
+<div style="min-width:90px;height:130px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:8px;border:0.5px solid rgba(200,169,81,0.12)"></div>
+</div>
+</div>
+<div class="tab-bar">
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="6" y1="4" x2="6" y2="8"/><line x1="10" y1="4" x2="10" y2="8"/><line x1="14" y1="4" x2="14" y2="8"/><line x1="18" y1="4" x2="18" y2="8"/></svg><span class="tab-label tab-active">Explore</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21" stroke-linecap="round"/></svg><span class="tab-label tab-inactive">Search</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-linecap="round"/></svg><span class="tab-label tab-inactive">Profile</span></div>
+</div>
+</div>
+<p class="mockup-label">Explore tab</p>
+<p class="mockup-note">No Friends toggle (cut from v1). Ticket stub overlay on all posters. Scores are merged/overall.</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 4. SEARCH TAB ===== -->
+<p class="section-title">4. Search Tab</p>
+<p class="section-desc">Universal search bar. Browse categories. Review/Live React button in top-right corner (replaces dedicated Review tab).</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone">
+<div style="height:540px;overflow-y:auto;padding:16px 14px 80px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<p style="font-family:'Playfair Display',serif;font-size:16px;color:#F5F0E1;margin:0;font-weight:500">Search</p>
+<div style="display:flex;align-items:center;gap:4px;background:rgba(200,169,81,0.12);border:0.5px solid rgba(200,169,81,0.25);border-radius:8px;padding:6px 10px">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+<span style="font-size:11px;color:#C8A951;font-weight:500">Review</span>
+</div>
+</div>
+<div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:20px;border:0.5px solid rgba(200,169,81,0.1)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21" stroke-linecap="round"/></svg>
+<span style="font-size:13px;color:rgba(255,255,255,0.3)">Films, people, members...</span>
+</div>
+<p style="font-family:'Playfair Display',serif;font-size:14px;color:#C8A951;margin:0 0 12px;font-weight:500">Browse by</p>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Genre</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Release date</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Highest rated</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Most dramatic arcs</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Streaming service</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)"><span style="font-size:14px;color:#F5F0E1">Directors</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0"><span style="font-size:14px;color:#F5F0E1">Recently added</span><span style="color:rgba(255,255,255,0.2)">&#8250;</span></div>
+</div>
+<div class="tab-bar">
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="6" y1="4" x2="6" y2="8"/><line x1="10" y1="4" x2="10" y2="8"/><line x1="14" y1="4" x2="14" y2="8"/><line x1="18" y1="4" x2="18" y2="8"/></svg><span class="tab-label tab-inactive">Explore</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21" stroke-linecap="round"/></svg><span class="tab-label tab-active">Search</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-linecap="round"/></svg><span class="tab-label tab-inactive">Profile</span></div>
+</div>
+</div>
+<p class="mockup-label">Search tab</p>
+<p class="mockup-note">Review button top-right replaces dedicated Review tab.</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 5. PROFILE ===== -->
+<p class="section-title">5. Profile Tab</p>
+<p class="section-desc">Avatar, stats, sub-tabs: Profile, My films, Lists, Watchlist. Reviewed shows USER'S personal scores. Poster + graph view toggle.</p>
+<div class="mockup-row">
+<div class="mockup-wrapper">
+<div class="phone">
+<div style="height:540px;overflow-y:auto;padding:16px 14px 80px">
+<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px">
+<div style="width:48px;height:48px;border-radius:50%;background:rgba(200,169,81,0.15);border:1.5px solid rgba(200,169,81,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:6px"><span style="font-size:18px;color:#C8A951;font-weight:500">H</span></div>
+<p style="font-size:14px;color:#F5F0E1;margin:0;font-weight:500">humza</p>
+</div>
+<div style="display:flex;justify-content:center;gap:24px;margin-bottom:16px">
+<div style="text-align:center"><p style="font-size:18px;color:#F5F0E1;margin:0;font-weight:500">42</p><p style="font-size:11px;color:rgba(255,255,255,0.35);margin:0">Films</p></div>
+<div style="text-align:center"><p style="font-size:18px;color:#F5F0E1;margin:0;font-weight:500">128</p><p style="font-size:11px;color:rgba(255,255,255,0.35);margin:0">Following</p></div>
+<div style="text-align:center"><p style="font-size:18px;color:#F5F0E1;margin:0;font-weight:500">89</p><p style="font-size:11px;color:rgba(255,255,255,0.35);margin:0">Followers</p></div>
+</div>
+<div style="display:flex;gap:0;border-bottom:0.5px solid rgba(255,255,255,0.08);margin-bottom:12px">
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Profile</span></div>
+<div style="padding:0 14px 10px;border-bottom:2px solid #C8A951"><span style="font-size:13px;color:#C8A951;font-weight:500">My films</span></div>
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Lists</span></div>
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Watchlist</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<div style="display:flex;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px">
+<div style="padding:5px 12px;font-size:12px;color:rgba(255,255,255,0.4)">Watched</div>
+<div style="padding:5px 12px;background:rgba(200,169,81,0.2);border-radius:4px;font-size:12px;color:#C8A951;font-weight:500">Reviewed</div>
+</div>
+<div style="display:flex;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px;gap:2px">
+<div style="padding:5px 8px;background:rgba(200,169,81,0.2);border-radius:4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="#C8A951"/><rect x="9" y="1" width="6" height="6" rx="1" fill="#C8A951"/><rect x="1" y="9" width="6" height="6" rx="1" fill="#C8A951"/><rect x="9" y="9" width="6" height="6" rx="1" fill="#C8A951"/></svg></div>
+<div style="padding:5px 8px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="3" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="1" y="6.5" width="14" height="3" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="1" y="12" width="14" height="3" rx="1" fill="rgba(255,255,255,0.3)"/></svg></div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,12 10,10 20,6 30,8 40,4 50,6 60,3" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">7.8</p></div>
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,4 10,8 20,12 30,6 40,10 50,8 60,12" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">6.2</p></div>
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,8 10,4 20,6 30,2 40,8 50,10 60,6" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">8.1</p></div>
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,10 10,6 20,4 30,8 40,12 50,8 60,4" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">7.1</p></div>
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,6 10,10 20,14 30,8 40,4 50,6 60,10" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">5.9</p></div>
+<div><div style="aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.12);margin-bottom:4px"></div><svg width="100%" height="16" viewBox="0 0 60 16" preserveAspectRatio="none"><polyline points="0,12 10,8 20,4 30,6 40,2 50,4 60,6" fill="none" stroke="#C8A951" stroke-width="1.2"/></svg><p style="font-size:11px;color:#C8A951;margin:2px 0 0;text-align:center">8.5</p></div>
+</div>
+</div>
+<div class="tab-bar">
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="6" y1="4" x2="6" y2="8"/><line x1="10" y1="4" x2="10" y2="8"/><line x1="14" y1="4" x2="14" y2="8"/><line x1="18" y1="4" x2="18" y2="8"/></svg><span class="tab-label tab-inactive">Explore</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21" stroke-linecap="round"/></svg><span class="tab-label tab-inactive">Search</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-linecap="round"/></svg><span class="tab-label tab-active">Profile</span></div>
+</div>
+</div>
+<p class="mockup-label">My Films - Poster view</p>
+<p class="mockup-note">Reviewed active. Scores are USER'S personal. Watched tab has no sparklines.</p>
+</div>
+
+<div class="mockup-wrapper">
+<div class="phone">
+<div style="height:540px;overflow-y:auto;padding:16px 14px 80px">
+<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:12px">
+<div style="width:40px;height:40px;border-radius:50%;background:rgba(200,169,81,0.15);border:1.5px solid rgba(200,169,81,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:4px"><span style="font-size:16px;color:#C8A951;font-weight:500">H</span></div>
+<p style="font-size:13px;color:#F5F0E1;margin:0;font-weight:500">humza</p>
+</div>
+<div style="display:flex;gap:0;border-bottom:0.5px solid rgba(255,255,255,0.08);margin-bottom:12px">
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Profile</span></div>
+<div style="padding:0 14px 10px;border-bottom:2px solid #C8A951"><span style="font-size:13px;color:#C8A951;font-weight:500">My films</span></div>
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Lists</span></div>
+<div style="padding:0 14px 10px"><span style="font-size:13px;color:rgba(255,255,255,0.35)">Watchlist</span></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<div style="display:flex;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px">
+<div style="padding:5px 12px;font-size:12px;color:rgba(255,255,255,0.4)">Watched</div>
+<div style="padding:5px 12px;background:rgba(200,169,81,0.2);border-radius:4px;font-size:12px;color:#C8A951;font-weight:500">Reviewed</div>
+</div>
+<div style="display:flex;background:rgba(255,255,255,0.06);border-radius:6px;padding:2px;gap:2px">
+<div style="padding:5px 8px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="9" y="1" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="1" y="9" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="9" y="9" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/></svg></div>
+<div style="padding:5px 8px;background:rgba(200,169,81,0.2);border-radius:4px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="3" rx="1" fill="#C8A951"/><rect x="1" y="6.5" width="14" height="3" rx="1" fill="#C8A951"/><rect x="1" y="12" width="14" height="3" rx="1" fill="#C8A951"/></svg></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><div><span style="font-size:13px;font-weight:500">Oppenheimer</span> <span style="font-size:11px;color:rgba(255,255,255,0.3)">2023</span></div><span style="font-size:14px;color:#C8A951;font-weight:500">8.4</span></div>
+<svg width="100%" height="44" viewBox="0 0 240 44" preserveAspectRatio="none"><line x1="0" y1="22" x2="240" y2="22" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-dasharray="3,3"/><polyline points="0,36 30,28 60,34 90,20 120,10 150,14 180,8 210,6 240,4" fill="none" stroke="#C8A951" stroke-width="1.8" stroke-linejoin="round"/></svg>
+<div style="display:flex;justify-content:space-between;margin-top:3px"><span style="font-size:9px;color:rgba(255,255,255,0.2)">0m</span><span style="font-size:9px;color:rgba(255,255,255,0.2)">1h 30m</span><span style="font-size:9px;color:rgba(255,255,255,0.2)">3h 0m</span></div>
+</div>
+<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 12px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><div><span style="font-size:13px;font-weight:500">Poor Things</span> <span style="font-size:11px;color:rgba(255,255,255,0.3)">2023</span></div><span style="font-size:14px;color:#C8A951;font-weight:500">7.6</span></div>
+<svg width="100%" height="44" viewBox="0 0 240 44" preserveAspectRatio="none"><line x1="0" y1="22" x2="240" y2="22" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-dasharray="3,3"/><polyline points="0,30 30,22 60,14 90,8 120,18 150,24 180,16 210,20 240,12" fill="none" stroke="#C8A951" stroke-width="1.8" stroke-linejoin="round"/></svg>
+<div style="display:flex;justify-content:space-between;margin-top:3px"><span style="font-size:9px;color:rgba(255,255,255,0.2)">0m</span><span style="font-size:9px;color:rgba(255,255,255,0.2)">1h 11m</span><span style="font-size:9px;color:rgba(255,255,255,0.2)">2h 21m</span></div>
+</div>
+</div>
+</div>
+<div class="tab-bar">
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="6" y1="4" x2="6" y2="8"/><line x1="10" y1="4" x2="10" y2="8"/><line x1="14" y1="4" x2="14" y2="8"/><line x1="18" y1="4" x2="18" y2="8"/></svg><span class="tab-label tab-inactive">Explore</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21" stroke-linecap="round"/></svg><span class="tab-label tab-inactive">Search</span></div>
+<div class="tab-item"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-linecap="round"/></svg><span class="tab-label tab-active">Profile</span></div>
+</div>
+</div>
+<p class="mockup-label">My Films - Graph view</p>
+<p class="mockup-note">Stacked arc cards. Gold line, dashed midline, timestamps. No peak/low dots.</p>
+</div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 6. FILM DETAIL ===== -->
+<p class="section-title">6. Film Detail Page</p>
+<p class="section-desc">Backdrop + poster overlapping. Write Review + Live React CTAs. Multi-line graph (gold critics, teal audience, ivory merged). Beat pills. Peak/low cards. User reviews. Similar films. Ticket stub top-right. No third-party scores.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone" style="height:800px">
+<div style="height:160px;background:linear-gradient(135deg,rgba(30,30,60,0.8),rgba(13,13,26,0.9));position:relative">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,13,26,0) 40%,#0D0D1A 100%)"></div>
+<div style="position:absolute;top:10px;left:14px;z-index:2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F0E1" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></div>
+<div style="position:absolute;bottom:12px;right:14px;z-index:2;background:rgba(200,169,81,0.15);border:0.5px solid rgba(200,169,81,0.3);border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 8h20"/></svg><span style="font-size:10px;color:#C8A951;font-weight:500">Watched</span></div>
+</div>
+<div style="padding:0 14px;margin-top:-36px;position:relative;z-index:2;height:600px;overflow-y:auto;padding-bottom:20px">
+<div style="display:flex;gap:10px;margin-bottom:12px">
+<div style="width:70px;height:105px;background:rgba(30,30,60,0.8);border-radius:6px;border:0.5px solid rgba(200,169,81,0.15);flex-shrink:0"></div>
+<div style="padding-top:36px">
+<p style="font-family:'Playfair Display',serif;font-size:18px;font-weight:500;margin:0 0 3px;line-height:1.2">Oppenheimer</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.4);margin:0 0 4px">2023 · 3h 0m · Drama, History</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.35);margin:0">Dir. Christopher Nolan</p>
+</div>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:14px">
+<div style="flex:1;padding:10px;background:#C8A951;border:none;border-radius:8px;font-size:12px;font-weight:500;color:#0D0D1A;text-align:center">Write review</div>
+<div style="flex:1;padding:10px;border:1px solid rgba(200,169,81,0.3);border-radius:8px;font-size:12px;font-weight:500;color:#C8A951;text-align:center">Live react</div>
+</div>
+<div style="margin-bottom:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-family:'Playfair Display',serif;font-size:14px;font-weight:500;margin:0">Sentiment arc</p><span style="font-size:18px;font-weight:500;color:#C8A951;font-family:'Playfair Display',serif">8.2</span></div>
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.10);border-radius:10px;padding:10px">
+<div style="display:flex;gap:12px;margin-bottom:6px">
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#C8A951"></div><span style="font-size:8px;color:rgba(245,240,225,0.35)">Critics</span></div>
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#2DD4A8"></div><span style="font-size:8px;color:rgba(245,240,225,0.35)">Audience</span></div>
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#F5F0E1"></div><span style="font-size:8px;color:rgba(245,240,225,0.35)">Merged</span></div>
+</div>
+<svg width="100%" height="80" viewBox="0 0 260 80" preserveAspectRatio="none">
+<line x1="0" y1="40" x2="260" y2="40" stroke="rgba(245,240,225,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/>
+<path d="M5,35 L35,30 L65,18 L95,24 L130,14 L160,10 L195,35 L225,5 L255,16" fill="none" stroke="#C8A951" stroke-width="1.5"/>
+<path d="M5,38 L35,34 L65,22 L95,28 L130,18 L160,14 L195,30 L225,10 L255,20" fill="none" stroke="#2DD4A8" stroke-width="1" opacity="0.7"/>
+<path d="M5,36 L35,32 L65,20 L95,26 L130,16 L160,12 L195,32 L225,8 L255,18" fill="none" stroke="#F5F0E1" stroke-width="0.8" opacity="0.4"/>
+<text x="5" y="78" fill="rgba(245,240,225,0.15)" font-size="7">0m</text><text x="130" y="78" fill="rgba(245,240,225,0.15)" font-size="7">1h 30m</text><text x="235" y="78" fill="rgba(245,240,225,0.15)" font-size="7">3h 0m</text>
+</svg>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">
+<span style="background:rgba(200,169,81,0.1);border:0.5px solid rgba(200,169,81,0.2);border-radius:12px;padding:3px 8px;font-size:9px;color:#C8A951">The opening · 0m</span>
+<span style="background:rgba(200,169,81,0.1);border:0.5px solid rgba(200,169,81,0.2);border-radius:12px;padding:3px 8px;font-size:9px;color:#C8A951">Manhattan Project · 22m</span>
+<span style="background:rgba(226,75,74,0.1);border:0.5px solid rgba(226,75,74,0.2);border-radius:12px;padding:3px 8px;font-size:9px;color:#E24B4A">The affair · 1h 07m</span>
+<span style="background:rgba(45,212,168,0.1);border:0.5px solid rgba(45,212,168,0.2);border-radius:12px;padding:3px 8px;font-size:9px;color:#2DD4A8">Trinity Test · 1h 42m</span>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px">
+<div style="flex:1;background:rgba(45,212,168,0.08);border:0.5px solid rgba(45,212,168,0.2);border-radius:8px;padding:10px"><p style="font-size:9px;color:#2DD4A8;margin:0 0 2px;font-weight:500">Peak moment</p><p style="font-size:12px;margin:0 0 1px;font-weight:500">Trinity Test</p><p style="font-size:9px;color:rgba(245,240,225,0.4);margin:0">1h 42m · 9.8/10</p></div>
+<div style="flex:1;background:rgba(226,75,74,0.08);border:0.5px solid rgba(226,75,74,0.2);border-radius:8px;padding:10px"><p style="font-size:9px;color:#E24B4A;margin:0 0 2px;font-weight:500">Lowest point</p><p style="font-size:12px;margin:0 0 1px;font-weight:500">The affair unravels</p><p style="font-size:9px;color:rgba(245,240,225,0.4);margin:0">1h 07m · 6.2/10</p></div>
+</div>
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.08);border-radius:8px;padding:10px;margin-bottom:14px">
+<p style="font-size:9px;color:rgba(245,240,225,0.35);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 6px">Summary</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">A steadily building emotional experience that peaks dramatically at the Trinity Test sequence. The final act delivers a powerful, contemplative resolution.</p>
+</div>
+<div style="margin-bottom:14px">
+<div style="display:flex;justify-content:space-between;margin-bottom:8px"><p style="font-family:'Playfair Display',serif;font-size:13px;font-weight:500;margin:0">User reviews</p><span style="font-size:11px;color:#C8A951">See all</span></div>
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.08);border-radius:8px;padding:10px;margin-bottom:6px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(200,169,81,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;color:#C8A951;font-weight:500">JR</div><div><p style="font-size:11px;font-weight:500;margin:0">Jake Reynolds</p><p style="font-size:9px;color:rgba(245,240,225,0.3);margin:0">2d ago</p></div><span style="font-size:13px;font-weight:500;color:#C8A951;margin-left:auto">9.0</span></div>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.4">The Trinity Test scene is unlike anything I've experienced in cinema...</p>
+</div>
+</div>
+<p style="font-family:'Playfair Display',serif;font-size:13px;font-weight:500;margin:0 0 8px">Similar films</p>
+<div style="display:flex;gap:6px">
+<div style="width:70px;flex-shrink:0"><div style="height:105px;background:rgba(30,30,60,0.6);border-radius:6px;border:0.5px solid rgba(200,169,81,0.1);margin-bottom:4px"></div><p style="font-size:10px;margin:0">Interstellar</p><p style="font-size:9px;color:#C8A951;margin:0">8.7</p></div>
+<div style="width:70px;flex-shrink:0"><div style="height:105px;background:rgba(30,30,60,0.6);border-radius:6px;border:0.5px solid rgba(200,169,81,0.1);margin-bottom:4px"></div><p style="font-size:10px;margin:0">A Beautiful Mind</p><p style="font-size:9px;color:#C8A951;margin:0">8.2</p></div>
+<div style="width:70px;flex-shrink:0"><div style="height:105px;background:rgba(30,30,60,0.6);border-radius:6px;border:0.5px solid rgba(200,169,81,0.1);margin-bottom:4px"></div><p style="font-size:10px;margin:0">The Imitation Game</p><p style="font-size:9px;color:#C8A951;margin:0">8.0</p></div>
+</div>
+</div>
+</div>
+<p class="mockup-label">Film Detail Page</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 7. LIVE REACTIONS ACTIVE ===== -->
+<p class="section-title">7. Live Reactions - Active Session</p>
+<p class="section-desc">Timer + progress top. Graph middle. Slider + reactions anchored to bottom thumb zone. 2s cooldown.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone" style="height:680px">
+<div style="background:rgba(200,169,81,0.08);padding:8px 14px;display:flex;align-items:center;gap:6px">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="#C8A951"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+<span style="font-size:12px;font-weight:500;color:#C8A951">Live Reaction Mode</span>
+<span style="background:#E24B4A;color:#fff;font-size:8px;font-weight:500;padding:2px 6px;border-radius:3px">LIVE</span>
+<span style="font-size:10px;color:rgba(245,240,225,0.4);margin-left:auto">Oppenheimer</span>
+</div>
+<div style="padding:10px 14px 0">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+<span style="font-size:22px;font-weight:500;letter-spacing:2px">00:42:15</span>
+<div style="display:flex;gap:4px"><div style="background:#E24B4A;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:#fff">Pause</div><div style="border:0.5px solid rgba(245,240,225,0.2);padding:4px 6px;border-radius:6px;font-size:10px;color:rgba(245,240,225,0.5)">Reset</div></div>
+</div>
+<div style="height:3px;background:rgba(245,240,225,0.08);border-radius:2px;margin-bottom:3px"><div style="height:3px;width:37%;background:#C8A951;border-radius:2px"></div></div>
+<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:8px;color:rgba(245,240,225,0.25)">0:00</span><span style="font-size:8px;color:rgba(245,240,225,0.25)">3h 0m</span></div>
+</div>
+<div style="padding:0 14px">
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.10);border-radius:10px;padding:10px">
+<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:9px;color:rgba(245,240,225,0.3);text-transform:uppercase">Your sentiment</span><span style="font-size:16px;font-weight:500;color:#C8A951">7.5</span></div>
+<svg width="100%" height="80" viewBox="0 0 260 80" preserveAspectRatio="none">
+<line x1="0" y1="40" x2="260" y2="40" stroke="rgba(245,240,225,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/>
+<path d="M5,45 L30,42 L60,35 L90,28 L120,32 L150,22 L180,18 L210,20 L240,14" fill="none" stroke="#C8A951" stroke-width="1.5"/>
+<circle cx="240" cy="14" r="3" fill="#C8A951"/>
+</svg>
+</div>
+</div>
+<div style="position:absolute;bottom:0;left:0;right:0;padding:0 12px 16px">
+<div style="margin-bottom:8px;padding:0 4px">
+<div style="position:relative;height:16px;margin-bottom:3px"><div style="position:absolute;top:6px;left:0;right:0;height:3px;background:rgba(245,240,225,0.08);border-radius:2px"></div><div style="position:absolute;top:6px;left:0;width:72%;height:3px;background:#C8A951;border-radius:2px"></div><div style="position:absolute;top:1px;left:72%;width:14px;height:14px;background:#C8A951;border-radius:50%;transform:translateX(-50%)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:8px;color:rgba(245,240,225,0.25)"><span>1 Hated it</span><span>5 Neutral</span><span>10 Masterpiece</span></div>
+</div>
+<div style="display:flex;gap:5px;margin-bottom:6px">
+<div style="flex:1;background:rgba(45,212,168,0.08);border:0.5px solid rgba(45,212,168,0.2);border-radius:10px;padding:10px 0;text-align:center"><span style="font-size:22px">&#128077;</span><p style="font-size:11px;margin:3px 0 0">Like</p><p style="font-size:9px;color:#2DD4A8;margin:0">+0.5</p></div>
+<div style="flex:1;background:rgba(226,75,74,0.08);border:0.5px solid rgba(226,75,74,0.2);border-radius:10px;padding:10px 0;text-align:center"><span style="font-size:22px">&#128078;</span><p style="font-size:11px;margin:3px 0 0">Dislike</p><p style="font-size:9px;color:#E24B4A;margin:0">-0.5</p></div>
+</div>
+<div style="display:flex;gap:5px;margin-bottom:4px">
+<div style="flex:1;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:8px 0;text-align:center"><span style="font-size:18px">&#129327;</span><p style="font-size:10px;margin:2px 0 0">Wow</p><p style="font-size:8px;color:#C8A951;margin:0">+1.0</p></div>
+<div style="flex:1;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:8px 0;text-align:center"><span style="font-size:18px">&#128561;</span><p style="font-size:10px;margin:2px 0 0">Shock</p><p style="font-size:8px;color:#C8A951;margin:0">+0.5</p></div>
+<div style="flex:1;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:8px 0;text-align:center"><span style="font-size:18px">&#128514;</span><p style="font-size:10px;margin:2px 0 0">Funny</p><p style="font-size:8px;color:#C8A951;margin:0">+0.5</p></div>
+</div>
+<p style="font-size:8px;color:rgba(245,240,225,0.2);text-align:center;margin:0">Cooldown: 2s between reactions</p>
+</div>
+</div>
+<p class="mockup-label">Live Reactions - Active</p>
+<p class="mockup-note">Reactions in thumb zone at bottom. Timer and graph at top/middle.</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 8. POST SESSION ===== -->
+<p class="section-title">8. Post-Session + 9. Merged View</p>
+<p class="section-desc">Post-session: timestamps only for peak/low (no beat labels). "Rate the story beats" teal CTA. Merged: gold line (live) + teal dots (beats) overlaid.</p>
+<div class="mockup-row">
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:40px 14px 0;overflow-y:auto;height:100%">
+<div style="text-align:center;margin-bottom:16px"><p style="font-family:'Playfair Display',serif;font-size:18px;font-weight:500;margin:0 0 3px">Your arc for Oppenheimer</p><p style="font-size:12px;color:rgba(245,240,225,0.4);margin:0">Session complete</p></div>
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.10);border-radius:10px;padding:12px;margin-bottom:12px">
+<svg width="100%" height="80" viewBox="0 0 260 80" preserveAspectRatio="none">
+<line x1="0" y1="40" x2="260" y2="40" stroke="rgba(245,240,225,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/>
+<path d="M5,40 L35,36 L65,24 L95,28 L130,16 L160,12 L195,40 L225,6 L255,18" fill="none" stroke="#C8A951" stroke-width="1.5"/>
+</svg>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:10px"><p style="font-size:24px;font-weight:500;color:#C8A951;margin:0;font-family:'Playfair Display',serif">8.0</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:3px 0 0">Your score</p></div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:10px"><p style="font-size:24px;font-weight:500;margin:0;font-family:'Playfair Display',serif">8.4</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:3px 0 0">Critics avg</p></div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px">
+<div style="flex:1;background:rgba(45,212,168,0.08);border:0.5px solid rgba(45,212,168,0.2);border-radius:10px;padding:10px"><p style="font-size:9px;color:#2DD4A8;margin:0 0 2px;font-weight:500">Your peak</p><p style="font-size:13px;font-weight:500;margin:0 0 1px">1h 42m</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:0">10/10</p></div>
+<div style="flex:1;background:rgba(226,75,74,0.08);border:0.5px solid rgba(226,75,74,0.2);border-radius:10px;padding:10px"><p style="font-size:9px;color:#E24B4A;margin:0 0 2px;font-weight:500">Your low</p><p style="font-size:13px;font-weight:500;margin:0 0 1px">1h 07m</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:0">4/10</p></div>
+</div>
+<div style="width:100%;padding:12px;background:rgba(45,212,168,0.1);border:1px solid rgba(45,212,168,0.3);border-radius:8px;font-size:13px;font-weight:500;color:#2DD4A8;text-align:center;margin-bottom:10px">Rate the story beats</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<div style="flex:1;padding:10px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;text-align:center;font-size:12px;color:#C8A951;font-weight:500">Share</div>
+<div style="flex:1;padding:10px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;text-align:center;font-size:12px;color:rgba(245,240,225,0.5);font-weight:500">Home</div>
+</div>
+</div></div>
+<p class="mockup-label">Post-Session Results</p>
+<p class="mockup-note">No beat labels on peak/low (timestamps only). Teal CTA to rate beats.</p>
+</div>
+
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:40px 14px 0;overflow-y:auto;height:100%">
+<div style="text-align:center;margin-bottom:16px"><p style="font-family:'Playfair Display',serif;font-size:18px;font-weight:500;margin:0 0 3px">Your arc for Oppenheimer</p><p style="font-size:12px;color:rgba(245,240,225,0.4);margin:0">Live reaction + story beats</p></div>
+<div style="background:rgba(245,240,225,0.03);border:0.5px solid rgba(200,169,81,0.10);border-radius:10px;padding:12px;margin-bottom:12px">
+<div style="display:flex;gap:12px;margin-bottom:6px">
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#C8A951"></div><span style="font-size:8px;color:rgba(245,240,225,0.35)">Live reaction</span></div>
+<div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;background:#2DD4A8;border-radius:50%"></div><span style="font-size:8px;color:rgba(245,240,225,0.35)">Story beats</span></div>
+</div>
+<svg width="100%" height="90" viewBox="0 0 260 90" preserveAspectRatio="none">
+<line x1="0" y1="45" x2="260" y2="45" stroke="rgba(245,240,225,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/>
+<path d="M5,42 L30,40 L60,32 L90,25 L120,30 L150,20 L180,16 L210,18 L240,40 L255,22" fill="none" stroke="#C8A951" stroke-width="1.5"/>
+<circle cx="20" cy="32" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="20" cy="32" r="1.5" fill="#2DD4A8"/>
+<circle cx="60" cy="26" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="60" cy="26" r="1.5" fill="#2DD4A8"/>
+<circle cx="100" cy="16" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="100" cy="16" r="1.5" fill="#2DD4A8"/>
+<circle cx="145" cy="30" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="145" cy="30" r="1.5" fill="#2DD4A8"/>
+<circle cx="185" cy="38" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="185" cy="38" r="1.5" fill="#2DD4A8"/>
+<circle cx="220" cy="8" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="220" cy="8" r="1.5" fill="#2DD4A8"/>
+<circle cx="245" cy="26" r="4" fill="none" stroke="#2DD4A8" stroke-width="1.5"/><circle cx="245" cy="26" r="1.5" fill="#2DD4A8"/>
+</svg>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<div style="flex:1;text-align:center;padding:12px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:10px"><p style="font-size:24px;font-weight:500;color:#C8A951;margin:0;font-family:'Playfair Display',serif">8.0</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:3px 0 0">Your score</p></div>
+<div style="flex:1;text-align:center;padding:12px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:10px"><p style="font-size:24px;font-weight:500;margin:0;font-family:'Playfair Display',serif">8.4</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:3px 0 0">Critics avg</p></div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<div style="flex:1;background:rgba(45,212,168,0.08);border:0.5px solid rgba(45,212,168,0.2);border-radius:10px;padding:10px"><p style="font-size:9px;color:#2DD4A8;margin:0 0 2px;font-weight:500">Your peak</p><p style="font-size:12px;font-weight:500;margin:0 0 1px">Trinity Test</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:0">1h 42m · 10/10</p></div>
+<div style="flex:1;background:rgba(226,75,74,0.08);border:0.5px solid rgba(226,75,74,0.2);border-radius:10px;padding:10px"><p style="font-size:9px;color:#E24B4A;margin:0 0 2px;font-weight:500">Your low</p><p style="font-size:12px;font-weight:500;margin:0 0 1px">The affair unravels</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:0">1h 07m · 6/10</p></div>
+</div>
+<p style="font-size:10px;color:rgba(245,240,225,0.3);text-align:center;margin:0 0 4px">Your live gut reaction diverged most at <span style="color:#C8A951">1h 07m</span></p>
+<p style="font-size:9px;color:rgba(245,240,225,0.2);text-align:center;margin:0 0 14px">Live: 4/10 vs Beat rating: 6/10</p>
+<div style="display:flex;gap:8px">
+<div style="flex:1;padding:10px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;text-align:center;font-size:12px;color:#C8A951;font-weight:500">Share</div>
+<div style="flex:1;padding:10px;background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;text-align:center;font-size:12px;color:rgba(245,240,225,0.5);font-weight:500">Home</div>
+</div>
+</div></div>
+<p class="mockup-label">Merged Live + Beats</p>
+<p class="mockup-note">Gold line = live arc. Teal dots = beat ratings. Beat labels appear in merged view (from slider data).</p>
+</div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 10. WRITE REVIEW ===== -->
+<p class="section-title">10. Write Review</p>
+<p class="section-desc">Overall rating slider FIRST (anchors the review). Then 8 film-specific beat sliders with timestamps and "Hated it / Neutral / Loved it" labels. Text review field. Watch date. Submit.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone" style="height:700px"><div style="padding:36px 14px 0;overflow-y:auto;height:100%;padding-bottom:20px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+<div style="width:40px;height:60px;background:rgba(30,30,60,0.8);border-radius:4px;border:0.5px solid rgba(200,169,81,0.15)"></div>
+<div><p style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:0">Write your review</p><p style="font-size:10px;color:rgba(245,240,225,0.4);margin:2px 0 0">Oppenheimer (2023) · Watched on Apr 5, 2026</p></div>
+</div>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:10px;padding:14px;margin-bottom:14px">
+<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:13px;font-weight:500">Overall rating</span><span style="font-size:22px;font-weight:500;color:#C8A951;font-family:'Playfair Display',serif">8.5</span></div>
+<div style="position:relative;height:14px;margin-bottom:4px"><div style="position:absolute;top:5px;left:0;right:0;height:3px;background:rgba(245,240,225,0.08);border-radius:2px"></div><div style="position:absolute;top:5px;left:0;width:85%;height:3px;background:#C8A951;border-radius:2px"></div><div style="position:absolute;top:0;left:85%;width:14px;height:14px;background:#C8A951;border-radius:50%;transform:translateX(-50%)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(245,240,225,0.3)"><span>1</span><span>5</span><span>10</span></div>
+</div>
+<p style="font-size:10px;color:rgba(245,240,225,0.35);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px">Story beats</p>
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+<div style="background:rgba(200,169,81,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:10px 12px">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px">The opening <span style="color:rgba(245,240,225,0.3)">0m</span></span><span style="font-size:13px;font-weight:500;color:#C8A951">7</span></div>
+<div style="position:relative;height:10px;margin-bottom:3px"><div style="position:absolute;top:3px;left:0;right:0;height:3px;background:rgba(245,240,225,0.08);border-radius:2px"></div><div style="position:absolute;top:3px;left:0;width:70%;height:3px;background:#C8A951;border-radius:2px"></div><div style="position:absolute;top:0;left:70%;width:10px;height:10px;background:#C8A951;border-radius:50%;transform:translateX(-50%)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:8px;color:rgba(245,240,225,0.2)"><span>Hated it</span><span>Neutral</span><span>Loved it</span></div>
+</div>
+<div style="background:rgba(200,169,81,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:10px 12px">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px">Manhattan Project <span style="color:rgba(245,240,225,0.3)">22m</span></span><span style="font-size:13px;font-weight:500;color:#C8A951">9</span></div>
+<div style="position:relative;height:10px;margin-bottom:3px"><div style="position:absolute;top:3px;left:0;right:0;height:3px;background:rgba(245,240,225,0.08);border-radius:2px"></div><div style="position:absolute;top:3px;left:0;width:90%;height:3px;background:#C8A951;border-radius:2px"></div><div style="position:absolute;top:0;left:90%;width:10px;height:10px;background:#C8A951;border-radius:50%;transform:translateX(-50%)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:8px;color:rgba(245,240,225,0.2)"><span>Hated it</span><span>Neutral</span><span>Loved it</span></div>
+</div>
+<div style="background:rgba(200,169,81,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:10px 12px">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px">Trinity Test <span style="color:rgba(245,240,225,0.3)">1h 42m</span></span><span style="font-size:13px;font-weight:500;color:#C8A951">10</span></div>
+<div style="position:relative;height:10px;margin-bottom:3px"><div style="position:absolute;top:3px;left:0;right:0;height:3px;background:rgba(245,240,225,0.08);border-radius:2px"></div><div style="position:absolute;top:3px;left:0;width:100%;height:3px;background:#C8A951;border-radius:2px"></div><div style="position:absolute;top:0;left:100%;width:10px;height:10px;background:#C8A951;border-radius:50%;transform:translateX(-50%)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:8px;color:rgba(245,240,225,0.2)"><span>Hated it</span><span>Neutral</span><span>Loved it</span></div>
+</div>
+</div>
+<p style="font-size:10px;color:rgba(245,240,225,0.35);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 6px">Your thoughts</p>
+<div style="background:rgba(245,240,225,0.04);border:0.5px solid rgba(200,169,81,0.12);border-radius:8px;padding:10px;min-height:50px;margin-bottom:14px"><span style="font-size:12px;color:rgba(245,240,225,0.2)">What stood out to you?</span></div>
+<button style="width:100%;padding:12px;background:#C8A951;border:none;border-radius:8px;font-size:14px;font-weight:500;color:#0D0D1A">Submit review</button>
+</div></div>
+<p class="mockup-label">Write Review</p>
+<p class="mockup-note">Overall slider FIRST. 8 film-specific beats with timestamps. "Hated it / Neutral / Loved it" labels on each. Shows 3 of 8 beats here.</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 12. SETTINGS ===== -->
+<p class="section-title">12. Settings</p>
+<p class="section-desc">Account, privacy toggles (global only, no per-review), about links, sign out.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone"><div style="padding:40px 14px 0;overflow-y:auto;height:100%">
+<p style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:0 0 20px;text-align:center">Settings</p>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid rgba(200,169,81,0.08)">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(200,169,81,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;color:#C8A951;font-weight:500">BW</div>
+<div><p style="font-size:13px;font-weight:500;margin:0">Bruce Wayne</p><p style="font-size:11px;color:rgba(245,240,225,0.4);margin:2px 0 0">bruce@wayne.com</p></div>
+<span style="font-size:11px;color:#C8A951;margin-left:auto">Edit</span>
+</div>
+<p style="font-size:9px;color:rgba(245,240,225,0.3);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px">Account</p>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between"><span style="font-size:13px">Edit profile</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between"><span style="font-size:13px">Change password</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between;margin-bottom:16px"><span style="font-size:13px">Notifications</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<p style="font-size:9px;color:rgba(245,240,225,0.3);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px">Privacy</p>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px">Public profile</span><div style="width:36px;height:20px;background:#C8A951;border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#0D0D1A;border-radius:50%;position:absolute;right:2px;top:2px"></div></div></div>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px">Allow followers</span><div style="width:36px;height:20px;background:#C8A951;border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#0D0D1A;border-radius:50%;position:absolute;right:2px;top:2px"></div></div></div>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span style="font-size:13px">Private graphs</span><div style="width:36px;height:20px;background:rgba(245,240,225,0.1);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:rgba(245,240,225,0.3);border-radius:50%;position:absolute;left:2px;top:2px"></div></div></div>
+<p style="font-size:9px;color:rgba(245,240,225,0.3);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 8px">About</p>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between"><span style="font-size:13px">How Cinemagraphs works</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<div style="padding:10px 0;border-bottom:0.5px solid rgba(245,240,225,0.04);display:flex;justify-content:space-between"><span style="font-size:13px">Contact us</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<div style="padding:10px 0;margin-bottom:20px;display:flex;justify-content:space-between"><span style="font-size:13px">Terms & privacy</span><span style="color:rgba(245,240,225,0.2)">&#8250;</span></div>
+<button style="width:100%;padding:12px;background:transparent;border:0.5px solid rgba(226,75,74,0.3);border-radius:8px;font-size:13px;color:#E24B4A;margin-bottom:10px">Sign out</button>
+<p style="font-size:10px;color:rgba(245,240,225,0.15);text-align:center;margin:0">Cinemagraphs v1.0.0</p>
+</div></div>
+<p class="mockup-label">Settings</p>
+<p class="mockup-note">Private graphs is GLOBAL toggle (no per-review). Public profile and Allow followers on by default.</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 13. ABOUT ===== -->
+<p class="section-title">13. About / Onboarding</p>
+<p class="section-desc">"How it works" page. Accessible from Settings anytime. Explains graphs, ticket stub, reviews, live react, lists.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone"><div style="padding:40px 14px 0;overflow-y:auto;height:100%;padding-bottom:20px">
+<p style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:0 0 4px;text-align:center">How it works</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.35);text-align:center;margin:0 0 20px">Everything you need to know</p>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:12px;padding:14px;margin-bottom:10px">
+<p style="font-size:13px;font-weight:500;margin:0 0 6px">Sentiment graphs</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">Every film has a sentiment arc showing how emotions shift scene by scene. Generated from hundreds of reviews using AI analysis.</p>
+</div>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:12px;padding:14px;margin-bottom:10px">
+<p style="font-size:13px;font-weight:500;margin:0 0 6px">The ticket stub</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">Tap the ticket stub on any poster to mark a film as watched. Set the date. Once you review it, it moves from Watched to Reviewed.</p>
+</div>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:12px;padding:14px;margin-bottom:10px">
+<p style="font-size:13px;font-weight:500;margin:0 0 6px">Write a review</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">Rate 8 story beats on sliders to create your personal sentiment arc. Your arc overlays on the main graph.</p>
+</div>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:12px;padding:14px;margin-bottom:10px">
+<p style="font-size:13px;font-weight:500;margin:0 0 6px">Live react</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">Start a session while watching. Use the slider and reaction buttons to capture how you feel in real-time. Rate beats after to create a combined arc.</p>
+</div>
+<div style="background:rgba(200,169,81,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:12px;padding:14px">
+<p style="font-size:13px;font-weight:500;margin:0 0 6px">Lists</p>
+<p style="font-size:11px;color:rgba(245,240,225,0.5);margin:0;line-height:1.5">Create custom film collections. Each list shows sentiment arcs so you can compare emotional journeys at a glance.</p>
+</div>
+</div></div>
+<p class="mockup-label">About / Onboarding</p>
+</div></div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 14-15. LISTS ===== -->
+<p class="section-title">14-15. List Creation + Expanded Detail</p>
+<p class="section-desc">Bottom sheet modal for creation. Expanded detail shows graph view with arc cards per film (merged/overall scores).</p>
+<div class="mockup-row">
+<div class="mockup-wrapper">
+<div class="phone">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,0.5)"></div>
+<div style="position:absolute;bottom:0;left:0;right:0;background:#0D0D1A;border-top-left-radius:16px;border-top-right-radius:16px;border-top:0.5px solid rgba(200,169,81,0.2);padding:12px 14px 24px">
+<div style="width:30px;height:3px;background:rgba(245,240,225,0.15);border-radius:2px;margin:0 auto 12px"></div>
+<div style="display:flex;justify-content:space-between;margin-bottom:16px"><p style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:0">New list</p><span style="font-size:13px;color:rgba(245,240,225,0.3)">Cancel</span></div>
+<div style="margin-bottom:12px"><label style="font-size:10px;color:rgba(245,240,225,0.5);display:block;margin-bottom:4px">Name</label><div style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.15);border-radius:8px;padding:10px 12px"><span style="font-size:12px">Best of 2024</span></div></div>
+<div style="margin-bottom:12px"><label style="font-size:10px;color:rgba(245,240,225,0.5);display:block;margin-bottom:4px">Genre tag</label>
+<div style="display:flex;flex-wrap:wrap;gap:4px"><span style="background:#C8A951;border-radius:12px;padding:4px 10px;font-size:10px;color:#0D0D1A;font-weight:500">Drama</span><span style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.12);border-radius:12px;padding:4px 10px;font-size:10px;color:rgba(245,240,225,0.5)">Action</span><span style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.12);border-radius:12px;padding:4px 10px;font-size:10px;color:rgba(245,240,225,0.5)">Horror</span><span style="background:rgba(245,240,225,0.06);border:0.5px solid rgba(200,169,81,0.12);border-radius:12px;padding:4px 10px;font-size:10px;color:rgba(245,240,225,0.5)">Sci-Fi</span></div>
+</div>
+<div style="margin-bottom:14px"><label style="font-size:10px;color:rgba(245,240,225,0.5);display:block;margin-bottom:4px">Add films</label>
+<div style="display:flex;gap:6px"><div style="width:44px;height:64px;background:rgba(30,30,60,0.6);border-radius:4px;border:0.5px solid rgba(200,169,81,0.1)"></div><div style="width:44px;height:64px;background:rgba(30,30,60,0.6);border-radius:4px;border:0.5px solid rgba(200,169,81,0.1)"></div><div style="width:44px;height:64px;border:1px dashed rgba(200,169,81,0.2);border-radius:4px;display:flex;align-items:center;justify-content:center"><span style="font-size:16px;color:rgba(200,169,81,0.3)">+</span></div></div>
+</div>
+<button style="width:100%;padding:10px;background:#C8A951;border:none;border-radius:8px;font-size:13px;font-weight:500;color:#0D0D1A">Create list</button>
+</div>
+</div>
+<p class="mockup-label">List Creation Modal</p>
+</div>
+
+<div class="mockup-wrapper">
+<div class="phone"><div style="padding:40px 14px 0;overflow-y:auto;height:100%">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg><p style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin:0">Best of 2024</p></div>
+<div style="display:flex;gap:8px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="9" y="1" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="1" y="9" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="9" y="9" width="6" height="6" rx="1" fill="rgba(255,255,255,0.3)"/></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8A951" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+</div>
+<p style="font-size:11px;color:rgba(245,240,225,0.4);margin:0 0 12px">Drama · 6 films</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><span style="font-size:12px;font-weight:500">Oppenheimer</span> <span style="font-size:10px;color:rgba(255,255,255,0.3)">2023</span></div><span style="font-size:14px;color:#C8A951;font-weight:500">8.2</span></div>
+<svg width="100%" height="36" viewBox="0 0 240 36" preserveAspectRatio="none"><line x1="0" y1="18" x2="240" y2="18" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/><polyline points="0,28 30,24 60,12 90,16 120,8 150,6 180,24 210,4 240,12" fill="none" stroke="#C8A951" stroke-width="1.5"/></svg>
+</div>
+<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><span style="font-size:12px;font-weight:500">Dune: Part Two</span> <span style="font-size:10px;color:rgba(255,255,255,0.3)">2024</span></div><span style="font-size:14px;color:#C8A951;font-weight:500">8.5</span></div>
+<svg width="100%" height="36" viewBox="0 0 240 36" preserveAspectRatio="none"><line x1="0" y1="18" x2="240" y2="18" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/><polyline points="0,30 30,26 60,20 90,14 120,10 150,8 180,6 210,4 240,6" fill="none" stroke="#C8A951" stroke-width="1.5"/></svg>
+</div>
+<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px;border:0.5px solid rgba(200,169,81,0.08)">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><span style="font-size:12px;font-weight:500">Anora</span> <span style="font-size:10px;color:rgba(255,255,255,0.3)">2024</span></div><span style="font-size:14px;color:#C8A951;font-weight:500">8.0</span></div>
+<svg width="100%" height="36" viewBox="0 0 240 36" preserveAspectRatio="none"><line x1="0" y1="18" x2="240" y2="18" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" stroke-dasharray="3,3"/><polyline points="0,16 30,12 60,10 90,20 120,24 150,30 180,10 210,8 240,14" fill="none" stroke="#C8A951" stroke-width="1.5"/></svg>
+</div>
+</div>
+</div></div>
+<p class="mockup-label">Expanded List Detail</p>
+<p class="mockup-note">Graph view active. Scores are merged/overall. Poster/graph toggle top-right.</p>
+</div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== 16. EXPANDED GRAPH ===== -->
+<p class="section-title">16. Expanded Graph View</p>
+<p class="section-desc">Full-screen from film detail. Y-axis (0-10) pinned on left during horizontal scroll. X-axis timestamps at bottom. Beat dots tappable.</p>
+<div class="mockup-row"><div class="mockup-wrapper">
+<div class="phone">
+<div style="padding:36px 0 0;height:100%">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:0 14px;margin-bottom:12px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F0E1" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg><p style="font-family:'Playfair Display',serif;font-size:14px;font-weight:500;margin:0">Oppenheimer</p><span style="font-size:16px;font-weight:500;color:#C8A951;font-family:'Playfair Display',serif">8.2</span></div>
+<div style="display:flex;gap:12px;padding:0 14px;margin-bottom:10px">
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#C8A951"></div><span style="font-size:9px;color:rgba(245,240,225,0.35)">Critics</span></div>
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#2DD4A8"></div><span style="font-size:9px;color:rgba(245,240,225,0.35)">Audience</span></div>
+<div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:2px;background:#F5F0E1"></div><span style="font-size:9px;color:rgba(245,240,225,0.35)">Merged</span></div>
+</div>
+<div style="display:flex;height:400px">
+<div style="width:28px;flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between;padding:4px 0;align-items:flex-end;padding-right:6px">
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">10</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">9</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">8</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">7</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">6</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">5</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">4</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">3</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">2</span>
+<span style="font-size:9px;color:rgba(245,240,225,0.25)">1</span>
+</div>
+<div style="flex:1;overflow-x:auto;border-left:0.5px solid rgba(245,240,225,0.08)">
+<svg width="500" height="400" viewBox="0 0 500 400">
+<line x1="0" y1="200" x2="500" y2="200" stroke="rgba(245,240,225,0.06)" stroke-width="0.5" stroke-dasharray="4,4"/>
+<path d="M10,180 L60,160 L120,100 L180,130 L240,70 L300,50 L360,180 L420,20 L480,80" fill="none" stroke="#C8A951" stroke-width="2"/>
+<path d="M10,200 L60,180 L120,120 L180,150 L240,90 L300,70 L360,160 L420,40 L480,100" fill="none" stroke="#2DD4A8" stroke-width="1.5" opacity="0.7"/>
+<path d="M10,190 L60,170 L120,110 L180,140 L240,80 L300,60 L360,170 L420,30 L480,90" fill="none" stroke="#F5F0E1" stroke-width="1" opacity="0.4"/>
+<circle cx="10" cy="180" r="4" fill="#C8A951"/><circle cx="120" cy="100" r="4" fill="#C8A951"/><circle cx="240" cy="70" r="4" fill="#C8A951"/><circle cx="300" cy="50" r="5" fill="#2DD4A8"/><circle cx="360" cy="180" r="5" fill="#E24B4A"/><circle cx="420" cy="20" r="4" fill="#C8A951"/><circle cx="480" cy="80" r="4" fill="#C8A951"/>
+<text x="10" y="395" fill="rgba(245,240,225,0.2)" font-size="9">0m</text>
+<text x="120" y="395" fill="rgba(245,240,225,0.2)" font-size="9">22m</text>
+<text x="240" y="395" fill="rgba(245,240,225,0.2)" font-size="9">49m</text>
+<text x="300" y="395" fill="rgba(245,240,225,0.2)" font-size="9">1h 07m</text>
+<text x="360" y="395" fill="rgba(245,240,225,0.2)" font-size="9">1h 42m</text>
+<text x="420" y="395" fill="rgba(245,240,225,0.2)" font-size="9">2h 15m</text>
+<text x="480" y="395" fill="rgba(245,240,225,0.2)" font-size="9">2h 45m</text>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<p class="mockup-label">Expanded Graph View</p>
+<p class="mockup-note">Y-axis pinned left. Graph scrolls horizontally. Beat dots are tappable for tooltip. Teal dot = peak, red dot = low.</p>
+</div></div>
+
+</body>
+</html>

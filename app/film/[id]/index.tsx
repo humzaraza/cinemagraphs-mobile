@@ -224,16 +224,18 @@ function MetadataRow({ film }: { film: FilmDetail }) {
 // ---------------------------------------------------------------------------
 
 function CTAButtons() {
+  const router = useRouter();
+
   return (
     <View style={styles.ctaRow}>
       <Pressable
-        onPress={() => console.log('Write review pressed')}
+        onPress={() => router.push('/review' as any)}
         style={styles.ctaPrimary}
       >
         <Text style={styles.ctaPrimaryText}>Write review</Text>
       </Pressable>
       <Pressable
-        onPress={() => console.log('Live react pressed')}
+        onPress={() => router.push('/live-react' as any)}
         style={styles.ctaSecondary}
       >
         <Text style={styles.ctaSecondaryText}>Live react</Text>
