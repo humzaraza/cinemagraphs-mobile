@@ -19,9 +19,9 @@ import Svg, {
   Text as SvgText,
   Path,
 } from 'react-native-svg';
-import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms } from '../../src/lib/api';
-import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../src/types/film';
+import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
+import { fetchFilmDetail, fetchSimilarFilms } from '../../../src/lib/api';
+import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
