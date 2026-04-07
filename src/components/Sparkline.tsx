@@ -32,8 +32,6 @@ export default function Sparkline({
   showMidline = false,
   runtimeMinutes,
 }: SparklineProps) {
-  console.log('Sparkline render', { showAxes, showMidline, width, height, pointCount: dataPoints.length });
-
   if (dataPoints.length < 2) return null;
 
   const scores = dataPoints.map((dp) => dp.score);
@@ -111,31 +109,27 @@ export default function Sparkline({
       <SvgText
         x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
         textAnchor="end" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR} fontFamily="DMSans_400Regular"
-      >
+        fill={LABEL_COLOR}      >
         {rawMax.toFixed(1)}
       </SvgText>
       <SvgText
         x={yLabelW - 4} y={chartBottom}
         textAnchor="end" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR} fontFamily="DMSans_400Regular"
-      >
+        fill={LABEL_COLOR}      >
         {rawMin.toFixed(1)}
       </SvgText>
       {/* X-axis labels */}
       <SvgText
         x={chartLeft} y={height - 2}
         textAnchor="start" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR} fontFamily="DMSans_400Regular"
-      >
+        fill={LABEL_COLOR}      >
         0m
       </SvgText>
       {runtimeMinutes != null && (
         <SvgText
           x={chartRight} y={height - 2}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
-          fill={LABEL_COLOR} fontFamily="DMSans_400Regular"
-        >
+          fill={LABEL_COLOR}        >
           {formatRuntime(runtimeMinutes)}
         </SvgText>
       )}
