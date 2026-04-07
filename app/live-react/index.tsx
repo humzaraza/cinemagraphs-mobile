@@ -10,8 +10,8 @@ export default function LiveReactScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Pressable onPress={() => router.back()} style={styles.back} hitSlop={12}>
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Pressable onPress={() => router.back()} style={styles.back}>
+        <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
           <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
         </Svg>
       </Pressable>
@@ -29,7 +29,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   back: {
-    padding: 14,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+    marginTop: 12,
   },
   center: {
     flex: 1,

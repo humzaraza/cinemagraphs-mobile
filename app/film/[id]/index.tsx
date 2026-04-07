@@ -170,10 +170,9 @@ function Backdrop({ film }: { film: FilmDetail }) {
       {/* Back chevron */}
       <Pressable
         onPress={() => router.back()}
-        style={[styles.backButton, { top: insets.top + 6 }]}
-        hitSlop={12}
+        style={[styles.backButton, { top: insets.top + 18 }]}
       >
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
           <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
         </Svg>
       </Pressable>
@@ -700,8 +699,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    left: 14,
+    left: 10,
     zIndex: 3,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   watchedBadge: {
     position: 'absolute',

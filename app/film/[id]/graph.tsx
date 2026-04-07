@@ -16,6 +16,7 @@ import Svg, {
   Circle,
   Text as SvgText,
   Rect,
+  Path,
 } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../../src/constants/theme';
 import { fetchFilmDetail } from '../../../src/lib/api';
@@ -221,10 +222,9 @@ export default function ExpandedGraphScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Line x1={15} y1={18} x2={9} y2={12} stroke={colors.ivory} strokeWidth={2} />
-            <Line x1={9} y1={12} x2={15} y2={6} stroke={colors.ivory} strokeWidth={2} />
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+            <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
           </Svg>
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
@@ -357,8 +357,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 6,
     paddingVertical: 10,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontFamily: fonts.heading,

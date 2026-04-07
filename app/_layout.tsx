@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
   PlayfairDisplay_400Regular,
@@ -32,7 +32,7 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Slot />
+      <Stack screenOptions={{ headerShown: false, gestureEnabled: true }} />
     </>
   );
 }
