@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import type { Film } from '../types/film';
+import type { Film, FilmDetail } from '../types/film';
 
 const API_BASE = 'https://cinemagraphs.ca/api';
 
@@ -56,4 +56,17 @@ export async function fetchTrendingFilms(): Promise<Film[]> {
 
 export async function fetchRecommendedFilms(): Promise<Film[]> {
   return extractFilms(await apiFetch('/films?sort=recent&limit=10'));
+}
+
+export async function fetchFilmDetail(id: string): Promise<FilmDetail | null> {
+  const res = await apiFetch(`/films/${id}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
+  // TODO: If the API doesn't support genre filtering, fall back to /films?limit=6
+  return extractFilms(
+    await apiFetch(`/films?genre=${encodeURIComponent(genre)}&limit=6&exclude=${filmId}`)
+  );
 }

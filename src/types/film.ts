@@ -21,3 +21,46 @@ export interface Film {
   director: string | null;
   sentimentGraph: SentimentGraph | null;
 }
+
+export interface StoryBeat {
+  label: string;
+  timeMidpoint: string;
+  score: number;
+}
+
+export interface PeakLowMoment {
+  label: string;
+  timeMidpoint: string;
+  score: number;
+}
+
+export interface ReviewUser {
+  id: string;
+  name: string;
+  image?: string;
+}
+
+export interface FilmReview {
+  id: string;
+  user: ReviewUser;
+  score: number;
+  content: string;
+  createdAt: string;
+}
+
+export interface DetailedSentimentGraph extends SentimentGraph {
+  storyBeats: StoryBeat[];
+  peakMoment: PeakLowMoment;
+  lowestMoment: PeakLowMoment;
+  summary: string;
+  overallSentiment: number;
+}
+
+export interface FilmDetail extends Film {
+  sentimentGraph: DetailedSentimentGraph;
+  reviews: FilmReview[];
+  director: string;
+  genres: string[];
+  runtime: number;
+  backdropPath: string;
+}

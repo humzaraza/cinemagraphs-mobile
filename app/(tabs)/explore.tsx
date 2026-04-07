@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
@@ -124,11 +125,12 @@ function TicketStub() {
 // ---------------------------------------------------------------------------
 
 function PosterCard({ film }: { film: Film }) {
+  const router = useRouter();
   const posterUri = getPosterUri(film);
 
   return (
     <Pressable
-      onPress={() => console.log('navigate to film', film.id)}
+      onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.posterCard}
     >
       {posterUri ? (
@@ -234,6 +236,7 @@ function MovieTicker({ films }: { films: Film[] }) {
 // ---------------------------------------------------------------------------
 
 function TrendingArcCard({ film }: { film: Film }) {
+  const router = useRouter();
   const posterUri = getPosterUri(film);
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
@@ -242,7 +245,7 @@ function TrendingArcCard({ film }: { film: Film }) {
   const sparklineWidth = SCREEN_WIDTH - 28 - 124;
 
   return (
-    <View style={styles.trendingCard}>
+    <Pressable onPress={() => router.push(`/film/${film.id}` as any)} style={styles.trendingCard}>
       {posterUri ? (
         <Image source={{ uri: posterUri }} style={styles.trendingPoster} resizeMode="cover" />
       ) : (
@@ -266,7 +269,7 @@ function TrendingArcCard({ film }: { film: Film }) {
       {score != null && (
         <Text style={styles.trendingScore}>{score.toFixed(1)}</Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 
