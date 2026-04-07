@@ -21,7 +21,7 @@ import Svg, {
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import { fetchFilmDetail, fetchSimilarFilms } from '../../src/lib/api';
-import type { Film, FilmDetail, FilmReview, StoryBeat } from '../../src/types/film';
+import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
@@ -43,6 +43,13 @@ const GRAPH_HEIGHT = 100;
 function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
+  return `${h}h ${m}m`;
+}
+
+function formatTimestamp(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
   return `${h}h ${m}m`;
 }
 
@@ -145,7 +152,7 @@ function DetailSkeleton() {
 function Backdrop({ film }: { film: FilmDetail }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const backdropUri = getBackdropUri(film.backdropPath);
+  const backdropUri = getBackdropUri(film.backdropUrl);
 
   return (
     <View style={styles.backdrop}>
@@ -257,21 +264,15 @@ function SentimentArc({ film }: { film: FilmDetail }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }
 
-  // Build three polyline point strings from single dataset
-  const criticsPoints = sg.dataPoints
+  // Single polyline from dataPoints
+  const points = sg.dataPoints
     .map((dp, i) => toPoint(i, dp.score))
-    .join(' ');
-  const audiencePoints = sg.dataPoints
-    .map((dp, i) => toPoint(i, dp.score + (i % 2 === 0 ? 0.3 : -0.3)))
-    .join(' ');
-  const mergedPoints = sg.dataPoints
-    .map((dp, i) => toPoint(i, dp.score + (i % 2 === 0 ? 0.15 : -0.15)))
     .join(' ');
 
   // X-axis timestamps
   const runtime = film.runtime;
-  const midTime = formatRuntime(Math.floor(runtime / 2));
-  const endTime = formatRuntime(runtime);
+  const midTime = formatTimestamp(Math.floor(runtime / 2));
+  const endTime = formatTimestamp(runtime);
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -288,22 +289,6 @@ function SentimentArc({ film }: { film: FilmDetail }) {
         onPress={() => router.push(`/film/${film.id}/graph` as any)}
         style={styles.graphCard}
       >
-        {/* Legend row */}
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: colors.gold }]} />
-            <Text style={styles.legendText}>Critics</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: colors.teal }]} />
-            <Text style={styles.legendText}>Audience</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendSwatch, { backgroundColor: colors.ivory }]} />
-            <Text style={styles.legendText}>Merged</Text>
-          </View>
-        </View>
-
         {/* SVG Graph */}
         <Svg width={graphWidth} height={GRAPH_HEIGHT}>
           {/* 1. Y-axis line */}
@@ -395,27 +380,9 @@ function SentimentArc({ film }: { film: FilmDetail }) {
             strokeDasharray="3,3"
           />
 
-          {/* Merged polyline (ivory, behind others) */}
+          {/* Sentiment polyline (gold) */}
           <Polyline
-            points={mergedPoints}
-            fill="none"
-            stroke={colors.ivory}
-            strokeWidth={0.8}
-            opacity={0.4}
-          />
-
-          {/* Audience polyline (teal) */}
-          <Polyline
-            points={audiencePoints}
-            fill="none"
-            stroke={colors.teal}
-            strokeWidth={1}
-            opacity={0.7}
-          />
-
-          {/* Critics polyline (gold, on top) */}
-          <Polyline
-            points={criticsPoints}
+            points={points}
             fill="none"
             stroke={colors.gold}
             strokeWidth={1.5}
@@ -440,20 +407,20 @@ function SentimentArc({ film }: { film: FilmDetail }) {
 
 function StoryBeatPills({ film }: { film: FilmDetail }) {
   const sg = film.sentimentGraph;
-  if (!sg?.storyBeats?.length) return null;
+  if (!sg?.dataPoints?.length) return null;
 
   const peakLabel = sg.peakMoment?.label;
   const lowLabel = sg.lowestMoment?.label;
 
-  function pillStyle(beat: StoryBeat) {
-    if (beat.label === peakLabel) {
+  function pillStyle(dp: FilmDataPoint) {
+    if (dp.label === peakLabel) {
       return {
         bg: 'rgba(45,212,168,0.1)',
         border: 'rgba(45,212,168,0.2)',
         text: colors.teal,
       };
     }
-    if (beat.label === lowLabel) {
+    if (dp.label === lowLabel) {
       return {
         bg: 'rgba(226,75,74,0.1)',
         border: 'rgba(226,75,74,0.2)',
@@ -469,7 +436,7 @@ function StoryBeatPills({ film }: { film: FilmDetail }) {
 
   return (
     <FlatList
-      data={sg.storyBeats}
+      data={sg.dataPoints}
       keyExtractor={(item, i) => `${item.label}-${i}`}
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -488,7 +455,7 @@ function StoryBeatPills({ film }: { film: FilmDetail }) {
             }}
           >
             <Text style={{ fontSize: 9, color: s.text, fontFamily: fonts.body }}>
-              {item.label} {'\u00B7'} {item.timeMidpoint}
+              {item.label} {'\u00B7'} {formatTimestamp(item.timeMidpoint)}
             </Text>
           </View>
         );
@@ -514,14 +481,14 @@ function PeakLowCards({ film }: { film: FilmDetail }) {
         <Text style={styles.peakLabel}>Peak moment</Text>
         <Text style={styles.peakTitle}>{peak.label}</Text>
         <Text style={styles.peakMeta}>
-          {peak.timeMidpoint} {'\u00B7'} {peak.score}/10
+          {formatTimestamp(peak.time)} {'\u00B7'} {peak.score}/10
         </Text>
       </View>
       <View style={styles.lowCard}>
         <Text style={styles.lowLabel}>Lowest point</Text>
         <Text style={styles.lowTitle}>{low.label}</Text>
         <Text style={styles.lowMeta}>
-          {low.timeMidpoint} {'\u00B7'} {low.score}/10
+          {formatTimestamp(low.time)} {'\u00B7'} {low.score}/10
         </Text>
       </View>
     </View>
@@ -846,25 +813,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,169,81,0.10)',
     borderRadius: 10,
     padding: 10,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 6,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  legendSwatch: {
-    width: 10,
-    height: 2,
-  },
-  legendText: {
-    fontSize: 8,
-    color: 'rgba(245,240,225,0.35)',
-    fontFamily: fonts.body,
   },
   expandRow: {
     flexDirection: 'row',

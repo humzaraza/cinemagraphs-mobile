@@ -22,15 +22,9 @@ export interface Film {
   sentimentGraph: SentimentGraph | null;
 }
 
-export interface StoryBeat {
-  label: string;
-  timeMidpoint: string;
-  score: number;
-}
-
 export interface PeakLowMoment {
+  time: number;
   label: string;
-  timeMidpoint: string;
   score: number;
 }
 
@@ -49,7 +43,6 @@ export interface FilmReview {
 }
 
 export interface DetailedSentimentGraph extends SentimentGraph {
-  storyBeats: StoryBeat[];
   peakMoment: PeakLowMoment;
   lowestMoment: PeakLowMoment;
   summary: string;
@@ -62,5 +55,5 @@ export interface FilmDetail extends Film {
   director: string;
   genres: string[];
   runtime: number;
-  backdropPath: string;
+  backdropUrl: string;
 }
