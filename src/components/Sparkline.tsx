@@ -32,6 +32,8 @@ export default function Sparkline({
   showMidline = false,
   runtimeMinutes,
 }: SparklineProps) {
+  console.log('Sparkline render', { showAxes, showMidline, width, height, pointCount: dataPoints.length });
+
   if (dataPoints.length < 2) return null;
 
   const scores = dataPoints.map((dp) => dp.score);
@@ -58,7 +60,7 @@ export default function Sparkline({
       .join(' ');
 
     return (
-      <Svg width={width} height={height}>
+      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         {showMidline && (
           <Line
             x1={0} y1={height / 2} x2={width} y2={height / 2}
@@ -94,7 +96,7 @@ export default function Sparkline({
   const midY = chartTop + ch / 2;
 
   return (
-    <Svg width={width} height={height}>
+    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
       {/* Dashed midline */}
       <Line
         x1={chartLeft} y1={midY} x2={chartRight} y2={midY}

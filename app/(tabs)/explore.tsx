@@ -251,16 +251,28 @@ function TrendingArcCard({ film }: { film: Film }) {
       <View style={styles.trendingMiddle}>
         <Text style={styles.trendingTitle} numberOfLines={1}>{film.title}</Text>
         {dataPoints && dataPoints.length >= 2 && (
-          <Sparkline
-            dataPoints={dataPoints}
-            width={sparklineWidth}
-            height={50}
-            strokeColor={colors.gold}
-            strokeWidth={1.8}
-            showAxes
-            showMidline
-            runtimeMinutes={film.runtime}
-          />
+          <>
+            {console.log('TrendingArc Sparkline props', {
+              showAxes: true,
+              showMidline: true,
+              width: sparklineWidth,
+              height: 50,
+              runtime: film.runtime,
+              minScore: Math.min(...dataPoints.map(d => d.score)).toFixed(1),
+              maxScore: Math.max(...dataPoints.map(d => d.score)).toFixed(1),
+              pointCount: dataPoints.length,
+            })}
+            <Sparkline
+              dataPoints={dataPoints}
+              width={sparklineWidth}
+              height={50}
+              strokeColor={colors.gold}
+              strokeWidth={1.8}
+              showAxes
+              showMidline
+              runtimeMinutes={film.runtime}
+            />
+          </>
         )}
       </View>
       {score != null && (
@@ -527,7 +539,7 @@ const styles = StyleSheet.create({
   },
   trendingCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: borderRadius.lg,
@@ -556,5 +568,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 16,
     color: colors.gold,
+    alignSelf: 'center',
   },
 });
