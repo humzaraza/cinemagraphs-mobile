@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -286,17 +286,29 @@ export default function ExpandedGraphScreen() {
                 />
               )}
 
-              {/* Beat dots */}
-              {dataPoints.map((dp, i) => (
-                <Circle
-                  key={i}
-                  cx={getX(i)}
-                  cy={getY(dp.score)}
-                  r={dp.label === peakLabel || dp.label === lowLabel ? 5 : 4}
-                  fill={dotColor(dp)}
-                  onPress={() => handleDotPress(i)}
-                />
-              ))}
+              {/* Beat dots with invisible hit areas */}
+              {dataPoints.map((dp, i) => {
+                const cx = getX(i);
+                const cy = getY(dp.score);
+                return (
+                  <React.Fragment key={i}>
+                    <Circle
+                      cx={cx}
+                      cy={cy}
+                      r={20}
+                      fill="transparent"
+                      onPress={() => handleDotPress(i)}
+                    />
+                    <Circle
+                      cx={cx}
+                      cy={cy}
+                      r={5}
+                      fill={dotColor(dp)}
+                      onPress={() => handleDotPress(i)}
+                    />
+                  </React.Fragment>
+                );
+              })}
 
               {/* X-axis timestamps */}
               {dataPoints.map((dp, i) => {
