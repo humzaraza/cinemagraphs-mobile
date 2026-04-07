@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
@@ -206,6 +207,9 @@ function TrendingArcCard({ film }: { film: Film }) {
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 
+  // Card padding (10) + poster (44) + gaps (10+10) + score (~40) + card padding (10) = ~124
+  const sparklineWidth = SCREEN_WIDTH - 28 - 124;
+
   return (
     <View style={styles.trendingCard}>
       {posterUri ? (
@@ -218,7 +222,7 @@ function TrendingArcCard({ film }: { film: Film }) {
         {dataPoints && dataPoints.length >= 2 && (
           <Sparkline
             dataPoints={dataPoints}
-            width={160}
+            width={sparklineWidth}
             height={28}
             strokeColor={colors.gold}
             strokeWidth={1.5}
@@ -269,6 +273,7 @@ function TrendingCardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function ExploreScreen() {
+  const insets = useSafeAreaInsets();
   const [tickerFilms, setTickerFilms] = useState<Film[]>([]);
   const [nowPlaying, setNowPlaying] = useState<Film[]>([]);
   const [trending, setTrending] = useState<Film[]>([]);
@@ -312,7 +317,7 @@ export default function ExploreScreen() {
   const keyExtractor = useCallback((item: Film) => item.id, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Sticky ticker */}
       {loadingTicker ? <TickerSkeleton /> : <MovieTicker films={tickerFilms} />}
 
@@ -496,6 +501,8 @@ const styles = StyleSheet.create({
   trendingPoster: {
     width: 44,
     height: 64,
+    minWidth: 44,
+    maxWidth: 44,
     borderRadius: borderRadius.sm,
     backgroundColor: '#1a1a2e',
   },

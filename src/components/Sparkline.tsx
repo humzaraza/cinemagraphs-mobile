@@ -22,10 +22,19 @@ export default function Sparkline({
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
 
+  const scores = dataPoints.map((dp) => dp.score);
+  const rawMin = Math.min(...scores);
+  const rawMax = Math.max(...scores);
+  const range = rawMax - rawMin;
+  const yPad = range < 0.5 ? 0.5 : range * 0.15;
+  const yMin = rawMin - yPad;
+  const yMax = rawMax + yPad;
+  const yRange = yMax - yMin || 1;
+
   const points = dataPoints
     .map((dp, i) => {
       const x = padding + (i / (dataPoints.length - 1)) * chartWidth;
-      const y = padding + (1 - dp.score / 10) * chartHeight;
+      const y = padding + (1 - (dp.score - yMin) / yRange) * chartHeight;
       return `${x},${y}`;
     })
     .join(' ');
