@@ -15,6 +15,7 @@ export interface Film {
   title: string;
   year: number;
   posterPath: string | null;
+  posterUrl: string | null;
   runtime: number | null;
   genres: string[];
   director: string | null;

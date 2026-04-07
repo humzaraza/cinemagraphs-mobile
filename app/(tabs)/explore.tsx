@@ -27,6 +27,24 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_WIDTH = 90;
 const POSTER_HEIGHT = 130;
 const TICKER_SPEED = 32000;
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w185';
+
+function getPosterUri(film: Film): string | null {
+  const path = film.posterUrl || film.posterPath;
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${TMDB_IMAGE_BASE}${path}`;
+}
+
+function calcDelta(dataPoints: Array<{ score: number }>): number | null {
+  if (dataPoints.length < 4) return null;
+  const sampleSize = Math.max(2, Math.floor(dataPoints.length * 0.25));
+  const firstAvg =
+    dataPoints.slice(0, sampleSize).reduce((s, d) => s + d.score, 0) / sampleSize;
+  const lastAvg =
+    dataPoints.slice(-sampleSize).reduce((s, d) => s + d.score, 0) / sampleSize;
+  return lastAvg - firstAvg;
+}
 
 // ---------------------------------------------------------------------------
 // Skeleton placeholder with pulse animation
@@ -106,9 +124,7 @@ function TicketStub() {
 // ---------------------------------------------------------------------------
 
 function PosterCard({ film }: { film: Film }) {
-  const posterUri = film.posterPath
-    ? `https://image.tmdb.org/t/p/w185${film.posterPath}`
-    : null;
+  const posterUri = getPosterUri(film);
 
   return (
     <Pressable
@@ -135,22 +151,38 @@ function TickerItem({ film }: { film: Film }) {
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 
-  const sparkColor = score != null && score >= 5 ? colors.positiveGreen : colors.negativeRed;
+  if (!dataPoints || dataPoints.length < 2) {
+    return (
+      <View style={styles.tickerItem}>
+        <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
+        {score != null && (
+          <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
+        )}
+      </View>
+    );
+  }
+
+  const delta = calcDelta(dataPoints);
+  const isPositive = delta != null && delta >= 0;
+  const trendColor = isPositive ? colors.positiveGreen : colors.negativeRed;
 
   return (
     <View style={styles.tickerItem}>
       <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
-      {dataPoints && dataPoints.length >= 2 && (
-        <Sparkline
-          dataPoints={dataPoints}
-          width={40}
-          height={20}
-          strokeColor={sparkColor}
-          strokeWidth={1.2}
-        />
-      )}
+      <Sparkline
+        dataPoints={dataPoints}
+        width={40}
+        height={20}
+        strokeColor={trendColor}
+        strokeWidth={1.2}
+      />
       {score != null && (
         <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
+      )}
+      {delta != null && (
+        <Text style={[styles.tickerDelta, { color: trendColor }]}>
+          {isPositive ? '+' : ''}{delta.toFixed(1)}
+        </Text>
       )}
     </View>
   );
@@ -201,9 +233,7 @@ function MovieTicker({ films }: { films: Film[] }) {
 // ---------------------------------------------------------------------------
 
 function TrendingArcCard({ film }: { film: Film }) {
-  const posterUri = film.posterPath
-    ? `https://image.tmdb.org/t/p/w185${film.posterPath}`
-    : null;
+  const posterUri = getPosterUri(film);
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 
@@ -437,6 +467,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 13,
     color: colors.gold,
+  },
+  tickerDelta: {
+    fontFamily: fonts.body,
+    fontSize: 11,
   },
 
   // Poster cards
