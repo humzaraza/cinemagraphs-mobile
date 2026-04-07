@@ -94,3 +94,36 @@ export async function fetchSimilarFilms(filmId: string, genre: string): Promise<
     await apiFetch(`/films?genre=${encodeURIComponent(genre)}&limit=6&exclude=${filmId}`)
   );
 }
+
+// ---------------------------------------------------------------------------
+// Profile placeholders (return mock data until auth is wired in Prompt 9)
+// ---------------------------------------------------------------------------
+
+import {
+  mockUser,
+  mockFilms,
+  mockWatchlist,
+  type MockUser,
+  type MockFilm,
+  type MockWatchlistFilm,
+} from '../data/mockProfile';
+
+// TODO: Replace with GET /api/user/[id] after auth (Prompt 9)
+export async function fetchUserProfile(): Promise<MockUser> {
+  return mockUser;
+}
+
+// TODO: Replace with GET /api/user/[id]/films after auth (Prompt 9)
+export async function fetchUserFilms(): Promise<MockFilm[]> {
+  return mockFilms;
+}
+
+// TODO: Replace with GET /api/user/[id]/watchlist after auth (Prompt 9)
+export async function fetchUserWatchlist(): Promise<MockWatchlistFilm[]> {
+  return mockWatchlist;
+}
+
+// TODO: Replace with GET /api/user/[id]/lists after auth (Prompt 9)
+export async function fetchUserLists(): Promise<any[]> {
+  return [];
+}
