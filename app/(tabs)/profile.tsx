@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  FlatList,
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -216,6 +215,16 @@ function ViewToggle({
 // Poster grid item
 // ---------------------------------------------------------------------------
 
+function PosterFallback({ title }: { title: string }) {
+  return (
+    <View style={[styles.posterImage, styles.posterFallback]}>
+      <Text style={styles.posterFallbackText} numberOfLines={3}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 function PosterCell({
   film,
   showSparkline,
@@ -224,16 +233,28 @@ function PosterCell({
   showSparkline: boolean;
 }) {
   const router = useRouter();
+  const [imgError, setImgError] = useState(false);
+
+  const handlePress = () => {
+    try {
+      router.push(`/(tabs)/film/${film.id}` as any);
+    } catch (e) {
+      console.log('Navigation error:', e);
+    }
+  };
+
   return (
-    <Pressable
-      onPress={() => router.push(`/(tabs)/film/${film.id}` as any)}
-      style={styles.posterCell}
-    >
-      <Image
-        source={{ uri: film.posterUrl }}
-        style={styles.posterImage}
-        resizeMode="cover"
-      />
+    <Pressable onPress={handlePress} style={styles.posterCell}>
+      {imgError ? (
+        <PosterFallback title={film.title} />
+      ) : (
+        <Image
+          source={{ uri: film.posterUrl }}
+          style={styles.posterImage}
+          resizeMode="cover"
+          onError={() => setImgError(true)}
+        />
+      )}
       {showSparkline && (
         <>
           <View style={styles.posterSparkline}>
@@ -278,11 +299,16 @@ function ArcCard({ film }: { film: MockFilm }) {
 
   const midY = graphH / 2;
 
+  const handlePress = () => {
+    try {
+      router.push(`/(tabs)/film/${film.id}` as any);
+    } catch (e) {
+      console.log('Navigation error:', e);
+    }
+  };
+
   return (
-    <Pressable
-      onPress={() => router.push(`/(tabs)/film/${film.id}` as any)}
-      style={styles.arcCard}
-    >
+    <Pressable onPress={handlePress} style={styles.arcCard}>
       <View style={styles.arcHeader}>
         <View style={styles.arcTitleRow}>
           <Text style={styles.arcTitle}>{film.title}</Text>
@@ -325,16 +351,28 @@ function ArcCard({ film }: { film: MockFilm }) {
 
 function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
   const router = useRouter();
+  const [imgError, setImgError] = useState(false);
+
+  const handlePress = () => {
+    try {
+      router.push(`/(tabs)/film/${film.id}` as any);
+    } catch (e) {
+      console.log('Navigation error:', e);
+    }
+  };
+
   return (
-    <Pressable
-      onPress={() => router.push(`/(tabs)/film/${film.id}` as any)}
-      style={styles.posterCell}
-    >
-      <Image
-        source={{ uri: film.posterUrl }}
-        style={styles.posterImage}
-        resizeMode="cover"
-      />
+    <Pressable onPress={handlePress} style={styles.posterCell}>
+      {imgError ? (
+        <PosterFallback title={film.title} />
+      ) : (
+        <Image
+          source={{ uri: film.posterUrl }}
+          style={styles.posterImage}
+          resizeMode="cover"
+          onError={() => setImgError(true)}
+        />
+      )}
     </Pressable>
   );
 }
@@ -584,8 +622,16 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <View style={styles.collapsedHeader}>
-            <Avatar size={44} initial={user.avatarInitial} />
-            <Text style={styles.collapsedName}>{user.name}</Text>
+            <View style={styles.collapsedCenter}>
+              <Avatar size={44} initial={user.avatarInitial} />
+              <Text style={styles.collapsedName}>{user.name}</Text>
+            </View>
+            <Pressable
+              onPress={() => router.push('/settings' as any)}
+              style={styles.collapsedGear}
+            >
+              <GearIcon />
+            </Pressable>
           </View>
         )}
 
@@ -644,10 +690,23 @@ const styles = StyleSheet.create({
 
   // ---- Collapsed header (non-hub) ----
   collapsedHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
     marginBottom: 12,
+  },
+  collapsedCenter: {
+    alignItems: 'center',
     gap: 4,
+  },
+  collapsedGear: {
+    position: 'absolute',
+    right: 0,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   collapsedName: {
     fontFamily: fonts.bodyMedium,
@@ -848,6 +907,18 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.12)',
   },
+  posterFallback: {
+    backgroundColor: 'rgba(30,30,60,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  posterFallbackText: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: 'rgba(245,240,225,0.3)',
+    textAlign: 'center',
+  },
   posterSparkline: {
     marginTop: 4,
   },
@@ -894,7 +965,7 @@ const styles = StyleSheet.create({
   arcScore: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
-    color: colors.gold,
+    color: colors.teal,
   },
   arcTimestamps: {
     flexDirection: 'row',
