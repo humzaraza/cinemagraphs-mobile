@@ -690,6 +690,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 8,
     marginBottom: 12,
+    minHeight: 70,
   },
   collapsedCenter: {
     alignItems: 'center',
@@ -703,6 +704,7 @@ const styles = StyleSheet.create({
     width: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   collapsedName: {
     fontFamily: fonts.bodyMedium,
@@ -902,6 +904,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.12)',
+    backgroundColor: 'rgba(30,30,60,0.8)',
   },
   posterFallback: {
     backgroundColor: 'rgba(30,30,60,0.8)',
