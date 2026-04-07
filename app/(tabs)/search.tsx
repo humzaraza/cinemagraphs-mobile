@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import { searchFilms } from '../../src/lib/api';
+import { fetchAllFilms } from '../../src/lib/api';
 import Sparkline from '../../src/components/Sparkline';
 import type { Film } from '../../src/types/film';
 
@@ -215,37 +215,52 @@ function ResultCard({ film }: { film: Film }) {
 // Main screen
 // ---------------------------------------------------------------------------
 
+function normalizeTitle(title: string): string {
+  return title.replace(/\\"/g, '').replace(/"/g, '').toLowerCase();
+}
+
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const [allFilms, setAllFilms] = useState<Film[]>([]);
   const [results, setResults] = useState<Film[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [loadingFilms, setLoadingFilms] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSearching = focused || query.length > 0;
 
-  const doSearch = useCallback((term: string) => {
-    if (!term.trim()) {
-      setResults([]);
-      setHasSearched(false);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    searchFilms(term.trim())
-      .then((films) => {
-        setResults(films);
-        setHasSearched(true);
-      })
-      .catch(() => {
-        setResults([]);
-        setHasSearched(true);
-      })
-      .finally(() => setSearching(false));
+  // Fetch all films once on mount
+  useEffect(() => {
+    fetchAllFilms()
+      .then(setAllFilms)
+      .catch(() => {})
+      .finally(() => setLoadingFilms(false));
   }, []);
+
+  // Client-side filter
+  const doSearch = useCallback(
+    (term: string) => {
+      if (!term.trim()) {
+        setResults([]);
+        setHasSearched(false);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      const lower = term.trim().toLowerCase();
+      const matched = allFilms.filter((f) =>
+        normalizeTitle(f.title).includes(lower)
+      );
+      setResults(matched);
+      setHasSearched(true);
+      setSearching(false);
+    },
+    [allFilms]
+  );
 
   const onChangeText = useCallback(
     (text: string) => {

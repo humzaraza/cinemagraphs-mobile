@@ -64,8 +64,16 @@ export async function fetchFilmDetail(id: string): Promise<FilmDetail | null> {
   return res.json();
 }
 
-export async function searchFilms(query: string): Promise<Film[]> {
-  return extractFilms(await apiFetch(`/films?search=${encodeURIComponent(query)}`));
+export async function fetchAllFilms(): Promise<Film[]> {
+  const all: Film[] = [];
+  let page = 1;
+  while (true) {
+    const batch = await extractFilms(await apiFetch(`/films?limit=50&page=${page}`));
+    all.push(...batch);
+    if (batch.length < 50) break;
+    page++;
+  }
+  return all;
 }
 
 export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
