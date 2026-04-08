@@ -58,6 +58,25 @@ export interface ReviewSubmission {
   beatRatings?: Record<string, number>;
 }
 
+// Live Reactions
+export type ReactionType = 'up' | 'down' | 'wow' | 'shock' | 'funny';
+
+export interface ReactionPoint {
+  timestamp: number; // elapsed seconds
+  score: number;
+  reaction: ReactionType;
+}
+
+export interface LiveReactionSession {
+  id: string;
+  userId: string;
+  filmId: string;
+  startedAt: string;
+  lastReactionAt: string;
+  completionRate: number;
+  reactions?: ReactionPoint[];
+}
+
 export interface FilmDetail extends Film {
   sentimentGraph: DetailedSentimentGraph;
   reviews: FilmReview[];

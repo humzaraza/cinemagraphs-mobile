@@ -29,7 +29,7 @@ const POSTER_W = (SCREEN_WIDTH - POSTER_PAD * 2 - POSTER_GAP * (POSTER_COLS - 1)
 const POSTER_H = POSTER_W * 1.5;
 
 type SubTab = 'profile' | 'my-films' | 'lists' | 'watchlist';
-type FilmFilter = 'reviewed' | 'watched';
+type FilmFilter = 'reviewed' | 'watched' | 'reactions';
 type ViewMode = 'poster' | 'graph';
 
 // ---------------------------------------------------------------------------
@@ -435,7 +435,8 @@ export default function ProfileScreen() {
 
   const reviewed = films.filter((f) => f.status === 'reviewed');
   const watched = films.filter((f) => f.status === 'watched' || f.status === 'reviewed');
-  const activeFilms = filmFilter === 'reviewed' ? reviewed : watched;
+  const liveReacted = films.filter((f) => f.status === 'live-reacted');
+  const activeFilms = filmFilter === 'reviewed' ? reviewed : filmFilter === 'reactions' ? liveReacted : watched;
 
   // -----------------------------------------------------------------------
   // Profile hub (sub-tab: profile)
@@ -517,6 +518,7 @@ export default function ProfileScreen() {
           options={[
             { key: 'reviewed' as FilmFilter, label: 'Reviewed' },
             { key: 'watched' as FilmFilter, label: 'Watched' },
+            { key: 'reactions' as FilmFilter, label: 'Reactions' },
           ]}
           active={filmFilter}
           onSelect={setFilmFilter}
@@ -527,7 +529,13 @@ export default function ProfileScreen() {
       </View>
 
       {/* Content */}
-      {filmFilter === 'reviewed' && viewMode === 'graph' ? (
+      {filmFilter === 'reactions' ? (
+        <View style={styles.posterGrid}>
+          {activeFilms.map((f) => (
+            <PosterCell key={f.id} film={f} showSparkline={false} />
+          ))}
+        </View>
+      ) : filmFilter === 'reviewed' && viewMode === 'graph' ? (
         <View style={styles.arcList}>
           {(() => {
             const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];

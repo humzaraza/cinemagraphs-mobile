@@ -6,7 +6,7 @@ export interface MockUser {
   bio: string;
   avatarInitial: string;
   stats: { films: number; following: number; followers: number };
-  counts: { reviewed: number; watched: number; watchlist: number; lists: number };
+  counts: { reviewed: number; watched: number; watchlist: number; lists: number; liveReacted: number };
 }
 
 export interface MockFilm {
@@ -16,7 +16,7 @@ export interface MockFilm {
   posterUrl: string;
   score: number;
   personalScore: number;
-  status: 'watched' | 'reviewed';
+  status: 'watched' | 'reviewed' | 'live-reacted';
   runtime: number;
   genres: string[];
   sparklineData: number[];
@@ -37,7 +37,7 @@ export const mockUser: MockUser = {
   bio: 'Film sentiment, beat by beat',
   avatarInitial: 'H',
   stats: { films: 42, following: 128, followers: 89 },
-  counts: { reviewed: 24, watched: 18, watchlist: 7, lists: 3 },
+  counts: { reviewed: 24, watched: 18, watchlist: 7, lists: 3, liveReacted: 3 },
 };
 
 export const mockFilms: MockFilm[] = [
@@ -180,6 +180,49 @@ export const mockFilms: MockFilm[] = [
     sparklineData: [6, 7, 8, 7, 6, 5, 8],
     dominantColor: '#4A2C7A',
     dateWatched: '2026-02-01',
+  },
+  // Live-reacted films
+  {
+    id: 'oppenheimer-2023',
+    title: 'Oppenheimer',
+    year: 2023,
+    posterUrl: 'https://image.tmdb.org/t/p/w185/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+    score: 8.6,
+    personalScore: 8.0,
+    status: 'live-reacted',
+    runtime: 180,
+    genres: ['Drama', 'History'],
+    sparklineData: [5, 5.5, 6, 7, 7.5, 8, 9, 8],
+    dominantColor: '#8B4513',
+    dateWatched: '2026-04-05',
+  },
+  {
+    id: 'dune-part-two-2024',
+    title: 'Dune: Part Two',
+    year: 2024,
+    posterUrl: 'https://image.tmdb.org/t/p/w185/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+    score: 8.4,
+    personalScore: 9.0,
+    status: 'live-reacted',
+    runtime: 166,
+    genres: ['Sci-Fi', 'Adventure'],
+    sparklineData: [5, 6, 7, 7.5, 8, 9, 10, 9.5],
+    dominantColor: '#B8860B',
+    dateWatched: '2026-03-28',
+  },
+  {
+    id: 'poor-things-2023',
+    title: 'Poor Things',
+    year: 2023,
+    posterUrl: 'https://image.tmdb.org/t/p/w185/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg',
+    score: 8.1,
+    personalScore: 7.5,
+    status: 'live-reacted',
+    runtime: 141,
+    genres: ['Comedy', 'Drama', 'Sci-Fi'],
+    sparklineData: [5, 5.5, 6, 7, 8, 7.5, 7],
+    dominantColor: '#2E4057',
+    dateWatched: '2026-04-03',
   },
 ];
 

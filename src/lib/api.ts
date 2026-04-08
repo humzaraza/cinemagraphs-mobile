@@ -96,6 +96,45 @@ export async function fetchSimilarFilms(filmId: string, genre: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// Live Reactions
+// ---------------------------------------------------------------------------
+
+export async function createReactionSession(filmId: string, abandonPrevious?: boolean) {
+  const res = await apiFetch(`/films/${filmId}/reaction-sessions`, {
+    method: 'POST',
+    body: JSON.stringify({ abandonPrevious }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create session');
+  }
+  return res.json();
+}
+
+export async function getIncompleteSession(filmId: string) {
+  const res = await apiFetch(`/films/${filmId}/reaction-sessions`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function postReaction(filmId: string, data: {
+  reaction: string;
+  sessionTimestamp: number;
+  currentScore: number;
+  sessionId: string;
+}) {
+  const res = await apiFetch(`/films/${filmId}/reactions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to post reaction');
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
 // Profile placeholders (return mock data until auth is wired in Prompt 9)
 // ---------------------------------------------------------------------------
 

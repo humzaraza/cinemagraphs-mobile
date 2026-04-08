@@ -234,7 +234,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
         <Text style={styles.ctaPrimaryText}>Write review</Text>
       </Pressable>
       <Pressable
-        onPress={() => router.push('/live-react' as any)}
+        onPress={() => router.push({ pathname: '/live-react', params: { filmId } } as any)}
         style={styles.ctaSecondary}
       >
         <Text style={styles.ctaSecondaryText}>Live react</Text>
