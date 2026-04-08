@@ -12,6 +12,8 @@ interface SparklineProps {
   runtimeMinutes?: number | null;
   peakDotColor?: string;
   peakDotRadius?: number;
+  lowDotColor?: string;
+  lowDotRadius?: number;
 }
 
 function formatRuntime(minutes: number): string {
@@ -35,6 +37,8 @@ export default function Sparkline({
   runtimeMinutes,
   peakDotColor,
   peakDotRadius,
+  lowDotColor,
+  lowDotRadius,
 }: SparklineProps) {
   if (dataPoints.length < 2) return null;
 
@@ -66,6 +70,11 @@ export default function Sparkline({
     const peakX = pad + (peakIdx / (dataPoints.length - 1)) * cw;
     const peakY = pad + (1 - (scores[peakIdx] - yMin) / yRange) * ch;
 
+    let lowIdx = 0;
+    scores.forEach((s, i) => { if (s < scores[lowIdx]) lowIdx = i; });
+    const lowX = pad + (lowIdx / (dataPoints.length - 1)) * cw;
+    const lowY = pad + (1 - (scores[lowIdx] - yMin) / yRange) * ch;
+
     return (
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         {showMidline && (
@@ -80,6 +89,9 @@ export default function Sparkline({
         />
         {peakDotColor && (
           <Circle cx={peakX} cy={peakY} r={peakDotRadius ?? 3} fill={peakDotColor} />
+        )}
+        {lowDotColor && (
+          <Circle cx={lowX} cy={lowY} r={lowDotRadius ?? 3} fill={lowDotColor} />
         )}
       </Svg>
     );
@@ -108,6 +120,11 @@ export default function Sparkline({
   const peakX = chartLeft + (peakIdx / (dataPoints.length - 1)) * cw;
   const peakY = chartTop + (1 - (scores[peakIdx] - yMin) / yRange) * ch;
 
+  let lowIdx = 0;
+  scores.forEach((s, i) => { if (s < scores[lowIdx]) lowIdx = i; });
+  const lowX = chartLeft + (lowIdx / (dataPoints.length - 1)) * cw;
+  const lowY = chartTop + (1 - (scores[lowIdx] - yMin) / yRange) * ch;
+
   const midY = chartTop + ch / 2;
 
   return (
@@ -129,6 +146,10 @@ export default function Sparkline({
       {/* Peak dot */}
       {peakDotColor && (
         <Circle cx={peakX} cy={peakY} r={peakDotRadius ?? 3} fill={peakDotColor} />
+      )}
+      {/* Low dot */}
+      {lowDotColor && (
+        <Circle cx={lowX} cy={lowY} r={lowDotRadius ?? 3} fill={lowDotColor} />
       )}
       {/* Y-axis labels */}
       <SvgText

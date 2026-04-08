@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -322,7 +322,10 @@ function ArcCard({ film }: { film: MockFilm }) {
 
       {/* Title + graph */}
       <View style={styles.arcMiddle}>
-        <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
+        <View style={styles.arcTitleRow}>
+          <Text style={styles.arcDay}>{parseInt(film.dateWatched.slice(8), 10)}</Text>
+          <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
+        </View>
         <Sparkline
           dataPoints={film.sparklineData.map((s) => ({ score: s }))}
           width={sparklineWidth}
@@ -334,6 +337,8 @@ function ArcCard({ film }: { film: MockFilm }) {
           runtimeMinutes={film.runtime}
           peakDotColor={colors.teal}
           peakDotRadius={3.5}
+          lowDotColor="#E24B4A"
+          lowDotRadius={3.5}
         />
       </View>
 
@@ -527,9 +532,30 @@ export default function ProfileScreen() {
       {/* Content */}
       {filmFilter === 'reviewed' && viewMode === 'graph' ? (
         <View style={styles.arcList}>
-          {activeFilms.map((f) => (
-            <ArcCard key={f.id} film={f} />
-          ))}
+          {(() => {
+            const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+            const sorted = [...activeFilms].sort((a, b) => b.dateWatched.localeCompare(a.dateWatched));
+            let currentMonth = '';
+            const elements: React.ReactElement[] = [];
+            sorted.forEach((f) => {
+              const [year, month] = f.dateWatched.split('-');
+              const monthLabel = `${MONTHS[parseInt(month, 10) - 1]} ${year}`;
+              if (monthLabel !== currentMonth) {
+                const isFirst = currentMonth === '';
+                currentMonth = monthLabel;
+                elements.push(
+                  <Text
+                    key={`month-${monthLabel}`}
+                    style={[styles.monthHeader, !isFirst && { marginTop: 16 }]}
+                  >
+                    {monthLabel}
+                  </Text>
+                );
+              }
+              elements.push(<ArcCard key={f.id} film={f} />);
+            });
+            return elements;
+          })()}
         </View>
       ) : (
         <View style={styles.posterGrid}>
@@ -907,6 +933,12 @@ const styles = StyleSheet.create({
   arcList: {
     gap: 10,
   },
+  monthHeader: {
+    fontFamily: fonts.headingBold,
+    fontSize: 14,
+    color: colors.gold,
+    marginBottom: 8,
+  },
   arcCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -939,11 +971,22 @@ const styles = StyleSheet.create({
   arcMiddle: {
     flex: 1,
   },
+  arcTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 4,
+  },
+  arcDay: {
+    fontFamily: fonts.headingBold,
+    fontSize: 14,
+    color: colors.gold,
+  },
   arcTitle: {
     fontFamily: fonts.headingBold,
     fontSize: 14,
     color: colors.ivory,
-    marginBottom: 4,
+    flex: 1,
   },
   arcScore: {
     fontFamily: fonts.headingBold,
