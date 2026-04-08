@@ -233,12 +233,15 @@ function CTAButtons({ filmId }: { filmId: string }) {
       >
         <Text style={styles.ctaPrimaryText}>Write review</Text>
       </Pressable>
+      {/* TODO: Unhide when live reactions are ready */}
+      {false && (
       <Pressable
         onPress={() => router.push({ pathname: '/live-react', params: { filmId } } as any)}
         style={styles.ctaSecondary}
       >
         <Text style={styles.ctaSecondaryText}>Live react</Text>
       </Pressable>
+      )}
     </View>
   );
 }

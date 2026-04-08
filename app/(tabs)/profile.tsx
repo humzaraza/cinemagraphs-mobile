@@ -515,10 +515,11 @@ export default function ProfileScreen() {
       {/* Filter + view toggle row */}
       <View style={styles.filterRow}>
         <PillToggle
+          // TODO: Unhide when live reactions are ready
+          // { key: 'reactions' as FilmFilter, label: 'Reactions' },
           options={[
             { key: 'reviewed' as FilmFilter, label: 'Reviewed' },
             { key: 'watched' as FilmFilter, label: 'Watched' },
-            { key: 'reactions' as FilmFilter, label: 'Reactions' },
           ]}
           active={filmFilter}
           onSelect={setFilmFilter}
