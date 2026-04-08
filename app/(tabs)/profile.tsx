@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Line, Polyline } from 'react-native-svg';
+import Svg, { Path, Line, Polyline, Circle } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import {
@@ -283,21 +284,34 @@ function formatRuntime(minutes: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+const ARC_CARD_H = 96;
+
 function ArcCard({ film }: { film: MockFilm }) {
   const router = useRouter();
-  const cardW = SCREEN_WIDTH - POSTER_PAD * 2 - 24;
-  const graphH = 44;
+  const [imgError, setImgError] = useState(false);
+  const cardW = SCREEN_WIDTH - POSTER_PAD * 2;
+  const graphW = cardW * 0.45;
+  const graphH = 50;
   const n = film.sparklineData.length;
+  const padL = 20;
+  const plotW = graphW - padL - 8;
+
+  // Find peak index
+  let peakIdx = 0;
+  film.sparklineData.forEach((s, i) => {
+    if (s > film.sparklineData[peakIdx]) peakIdx = i;
+  });
+
+  const getX = (i: number) => padL + (i / Math.max(1, n - 1)) * plotW;
+  const getY = (s: number) => 4 + (1 - Math.max(0, Math.min(10, s)) / 10) * (graphH - 8);
 
   const points = film.sparklineData
-    .map((s, i) => {
-      const x = (i / Math.max(1, n - 1)) * cardW;
-      const y = (1 - Math.max(0, Math.min(10, s)) / 10) * graphH;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
+    .map((s, i) => `${getX(i).toFixed(1)},${getY(s).toFixed(1)}`)
     .join(' ');
 
-  const midY = graphH / 2;
+  const midY = 4 + (graphH - 8) / 2;
+  const minScore = Math.min(...film.sparklineData);
+  const maxScore = Math.max(...film.sparklineData);
 
   return (
     <Pressable
@@ -307,37 +321,59 @@ function ArcCard({ film }: { film: MockFilm }) {
       }}
       style={styles.arcCard}
     >
-      <View style={styles.arcHeader}>
-        <View style={styles.arcTitleRow}>
-          <Text style={styles.arcTitle}>{film.title}</Text>
-          <Text style={styles.arcYear}> {film.year}</Text>
+      {/* Layer 1: Poster background */}
+      {!imgError && (
+        <Image
+          source={{ uri: film.posterUrl }}
+          style={styles.arcPosterBg}
+          resizeMode="cover"
+          onError={() => setImgError(true)}
+        />
+      )}
+
+      {/* Layer 2: Gradient overlay */}
+      <LinearGradient
+        colors={['rgba(13,13,26,0.88)', 'rgba(13,13,26,0.4)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.arcGradient}
+      />
+
+      {/* Layer 3: Content */}
+      <View style={styles.arcContent}>
+        {/* Left side: title + year */}
+        <View style={styles.arcLeft}>
+          <Text style={styles.arcTitle} numberOfLines={2}>{film.title}</Text>
+          <Text style={styles.arcYear}>{film.year}</Text>
         </View>
-        <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
-      </View>
-      <Svg width={cardW} height={graphH}>
-        <Line
-          x1={0}
-          y1={midY}
-          x2={cardW}
-          y2={midY}
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={0.5}
-          strokeDasharray="3,3"
-        />
-        <Polyline
-          points={points}
-          fill="none"
-          stroke={colors.gold}
-          strokeWidth={1.8}
-          strokeLinejoin="round"
-        />
-      </Svg>
-      <View style={styles.arcTimestamps}>
-        <Text style={styles.arcTime}>0m</Text>
-        <Text style={styles.arcTime}>
-          {formatRuntime(Math.round(film.runtime / 2))}
-        </Text>
-        <Text style={styles.arcTime}>{formatRuntime(film.runtime)}</Text>
+
+        {/* Right side: graph + score */}
+        <View style={styles.arcRight}>
+          <View style={styles.arcGraphWrap}>
+            <Svg width={graphW} height={graphH}>
+              {/* Y-axis labels */}
+              <Line x1={padL} y1={4} x2={padL} y2={graphH - 4} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5} />
+              {/* Dashed midline */}
+              <Line x1={padL} y1={midY} x2={padL + plotW} y2={midY} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5} strokeDasharray="3,3" />
+              {/* Polyline */}
+              <Polyline points={points} fill="none" stroke={colors.gold} strokeWidth={1.5} strokeLinejoin="round" />
+              {/* Peak dot */}
+              <Circle cx={getX(peakIdx)} cy={getY(film.sparklineData[peakIdx])} r={3} fill={colors.teal} />
+            </Svg>
+            {/* Y labels outside SVG to avoid fontFamily on SVG Text */}
+            <View style={styles.arcYLabels}>
+              <Text style={styles.arcYLabel}>{maxScore.toFixed(1)}</Text>
+              <Text style={styles.arcYLabel}>{minScore.toFixed(1)}</Text>
+            </View>
+            <View style={styles.arcTimestamps}>
+              <Text style={styles.arcTime}>0m</Text>
+              <Text style={styles.arcTime}>{formatRuntime(film.runtime)}</Text>
+            </View>
+          </View>
+
+          {/* Score */}
+          <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -605,7 +641,7 @@ export default function ProfileScreen() {
       >
         {/* Header - same on every sub-tab */}
         <View style={styles.collapsedHeader}>
-          <View style={styles.collapsedCenter}>
+          <View style={[styles.collapsedCenter, subTab === 'profile' && { opacity: 0 }]}>
             <Avatar size={44} initial={user.avatarInitial} />
             <Text style={styles.collapsedName}>{user.name}</Text>
           </View>
@@ -903,51 +939,94 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ---- Arc card (graph view) ----
+  // ---- Arc card (graph view with poster backdrop) ----
   arcList: {
     gap: 10,
   },
   arcCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: borderRadius.lg,
-    padding: 12,
+    height: ARC_CARD_H,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(13,13,26,1)',
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.08)',
   },
-  arcHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 6,
+  arcPosterBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  arcTitleRow: {
+  arcGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  arcContent: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'baseline',
-    flexShrink: 1,
+    alignItems: 'center',
+  },
+  arcLeft: {
+    flex: 0.4,
+    justifyContent: 'center',
+    paddingLeft: 12,
+    paddingRight: 4,
   },
   arcTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontFamily: fonts.headingBold,
+    fontSize: 16,
     color: colors.ivory,
   },
   arcYear: {
     fontFamily: fonts.body,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    fontSize: 12,
+    color: colors.gold,
+    marginTop: 2,
+  },
+  arcRight: {
+    flex: 0.6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingRight: 12,
+  },
+  arcGraphWrap: {
+    flex: 1,
+  },
+  arcYLabels: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 16,
+    width: 18,
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  arcYLabel: {
+    fontFamily: fonts.body,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.25)',
   },
   arcScore: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.teal,
+    fontFamily: fonts.headingBold,
+    fontSize: 20,
+    color: colors.gold,
+    marginLeft: 8,
   },
   arcTimestamps: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 3,
+    paddingLeft: 20,
+    paddingRight: 8,
+    marginTop: 1,
   },
   arcTime: {
     fontFamily: fonts.body,
-    fontSize: 9,
+    fontSize: 8,
     color: 'rgba(255,255,255,0.2)',
   },
 
