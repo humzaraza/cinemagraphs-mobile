@@ -298,13 +298,13 @@ function ArcCard({ film }: { film: MockFilm }) {
         console.log('[Profile] ArcCard tap:', film.id, '->', `/film/${film.id}`);
         router.push(`/film/${film.id}` as any);
       }}
-      style={[styles.arcCard, { borderLeftWidth: 2, borderLeftColor: hexToRgba(film.dominantColor, 0.5) }]}
+      style={[styles.arcCard, { borderLeftWidth: 3, borderLeftColor: hexToRgba(film.dominantColor, 0.5) }]}
     >
       {/* Dominant color gradient accent */}
       <LinearGradient
-        colors={[hexToRgba(film.dominantColor, 0.3), 'transparent']}
+        colors={[hexToRgba(film.dominantColor, 0.5), 'transparent']}
         start={{ x: 0, y: 0.5 }}
-        end={{ x: 0.7, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
         style={styles.arcColorAccent}
       />
 
