@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -23,11 +23,6 @@ const POSTER_GAP = 8;
 const POSTER_COLS = 3;
 const POSTER_W = (SCREEN_WIDTH - PAD * 2 - POSTER_GAP * (POSTER_COLS - 1)) / POSTER_COLS;
 const POSTER_H = POSTER_W * 1.5;
-const MONTHS = [
-  'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
-];
-
 type ViewMode = 'poster' | 'graph';
 
 function GridIcon({ active }: { active: boolean }) {
@@ -123,35 +118,6 @@ export default function ListDetailScreen() {
 
   const cardWidth = SCREEN_WIDTH - PAD * 2;
 
-  // Build month-grouped elements for graph view
-  const buildMonthGrouped = () => {
-    const sorted = [...listFilms].sort((a, b) =>
-      b.dateWatched.localeCompare(a.dateWatched),
-    );
-    let currentMonth = '';
-    const elements: React.ReactElement[] = [];
-    sorted.forEach((f) => {
-      const [year, month] = f.dateWatched.split('-');
-      const monthLabel = `${MONTHS[parseInt(month, 10) - 1]} ${year}`;
-      if (monthLabel !== currentMonth) {
-        const isFirst = currentMonth === '';
-        currentMonth = monthLabel;
-        elements.push(
-          <Text
-            key={`month-${monthLabel}`}
-            style={[styles.monthHeader, !isFirst && { marginTop: 16 }]}
-          >
-            {monthLabel}
-          </Text>,
-        );
-      }
-      elements.push(
-        <ArcCard key={f.id} film={f} cardWidth={cardWidth} />,
-      );
-    });
-    return elements;
-  };
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
@@ -182,7 +148,9 @@ export default function ListDetailScreen() {
 
         {viewMode === 'graph' ? (
           <View style={styles.arcList}>
-            {buildMonthGrouped()}
+            {listFilms.map((f) => (
+              <ArcCard key={f.id} film={f} cardWidth={cardWidth} />
+            ))}
           </View>
         ) : (
           <View style={styles.posterGrid}>
@@ -241,12 +209,6 @@ const styles = StyleSheet.create({
 
   // Arc cards (graph view)
   arcList: { paddingHorizontal: PAD, gap: 10 },
-  monthHeader: {
-    fontFamily: fonts.headingBold,
-    fontSize: 14,
-    color: colors.gold,
-    marginBottom: 8,
-  },
 
   // Poster grid
   posterGrid: {
