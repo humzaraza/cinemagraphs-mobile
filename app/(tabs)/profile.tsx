@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,8 +19,11 @@ import {
   fetchUserProfile,
   fetchUserFilms,
   fetchUserWatchlist,
+  fetchUserLists,
 } from '../../src/lib/api';
-import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockProfile';
+import type { MockUser, MockFilm, MockWatchlistFilm, MockList } from '../../src/data/mockProfile';
+import { createList } from '../../src/lib/lists';
+import BottomSheet from '../../src/components/BottomSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -388,15 +392,25 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<MockUser | null>(null);
   const [films, setFilms] = useState<MockFilm[]>([]);
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
+  const [lists, setLists] = useState<MockList[]>([]);
 
   const [subTab, setSubTab] = useState<SubTab>('profile');
   const [filmFilter, setFilmFilter] = useState<FilmFilter>('reviewed');
   const [viewMode, setViewMode] = useState<ViewMode>('poster');
 
+  // List creation modal state
+  const [showCreateList, setShowCreateList] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [newListGenre, setNewListGenre] = useState('Drama');
+  const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
+  const [showFilmPicker, setShowFilmPicker] = useState(false);
+  const [filmSearch, setFilmSearch] = useState('');
+
   useEffect(() => {
     fetchUserProfile().then(setUser);
     fetchUserFilms().then(setFilms);
     fetchUserWatchlist().then(setWatchlist);
+    fetchUserLists().then(setLists);
   }, []);
 
   // Navigation helpers from profile hub rows
@@ -578,25 +592,101 @@ export default function ProfileScreen() {
   );
 
   // -----------------------------------------------------------------------
-  // Lists (placeholder)
+  // Lists
   // -----------------------------------------------------------------------
+  const GENRE_TAGS = ['Drama', 'Action', 'Horror', 'Sci-Fi', 'Comedy', 'Thriller'];
+
+  const allUniqueFilms = films.filter(
+    (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
+  );
+
+  const filteredPickerFilms = allUniqueFilms.filter((f) =>
+    f.title.toLowerCase().includes(filmSearch.toLowerCase()),
+  );
+
+  const handleCreateList = () => {
+    try {
+      const list = createList(newListName, newListGenre, newListFilmIds, lists);
+      setLists((prev) => [list, ...prev]);
+      setShowCreateList(false);
+      setNewListName('');
+      setNewListGenre('Drama');
+      setNewListFilmIds([]);
+      setFilmSearch('');
+    } catch (_e) {
+      // validation error, name field will show inline
+    }
+  };
+
+  const toggleFilmInNewList = (filmId: string) => {
+    setNewListFilmIds((prev) =>
+      prev.includes(filmId) ? prev.filter((id) => id !== filmId) : [...prev, filmId],
+    );
+  };
+
   const renderLists = () => (
-    <View style={styles.listEmptyWrap}>
-      <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M4 6h16M4 12h16M4 18h10"
-          stroke="rgba(255,255,255,0.15)"
-          strokeWidth={1.5}
-        />
-      </Svg>
-      <Text style={styles.listEmptyText}>Your lists will appear here</Text>
+    <>
+      {/* New list button */}
       <Pressable
-        onPress={() => console.log('New list')}
-        style={styles.newListButton}
+        onPress={() => setShowCreateList(true)}
+        style={styles.createListBtn}
       >
-        <Text style={styles.newListText}>New list</Text>
+        <Text style={styles.createListText}>+ New list</Text>
       </Pressable>
-    </View>
+
+      {lists.length === 0 ? (
+        <View style={styles.listEmptyWrap}>
+          <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M4 6h16M4 12h16M4 18h10"
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1.5}
+            />
+          </Svg>
+          <Text style={styles.listEmptyText}>Your lists will appear here</Text>
+        </View>
+      ) : (
+        <View style={{ gap: 10, marginTop: 8 }}>
+          {lists.map((list) => {
+            const listFilms = list.filmIds
+              .map((id) => allUniqueFilms.find((f) => f.id === id))
+              .filter(Boolean) as MockFilm[];
+            return (
+              <Pressable
+                key={list.id}
+                onPress={() => router.push(`/list/${list.id}` as any)}
+                style={styles.listCard}
+              >
+                {/* Poster strip */}
+                <View style={styles.listPosterStrip}>
+                  {listFilms.slice(0, 4).map((f) => (
+                    <Image
+                      key={f.id}
+                      source={{ uri: f.posterUrl }}
+                      style={styles.listThumb}
+                      resizeMode="cover"
+                    />
+                  ))}
+                  {listFilms.length === 0 && (
+                    <View style={[styles.listThumb, { backgroundColor: 'rgba(30,30,60,0.6)' }]} />
+                  )}
+                </View>
+                {/* Info */}
+                <View style={styles.listCardInfo}>
+                  <Text style={styles.listCardName} numberOfLines={1}>
+                    {list.name}
+                  </Text>
+                  <Text style={styles.listCardMeta}>
+                    {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <ChevronRight />
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </>
   );
 
   // -----------------------------------------------------------------------
@@ -658,6 +748,144 @@ export default function ProfileScreen() {
         {subTab === 'lists' && renderLists()}
         {subTab === 'watchlist' && renderWatchlist()}
       </ScrollView>
+
+      {/* ---- Create List Bottom Sheet ---- */}
+      <BottomSheet
+        visible={showCreateList && !showFilmPicker}
+        onClose={() => setShowCreateList(false)}
+        title="New list"
+      >
+        {/* Name */}
+        <Text style={styles.sheetLabel}>NAME</Text>
+        <View style={styles.sheetInput}>
+          <TextInput
+            value={newListName}
+            onChangeText={setNewListName}
+            placeholder="Best of 2024"
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            style={styles.sheetTextInput}
+            maxLength={40}
+          />
+        </View>
+
+        {/* Genre tag */}
+        <Text style={[styles.sheetLabel, { marginTop: 14 }]}>GENRE TAG</Text>
+        <View style={styles.genreTagRow}>
+          {GENRE_TAGS.map((g) => (
+            <Pressable
+              key={g}
+              onPress={() => setNewListGenre(g)}
+              style={[
+                styles.genreTag,
+                newListGenre === g && styles.genreTagActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.genreTagText,
+                  newListGenre === g && styles.genreTagTextActive,
+                ]}
+              >
+                {g}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Films */}
+        <Text style={[styles.sheetLabel, { marginTop: 14 }]}>ADD FILMS</Text>
+        <View style={styles.filmChipRow}>
+          {newListFilmIds.map((id) => {
+            const f = allUniqueFilms.find((x) => x.id === id);
+            if (!f) return null;
+            return (
+              <Pressable key={id} onPress={() => toggleFilmInNewList(id)}>
+                <Image
+                  source={{ uri: f.posterUrl }}
+                  style={styles.filmChipPoster}
+                  resizeMode="cover"
+                />
+              </Pressable>
+            );
+          })}
+          <Pressable
+            style={styles.filmChipAdd}
+            onPress={() => setShowFilmPicker(true)}
+          >
+            <Text style={styles.filmChipPlus}>+</Text>
+          </Pressable>
+        </View>
+
+        {/* Create button */}
+        <Pressable
+          onPress={handleCreateList}
+          style={[
+            styles.sheetCreateBtn,
+            !newListName.trim() && { opacity: 0.4 },
+          ]}
+          disabled={!newListName.trim()}
+        >
+          <Text style={styles.sheetCreateText}>Create list</Text>
+        </Pressable>
+      </BottomSheet>
+
+      {/* ---- Film Picker Bottom Sheet ---- */}
+      <BottomSheet
+        visible={showFilmPicker}
+        onClose={() => setShowFilmPicker(false)}
+        title="Add films"
+      >
+        <View style={styles.sheetInput}>
+          <TextInput
+            value={filmSearch}
+            onChangeText={setFilmSearch}
+            placeholder="Search your films..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            style={styles.sheetTextInput}
+            autoFocus
+          />
+        </View>
+        <ScrollView style={{ maxHeight: 300, marginTop: 10 }}>
+          {filteredPickerFilms.map((f) => {
+            const selected = newListFilmIds.includes(f.id);
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => toggleFilmInNewList(f.id)}
+                style={styles.pickerRow}
+              >
+                <Image
+                  source={{ uri: f.posterUrl }}
+                  style={styles.pickerPoster}
+                  resizeMode="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pickerTitle} numberOfLines={1}>
+                    {f.title}
+                  </Text>
+                  <Text style={styles.pickerYear}>{f.year}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.pickerCheck,
+                    selected && styles.pickerCheckActive,
+                  ]}
+                >
+                  {selected && <Text style={styles.pickerCheckMark}>{'\u2713'}</Text>}
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Pressable
+          onPress={() => setShowFilmPicker(false)}
+          style={styles.sheetCreateBtn}
+        >
+          <Text style={styles.sheetCreateText}>
+            Done ({newListFilmIds.length} selected)
+          </Text>
+        </Pressable>
+      </BottomSheet>
     </View>
   );
 }
@@ -1025,5 +1253,184 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.teal,
+  },
+
+  // ---- Lists (real) ----
+  createListBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.gold,
+    borderRadius: borderRadius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  createListText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.background,
+  },
+  listCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.08)',
+    borderRadius: borderRadius.xl,
+    padding: 10,
+    gap: 10,
+  },
+  listPosterStrip: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  listThumb: {
+    width: 36,
+    height: 52,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.1)',
+    backgroundColor: 'rgba(30,30,60,0.6)',
+  },
+  listCardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  listCardName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.ivory,
+  },
+  listCardMeta: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(245,240,225,0.4)',
+  },
+
+  // ---- Bottom sheet form ----
+  sheetLabel: {
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.5)',
+    textTransform: 'uppercase',
+    fontFamily: fonts.body,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  sheetInput: {
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sheetTextInput: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.ivory,
+    padding: 0,
+  },
+  genreTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  genreTag: {
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.12)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  genreTagActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  genreTagText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.5)',
+  },
+  genreTagTextActive: {
+    color: colors.background,
+  },
+  filmChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filmChipPoster: {
+    width: 44,
+    height: 64,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.1)',
+  },
+  filmChipAdd: {
+    width: 44,
+    height: 64,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(200,169,81,0.2)',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filmChipPlus: {
+    fontSize: 16,
+    color: 'rgba(200,169,81,0.3)',
+  },
+  sheetCreateBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  sheetCreateText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.background,
+  },
+
+  // ---- Film picker ----
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(245,240,225,0.04)',
+  },
+  pickerPoster: {
+    width: 32,
+    height: 46,
+    borderRadius: 3,
+  },
+  pickerTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.ivory,
+  },
+  pickerYear: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.35)',
+  },
+  pickerCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(200,169,81,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerCheckActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  pickerCheckMark: {
+    fontSize: 12,
+    color: colors.background,
   },
 });

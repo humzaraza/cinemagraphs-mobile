@@ -142,9 +142,11 @@ import {
   mockUser,
   mockFilms,
   mockWatchlist,
+  mockLists,
   type MockUser,
   type MockFilm,
   type MockWatchlistFilm,
+  type MockList,
 } from '../data/mockProfile';
 
 // TODO: Replace with GET /api/user/[id] after auth (Prompt 9)
@@ -163,6 +165,6 @@ export async function fetchUserWatchlist(): Promise<MockWatchlistFilm[]> {
 }
 
 // TODO: Replace with GET /api/user/[id]/lists after auth (Prompt 9)
-export async function fetchUserLists(): Promise<any[]> {
-  return [];
+export async function fetchUserLists(): Promise<MockList[]> {
+  return mockLists;
 }

@@ -20,8 +20,11 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms } from '../../../src/lib/api';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists } from '../../../src/lib/api';
+import { addFilmToList } from '../../../src/lib/lists';
+import BottomSheet from '../../../src/components/BottomSheet';
 import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
+import type { MockList } from '../../../src/data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
@@ -149,7 +152,7 @@ function DetailSkeleton() {
 // Backdrop with gradient, back button, watched badge
 // ---------------------------------------------------------------------------
 
-function Backdrop({ film }: { film: FilmDetail }) {
+function Backdrop({ film, onAddToList }: { film: FilmDetail; onAddToList?: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const backdropUri = getBackdropUri(film.backdropUrl);
@@ -177,17 +180,25 @@ function Backdrop({ film }: { film: FilmDetail }) {
         </Svg>
       </Pressable>
 
-      {/* Watched badge (static) */}
-      <View style={styles.watchedBadge}>
-        <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M2 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
-            stroke={colors.gold}
-            strokeWidth={1.5}
-          />
-          <Line x1={2} y1={8} x2={22} y2={8} stroke={colors.gold} strokeWidth={1.5} />
-        </Svg>
-        <Text style={styles.watchedText}>Watched</Text>
+      {/* Watched badge + add-to-list button */}
+      <View style={styles.badgeRow}>
+        <View style={styles.watchedBadge}>
+          <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M2 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+              stroke={colors.gold}
+              strokeWidth={1.5}
+            />
+            <Line x1={2} y1={8} x2={22} y2={8} stroke={colors.gold} strokeWidth={1.5} />
+          </Svg>
+          <Text style={styles.watchedText}>Watched</Text>
+        </View>
+        <Pressable
+          onPress={() => onAddToList?.()}
+          style={styles.addToListBtn}
+        >
+          <Text style={styles.addToListPlus}>+</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -617,6 +628,8 @@ export default function FilmDetailScreen() {
   const [film, setFilm] = useState<FilmDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [lists, setLists] = useState<MockList[]>([]);
+  const [showListSheet, setShowListSheet] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -636,6 +649,7 @@ export default function FilmDetailScreen() {
 
   useEffect(() => {
     load();
+    fetchUserLists().then(setLists);
   }, [load]);
 
   if (loading) return <DetailSkeleton />;
@@ -658,7 +672,7 @@ export default function FilmDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
       >
-        <Backdrop film={film} />
+        <Backdrop film={film} onAddToList={() => setShowListSheet(true)} />
 
         <View style={styles.content}>
           <MetadataRow film={film} />
@@ -674,6 +688,47 @@ export default function FilmDetailScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* Add to List bottom sheet */}
+      <BottomSheet
+        visible={showListSheet}
+        onClose={() => setShowListSheet(false)}
+        title="Add to list"
+      >
+        {lists.length === 0 ? (
+          <Text style={styles.listSheetEmpty}>
+            No lists yet. Create one from your profile.
+          </Text>
+        ) : (
+          lists.map((list) => {
+            const already = list.filmIds.includes(id ?? '');
+            return (
+              <Pressable
+                key={list.id}
+                onPress={() => {
+                  if (!already && id) {
+                    const updated = addFilmToList(list, id);
+                    setLists((prev) =>
+                      prev.map((l) => (l.id === list.id ? updated : l)),
+                    );
+                  }
+                }}
+                style={styles.listSheetRow}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.listSheetName}>{list.name}</Text>
+                  <Text style={styles.listSheetMeta}>
+                    {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                {already && (
+                  <Text style={styles.listSheetAdded}>{'\u2713'} Added</Text>
+                )}
+              </Pressable>
+            );
+          })
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -709,11 +764,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  watchedBadge: {
+  badgeRow: {
     position: 'absolute',
     bottom: 12,
     right: 14,
     zIndex: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  watchedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1040,5 +1100,55 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.gold,
     fontFamily: fonts.bodyMedium,
+  },
+
+  // ---- Add to list button ----
+  addToListBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(200,169,81,0.15)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addToListPlus: {
+    fontSize: 14,
+    color: colors.gold,
+    fontFamily: fonts.bodyMedium,
+    marginTop: -1,
+  },
+
+  // ---- List sheet ----
+  listSheetEmpty: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: 'rgba(245,240,225,0.4)',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  listSheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(245,240,225,0.04)',
+  },
+  listSheetName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.ivory,
+  },
+  listSheetMeta: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.35)',
+    marginTop: 1,
+  },
+  listSheetAdded: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    color: colors.gold,
   },
 });

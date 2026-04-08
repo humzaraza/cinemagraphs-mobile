@@ -31,6 +31,14 @@ export interface MockWatchlistFilm {
   posterUrl: string;
 }
 
+export interface MockList {
+  id: string;
+  name: string;
+  genreTag: string;
+  filmIds: string[];
+  createdAt: string;
+}
+
 export const mockUser: MockUser = {
   id: 'mock-user-1',
   name: 'humza',
@@ -223,6 +231,23 @@ export const mockFilms: MockFilm[] = [
     sparklineData: [5, 5.5, 6, 7, 8, 7.5, 7],
     dominantColor: '#2E4057',
     dateWatched: '2026-04-03',
+  },
+];
+
+export const mockLists: MockList[] = [
+  {
+    id: 'list-best-2024',
+    name: 'Best of 2024',
+    genreTag: 'Drama',
+    filmIds: ['oppenheimer-2023', 'dune-part-two-2024', 'poor-things-2023'],
+    createdAt: '2026-03-01',
+  },
+  {
+    id: 'list-comfort-rewatches',
+    name: 'Comfort rewatches',
+    genreTag: 'Comedy',
+    filmIds: ['barbie-2023', 'the-holdovers-2023'],
+    createdAt: '2026-02-15',
   },
 ];
 

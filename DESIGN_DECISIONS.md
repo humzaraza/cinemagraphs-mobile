@@ -82,6 +82,31 @@ This document captures all finalized UI/UX decisions. Update this whenever a des
 - Wire up after auth (Prompt 9)
 - Needs AsyncStorage local tracking or API endpoint for page view logging
 
+## Lists
+- Lists sub-tab shows card per list with poster strip, name, genre tag, film count
+- "New list" button opens bottom sheet with name input, genre tag pills, film picker
+- Genre tags: Drama, Action, Horror, Sci-Fi, Comedy, Thriller
+- List creation validates name (unique, max 40 chars, required)
+- Max 50 films per list
+- Expanded list detail has poster/graph view toggle
+- Graph view: arc card per film showing name, year, merged score, gold sparkline
+- Poster view: 3-column grid
+- Film detail page: "+" button next to Watched badge opens "Add to list" sheet
+
+## Settings
+- User card with avatar initials, name, email, edit link
+- Account section: Edit profile, Change password, Notifications (all placeholder screens)
+- Privacy section: Public profile (on), Allow followers (on), Private graphs (off)
+- Private graphs is global toggle only (no per-review)
+- About section links: How Cinemagraphs works, Contact us, Terms & privacy
+- Sign out button with red border/text (#E24B4A)
+- Version footer: "Cinemagraphs v1.0.0"
+
+## About / How It Works
+- 5 info cards: Sentiment graphs, The ticket stub, Write a review, Live react, Lists
+- Cards: gold-tinted background, gold border, 12px border radius
+- Accessible from Settings anytime
+
 ## Instagram Stories Sharing
 - Use Instagram Share API (not Web Share API) for mobile
 - Reference Spotify share sheet UX
