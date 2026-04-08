@@ -38,15 +38,15 @@ type ViewMode = 'poster' | 'graph';
 
 function GearIcon() {
   return (
-    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path
         d="M12 15a3 3 0 100-6 3 3 0 000 6z"
-        stroke={colors.ivory}
+        stroke="rgba(245,240,225,0.35)"
         strokeWidth={1.5}
       />
       <Path
         d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
-        stroke={colors.ivory}
+        stroke="rgba(245,240,225,0.35)"
         strokeWidth={1.5}
       />
     </Svg>
@@ -322,10 +322,7 @@ function ArcCard({ film }: { film: MockFilm }) {
 
       {/* Title + graph */}
       <View style={styles.arcMiddle}>
-        <View style={styles.arcTitleRow}>
-          <Text style={styles.arcDay}>{parseInt(film.dateWatched.slice(8), 10)}</Text>
-          <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
-        </View>
+        <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
         <Sparkline
           dataPoints={film.sparklineData.map((s) => ({ score: s }))}
           width={sparklineWidth}
@@ -971,22 +968,11 @@ const styles = StyleSheet.create({
   arcMiddle: {
     flex: 1,
   },
-  arcTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    marginBottom: 4,
-  },
-  arcDay: {
-    fontFamily: fonts.headingBold,
-    fontSize: 14,
-    color: colors.gold,
-  },
   arcTitle: {
     fontFamily: fonts.headingBold,
     fontSize: 14,
     color: colors.ivory,
-    flex: 1,
+    marginBottom: 4,
   },
   arcScore: {
     fontFamily: fonts.headingBold,
