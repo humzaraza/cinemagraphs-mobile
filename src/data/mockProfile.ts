@@ -20,6 +20,7 @@ export interface MockFilm {
   runtime: number;
   genres: string[];
   sparklineData: number[];
+  dominantColor: string;
 }
 
 export interface MockWatchlistFilm {
@@ -50,6 +51,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 180,
     genres: ['Drama', 'History'],
     sparklineData: [7, 6.5, 8, 7.5, 9, 8.5, 9.5, 8],
+    dominantColor: '#8B4513',
   },
   {
     id: 'poor-things-2023',
@@ -62,6 +64,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 141,
     genres: ['Comedy', 'Drama', 'Sci-Fi'],
     sparklineData: [6, 7, 8, 7.5, 9, 8, 8.5],
+    dominantColor: '#2E4057',
   },
   {
     id: 'dune-part-two-2024',
@@ -74,6 +77,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 166,
     genres: ['Sci-Fi', 'Adventure'],
     sparklineData: [7, 7.5, 8, 8.5, 9, 9.5, 10, 9],
+    dominantColor: '#B8860B',
   },
   {
     id: 'the-holdovers-2023',
@@ -86,6 +90,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 133,
     genres: ['Comedy', 'Drama'],
     sparklineData: [6, 6.5, 7, 7.5, 8, 8.5, 7, 8],
+    dominantColor: '#8B0000',
   },
   {
     id: 'killers-of-the-flower-moon-2023',
@@ -98,6 +103,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 206,
     genres: ['Crime', 'Drama', 'History'],
     sparklineData: [7, 6, 5, 6.5, 7, 8, 7.5, 6],
+    dominantColor: '#556B2F',
   },
   {
     id: 'past-lives-2023',
@@ -110,6 +116,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 106,
     genres: ['Drama', 'Romance'],
     sparklineData: [5, 6, 7, 7.5, 8, 9, 8.5],
+    dominantColor: '#4A6670',
   },
   {
     id: 'barbie-2023',
@@ -122,6 +129,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 114,
     genres: ['Comedy', 'Adventure'],
     sparklineData: [7, 8, 7.5, 6, 5.5, 6.5, 7],
+    dominantColor: '#E91E8F',
   },
   {
     id: 'anatomy-of-a-fall-2023',
@@ -134,6 +142,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 152,
     genres: ['Thriller', 'Drama'],
     sparklineData: [6, 7, 8, 7, 8.5, 9, 8],
+    dominantColor: '#87CEEB',
   },
   {
     id: 'the-zone-of-interest-2023',
@@ -146,6 +155,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 105,
     genres: ['Drama', 'History', 'War'],
     sparklineData: [5, 6, 7, 6.5, 7, 8, 7.5],
+    dominantColor: '#3A5F0B',
   },
   {
     id: 'saltburn-2023',
@@ -158,6 +168,7 @@ export const mockFilms: MockFilm[] = [
     runtime: 131,
     genres: ['Thriller', 'Drama', 'Comedy'],
     sparklineData: [6, 7, 8, 7, 6, 5, 8],
+    dominantColor: '#4A2C7A',
   },
 ];
 

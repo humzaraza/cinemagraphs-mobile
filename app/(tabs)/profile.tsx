@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Line, Polyline, Circle } from 'react-native-svg';
+import Svg, { Path, Line } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
@@ -275,43 +275,22 @@ function PosterCell({
 }
 
 // ---------------------------------------------------------------------------
-// Graph card (arc view for reviewed films)
+// Graph card (arc view matching Trending Arcs style)
 // ---------------------------------------------------------------------------
 
-function formatRuntime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
-
-const ARC_CARD_H = 96;
 
 function ArcCard({ film }: { film: MockFilm }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const cardW = SCREEN_WIDTH - POSTER_PAD * 2;
-  const graphW = cardW * 0.45;
-  const graphH = 50;
-  const n = film.sparklineData.length;
-  const padL = 20;
-  const plotW = graphW - padL - 8;
-
-  // Find peak index
-  let peakIdx = 0;
-  film.sparklineData.forEach((s, i) => {
-    if (s > film.sparklineData[peakIdx]) peakIdx = i;
-  });
-
-  const getX = (i: number) => padL + (i / Math.max(1, n - 1)) * plotW;
-  const getY = (s: number) => 4 + (1 - Math.max(0, Math.min(10, s)) / 10) * (graphH - 8);
-
-  const points = film.sparklineData
-    .map((s, i) => `${getX(i).toFixed(1)},${getY(s).toFixed(1)}`)
-    .join(' ');
-
-  const midY = 4 + (graphH - 8) / 2;
-  const minScore = Math.min(...film.sparklineData);
-  const maxScore = Math.max(...film.sparklineData);
+  // card padding (10) + poster (50) + gaps (10+10) + score (~40) + card padding (10)
+  const sparklineWidth = cardW - 130;
 
   return (
     <Pressable
@@ -319,62 +298,47 @@ function ArcCard({ film }: { film: MockFilm }) {
         console.log('[Profile] ArcCard tap:', film.id, '->', `/film/${film.id}`);
         router.push(`/film/${film.id}` as any);
       }}
-      style={styles.arcCard}
+      style={[styles.arcCard, { borderLeftWidth: 2, borderLeftColor: hexToRgba(film.dominantColor, 0.5) }]}
     >
-      {/* Layer 1: Poster background */}
-      {!imgError && (
+      {/* Dominant color gradient accent */}
+      <LinearGradient
+        colors={[hexToRgba(film.dominantColor, 0.3), 'transparent']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 0.7, y: 0.5 }}
+        style={styles.arcColorAccent}
+      />
+
+      {/* Poster thumbnail */}
+      {imgError ? (
+        <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
+      ) : (
         <Image
           source={{ uri: film.posterUrl }}
-          style={styles.arcPosterBg}
+          style={styles.arcPoster}
           resizeMode="cover"
           onError={() => setImgError(true)}
         />
       )}
 
-      {/* Layer 2: Gradient overlay */}
-      <LinearGradient
-        colors={['rgba(13,13,26,0.88)', 'rgba(13,13,26,0.4)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.arcGradient}
-      />
-
-      {/* Layer 3: Content */}
-      <View style={styles.arcContent}>
-        {/* Left side: title + year */}
-        <View style={styles.arcLeft}>
-          <Text style={styles.arcTitle} numberOfLines={2}>{film.title}</Text>
-          <Text style={styles.arcYear}>{film.year}</Text>
-        </View>
-
-        {/* Right side: graph + score */}
-        <View style={styles.arcRight}>
-          <View style={styles.arcGraphWrap}>
-            <Svg width={graphW} height={graphH}>
-              {/* Y-axis labels */}
-              <Line x1={padL} y1={4} x2={padL} y2={graphH - 4} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5} />
-              {/* Dashed midline */}
-              <Line x1={padL} y1={midY} x2={padL + plotW} y2={midY} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5} strokeDasharray="3,3" />
-              {/* Polyline */}
-              <Polyline points={points} fill="none" stroke={colors.gold} strokeWidth={1.5} strokeLinejoin="round" />
-              {/* Peak dot */}
-              <Circle cx={getX(peakIdx)} cy={getY(film.sparklineData[peakIdx])} r={3} fill={colors.teal} />
-            </Svg>
-            {/* Y labels outside SVG to avoid fontFamily on SVG Text */}
-            <View style={styles.arcYLabels}>
-              <Text style={styles.arcYLabel}>{maxScore.toFixed(1)}</Text>
-              <Text style={styles.arcYLabel}>{minScore.toFixed(1)}</Text>
-            </View>
-            <View style={styles.arcTimestamps}>
-              <Text style={styles.arcTime}>0m</Text>
-              <Text style={styles.arcTime}>{formatRuntime(film.runtime)}</Text>
-            </View>
-          </View>
-
-          {/* Score */}
-          <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
-        </View>
+      {/* Title + graph */}
+      <View style={styles.arcMiddle}>
+        <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
+        <Sparkline
+          dataPoints={film.sparklineData.map((s) => ({ score: s }))}
+          width={sparklineWidth}
+          height={50}
+          strokeColor={colors.gold}
+          strokeWidth={2}
+          showAxes
+          showMidline
+          runtimeMinutes={film.runtime}
+          peakDotColor={colors.teal}
+          peakDotRadius={3.5}
+        />
       </View>
+
+      {/* Score */}
+      <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
     </Pressable>
   );
 }
@@ -939,95 +903,53 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ---- Arc card (graph view with poster backdrop) ----
+  // ---- Arc card (trending arcs style) ----
   arcList: {
     gap: 10,
   },
   arcCard: {
-    height: ARC_CARD_H,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(13,13,26,1)',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: borderRadius.lg,
+    padding: 10,
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.08)',
+    overflow: 'hidden',
   },
-  arcPosterBg: {
+  arcColorAccent: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
-  arcGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  arcPoster: {
+    width: 50,
+    height: 75,
+    minWidth: 50,
+    maxWidth: 50,
+    borderRadius: 6,
+    backgroundColor: '#1a1a2e',
   },
-  arcContent: {
+  arcPosterPlaceholder: {
+    backgroundColor: 'rgba(30,30,60,0.8)',
+  },
+  arcMiddle: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  arcLeft: {
-    flex: 0.4,
-    justifyContent: 'center',
-    paddingLeft: 12,
-    paddingRight: 4,
   },
   arcTitle: {
     fontFamily: fonts.headingBold,
-    fontSize: 16,
+    fontSize: 14,
     color: colors.ivory,
-  },
-  arcYear: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.gold,
-    marginTop: 2,
-  },
-  arcRight: {
-    flex: 0.6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingRight: 12,
-  },
-  arcGraphWrap: {
-    flex: 1,
-  },
-  arcYLabels: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 16,
-    width: 18,
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  arcYLabel: {
-    fontFamily: fonts.body,
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.25)',
+    marginBottom: 4,
   },
   arcScore: {
     fontFamily: fonts.headingBold,
     fontSize: 20,
     color: colors.gold,
-    marginLeft: 8,
-  },
-  arcTimestamps: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingLeft: 20,
-    paddingRight: 8,
-    marginTop: 1,
-  },
-  arcTime: {
-    fontFamily: fonts.body,
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.2)',
+    alignSelf: 'center',
   },
 
   // ---- Lists empty ----

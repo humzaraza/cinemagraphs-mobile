@@ -1,4 +1,4 @@
-import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Polyline, Line, Circle, Text as SvgText } from 'react-native-svg';
 import { colors } from '../constants/theme';
 
 interface SparklineProps {
@@ -10,6 +10,8 @@ interface SparklineProps {
   showAxes?: boolean;
   showMidline?: boolean;
   runtimeMinutes?: number | null;
+  peakDotColor?: string;
+  peakDotRadius?: number;
 }
 
 function formatRuntime(minutes: number): string {
@@ -31,6 +33,8 @@ export default function Sparkline({
   showAxes = false,
   showMidline = false,
   runtimeMinutes,
+  peakDotColor,
+  peakDotRadius,
 }: SparklineProps) {
   if (dataPoints.length < 2) return null;
 
@@ -57,6 +61,11 @@ export default function Sparkline({
       })
       .join(' ');
 
+    let peakIdx = 0;
+    scores.forEach((s, i) => { if (s > scores[peakIdx]) peakIdx = i; });
+    const peakX = pad + (peakIdx / (dataPoints.length - 1)) * cw;
+    const peakY = pad + (1 - (scores[peakIdx] - yMin) / yRange) * ch;
+
     return (
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         {showMidline && (
@@ -69,6 +78,9 @@ export default function Sparkline({
           points={points} fill="none" stroke={strokeColor}
           strokeWidth={strokeWidth} strokeLinejoin="round"
         />
+        {peakDotColor && (
+          <Circle cx={peakX} cy={peakY} r={peakDotRadius ?? 3} fill={peakDotColor} />
+        )}
       </Svg>
     );
   }
@@ -91,6 +103,11 @@ export default function Sparkline({
     })
     .join(' ');
 
+  let peakIdx = 0;
+  scores.forEach((s, i) => { if (s > scores[peakIdx]) peakIdx = i; });
+  const peakX = chartLeft + (peakIdx / (dataPoints.length - 1)) * cw;
+  const peakY = chartTop + (1 - (scores[peakIdx] - yMin) / yRange) * ch;
+
   const midY = chartTop + ch / 2;
 
   return (
@@ -109,6 +126,10 @@ export default function Sparkline({
         points={points} fill="none" stroke={strokeColor}
         strokeWidth={strokeWidth} strokeLinejoin="round"
       />
+      {/* Peak dot */}
+      {peakDotColor && (
+        <Circle cx={peakX} cy={peakY} r={peakDotRadius ?? 3} fill={peakDotColor} />
+      )}
       {/* Y-axis labels */}
       <SvgText
         x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
