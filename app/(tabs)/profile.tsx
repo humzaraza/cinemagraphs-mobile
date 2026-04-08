@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Line } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
+import ArcCard from '../../src/components/ArcCard';
 import {
   fetchUserProfile,
   fetchUserFilms,
@@ -279,77 +279,6 @@ function PosterCell({
 }
 
 // ---------------------------------------------------------------------------
-// Graph card (arc view matching Trending Arcs style)
-// ---------------------------------------------------------------------------
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function ArcCard({ film }: { film: MockFilm }) {
-  const router = useRouter();
-  const [imgError, setImgError] = useState(false);
-  const cardW = SCREEN_WIDTH - POSTER_PAD * 2;
-  // card padding (10) + poster (50) + gaps (10+10) + score (~40) + card padding (10)
-  const sparklineWidth = cardW - 130;
-
-  return (
-    <Pressable
-      onPress={() => {
-        console.log('[Profile] ArcCard tap:', film.id, '->', `/film/${film.id}`);
-        router.push(`/film/${film.id}` as any);
-      }}
-      style={[styles.arcCard, { borderLeftWidth: 3, borderLeftColor: hexToRgba(film.dominantColor, 0.5) }]}
-    >
-      {/* Dominant color gradient accent */}
-      <LinearGradient
-        colors={[hexToRgba(film.dominantColor, 0.5), 'transparent']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.arcColorAccent}
-      />
-
-      {/* Poster thumbnail */}
-      {imgError ? (
-        <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
-      ) : (
-        <Image
-          source={{ uri: film.posterUrl }}
-          style={styles.arcPoster}
-          resizeMode="cover"
-          onError={() => setImgError(true)}
-        />
-      )}
-
-      {/* Title + graph */}
-      <View style={styles.arcMiddle}>
-        <Text style={styles.arcTitle} numberOfLines={1}>{film.title}</Text>
-        <Sparkline
-          dataPoints={film.sparklineData.map((s) => ({ score: s }))}
-          width={sparklineWidth}
-          height={50}
-          strokeColor={colors.gold}
-          strokeWidth={2}
-          showAxes
-          showMidline
-          runtimeMinutes={film.runtime}
-          peakDotColor={colors.teal}
-          peakDotRadius={3.5}
-          lowDotColor="#E24B4A"
-          lowDotRadius={3.5}
-        />
-      </View>
-
-      {/* Score */}
-      <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
-    </Pressable>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Watchlist poster cell
 // ---------------------------------------------------------------------------
 
@@ -404,7 +333,10 @@ export default function ProfileScreen() {
   const [newListGenre, setNewListGenre] = useState('Drama');
   const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
   const [showFilmPicker, setShowFilmPicker] = useState(false);
+  const [filmSearchInput, setFilmSearchInput] = useState('');
   const [filmSearch, setFilmSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchUserProfile().then(setUser);
@@ -572,7 +504,7 @@ export default function ProfileScreen() {
                   </Text>
                 );
               }
-              elements.push(<ArcCard key={f.id} film={f} />);
+              elements.push(<ArcCard key={f.id} film={f} cardWidth={SCREEN_WIDTH - POSTER_PAD * 2} />);
             });
             return elements;
           })()}
@@ -612,10 +544,17 @@ export default function ProfileScreen() {
       setNewListName('');
       setNewListGenre('Drama');
       setNewListFilmIds([]);
+      setFilmSearchInput('');
       setFilmSearch('');
     } catch (_e) {
       // validation error, name field will show inline
     }
+  };
+
+  const handlePickerSearchChange = (text: string) => {
+    setFilmSearchInput(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => setFilmSearch(text), 400);
   };
 
   const toggleFilmInNewList = (filmId: string) => {
@@ -832,20 +771,27 @@ export default function ProfileScreen() {
       {/* ---- Film Picker Bottom Sheet ---- */}
       <BottomSheet
         visible={showFilmPicker}
-        onClose={() => setShowFilmPicker(false)}
+        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
         title="Add films"
       >
-        <View style={styles.sheetInput}>
+        <View
+          style={[
+            styles.pickerSearchBar,
+            searchFocused && styles.pickerSearchBarFocused,
+          ]}
+        >
           <TextInput
-            value={filmSearch}
-            onChangeText={setFilmSearch}
-            placeholder="Search your films..."
+            value={filmSearchInput}
+            onChangeText={handlePickerSearchChange}
+            placeholder="Search films..."
             placeholderTextColor="rgba(245,240,225,0.2)"
             style={styles.sheetTextInput}
             autoFocus
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
         </View>
-        <ScrollView style={{ maxHeight: 300, marginTop: 10 }}>
+        <ScrollView style={{ maxHeight: 320, marginTop: 10 }}>
           {filteredPickerFilms.map((f) => {
             const selected = newListFilmIds.includes(f.id);
             return (
@@ -878,7 +824,7 @@ export default function ProfileScreen() {
           })}
         </ScrollView>
         <Pressable
-          onPress={() => setShowFilmPicker(false)}
+          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
           style={styles.sheetCreateBtn}
         >
           <Text style={styles.sheetCreateText}>
@@ -1173,51 +1119,6 @@ const styles = StyleSheet.create({
     color: colors.gold,
     marginBottom: 8,
   },
-  arcCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: borderRadius.lg,
-    padding: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.08)',
-    overflow: 'hidden',
-  },
-  arcColorAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  arcPoster: {
-    width: 50,
-    height: 75,
-    minWidth: 50,
-    maxWidth: 50,
-    borderRadius: 6,
-    backgroundColor: '#1a1a2e',
-  },
-  arcPosterPlaceholder: {
-    backgroundColor: 'rgba(30,30,60,0.8)',
-  },
-  arcMiddle: {
-    flex: 1,
-  },
-  arcTitle: {
-    fontFamily: fonts.headingBold,
-    fontSize: 14,
-    color: colors.ivory,
-    marginBottom: 4,
-  },
-  arcScore: {
-    fontFamily: fonts.headingBold,
-    fontSize: 20,
-    color: colors.gold,
-    alignSelf: 'center',
-  },
-
   // ---- Lists empty ----
   listEmptyWrap: {
     alignItems: 'center',
@@ -1393,6 +1294,17 @@ const styles = StyleSheet.create({
   },
 
   // ---- Film picker ----
+  pickerSearchBar: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pickerSearchBarFocused: {
+    borderColor: colors.gold,
+  },
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1402,9 +1314,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(245,240,225,0.04)',
   },
   pickerPoster: {
-    width: 32,
-    height: 46,
-    borderRadius: 3,
+    width: 40,
+    height: 60,
+    borderRadius: 4,
   },
   pickerTitle: {
     fontFamily: fonts.bodyMedium,

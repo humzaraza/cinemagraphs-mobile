@@ -9,6 +9,7 @@ import {
   Pressable,
   Animated,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,11 +21,11 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists } from '../../../src/lib/api';
-import { addFilmToList } from '../../../src/lib/lists';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms } from '../../../src/lib/api';
+import { addFilmToList, createList } from '../../../src/lib/lists';
 import BottomSheet from '../../../src/components/BottomSheet';
 import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
-import type { MockList } from '../../../src/data/mockProfile';
+import type { MockList, MockFilm } from '../../../src/data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
@@ -631,6 +632,18 @@ export default function FilmDetailScreen() {
   const [lists, setLists] = useState<MockList[]>([]);
   const [showListSheet, setShowListSheet] = useState(false);
 
+  // Create-list-from-detail state
+  const [showCreateFlow, setShowCreateFlow] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [newListGenre, setNewListGenre] = useState('Drama');
+  const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
+  const [showFilmPicker, setShowFilmPicker] = useState(false);
+  const [filmSearchInput, setFilmSearchInput] = useState('');
+  const [filmSearch, setFilmSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pickerFilms, setPickerFilms] = useState<MockFilm[]>([]);
+
   const load = useCallback(() => {
     if (!id) return;
     setLoading(true);
@@ -650,7 +663,54 @@ export default function FilmDetailScreen() {
   useEffect(() => {
     load();
     fetchUserLists().then(setLists);
+    fetchUserFilms().then((films) => {
+      const unique = films.filter(
+        (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
+      );
+      setPickerFilms(unique);
+    });
   }, [load]);
+
+  const GENRE_TAGS = ['Drama', 'Action', 'Horror', 'Sci-Fi', 'Comedy', 'Thriller'];
+
+  const filteredPickerFilms = pickerFilms.filter((f) =>
+    f.title.toLowerCase().includes(filmSearch.toLowerCase()),
+  );
+
+  const handlePickerSearchChange = (text: string) => {
+    setFilmSearchInput(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => setFilmSearch(text), 400);
+  };
+
+  const toggleFilmInNewList = (filmId: string) => {
+    setNewListFilmIds((prev) =>
+      prev.includes(filmId) ? prev.filter((fid) => fid !== filmId) : [...prev, filmId],
+    );
+  };
+
+  const openCreateFlow = () => {
+    setShowListSheet(false);
+    setNewListName('');
+    setNewListGenre('Drama');
+    setNewListFilmIds(id ? [id] : []);
+    setShowCreateFlow(true);
+  };
+
+  const handleCreateList = () => {
+    try {
+      const list = createList(newListName, newListGenre, newListFilmIds, lists);
+      setLists((prev) => [list, ...prev]);
+      setShowCreateFlow(false);
+      setNewListName('');
+      setNewListGenre('Drama');
+      setNewListFilmIds([]);
+      setFilmSearchInput('');
+      setFilmSearch('');
+    } catch (_e) {
+      // validation error
+    }
+  };
 
   if (loading) return <DetailSkeleton />;
 
@@ -695,39 +755,179 @@ export default function FilmDetailScreen() {
         onClose={() => setShowListSheet(false)}
         title="Add to list"
       >
-        {lists.length === 0 ? (
-          <Text style={styles.listSheetEmpty}>
-            No lists yet. Create one from your profile.
-          </Text>
-        ) : (
-          lists.map((list) => {
-            const already = list.filmIds.includes(id ?? '');
-            return (
-              <Pressable
-                key={list.id}
-                onPress={() => {
-                  if (!already && id) {
-                    const updated = addFilmToList(list, id);
-                    setLists((prev) =>
-                      prev.map((l) => (l.id === list.id ? updated : l)),
-                    );
-                  }
-                }}
-                style={styles.listSheetRow}
+        {lists.map((list) => {
+          const already = list.filmIds.includes(id ?? '');
+          return (
+            <Pressable
+              key={list.id}
+              onPress={() => {
+                if (!already && id) {
+                  const updated = addFilmToList(list, id);
+                  setLists((prev) =>
+                    prev.map((l) => (l.id === list.id ? updated : l)),
+                  );
+                }
+              }}
+              style={styles.listSheetRow}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.listSheetName}>{list.name}</Text>
+                <Text style={styles.listSheetMeta}>
+                  {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              {already && (
+                <Text style={styles.listSheetAdded}>{'\u2713'} Added</Text>
+              )}
+            </Pressable>
+          );
+        })}
+        {/* Create new list row */}
+        <Pressable onPress={openCreateFlow} style={styles.createNewRow}>
+          <Text style={styles.createNewPlus}>+</Text>
+          <Text style={styles.createNewText}>Create new list</Text>
+        </Pressable>
+      </BottomSheet>
+
+      {/* Create List bottom sheet */}
+      <BottomSheet
+        visible={showCreateFlow && !showFilmPicker}
+        onClose={() => setShowCreateFlow(false)}
+        title="New list"
+      >
+        <Text style={styles.sheetLabel}>NAME</Text>
+        <View style={styles.sheetInput}>
+          <TextInput
+            value={newListName}
+            onChangeText={setNewListName}
+            placeholder="Best of 2024"
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            style={styles.sheetTextInput}
+            maxLength={40}
+          />
+        </View>
+
+        <Text style={[styles.sheetLabel, { marginTop: 14 }]}>GENRE TAG</Text>
+        <View style={styles.genreTagRow}>
+          {GENRE_TAGS.map((g) => (
+            <Pressable
+              key={g}
+              onPress={() => setNewListGenre(g)}
+              style={[
+                styles.genreTag,
+                newListGenre === g && styles.genreTagActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.genreTagText,
+                  newListGenre === g && styles.genreTagTextActive,
+                ]}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.listSheetName}>{list.name}</Text>
-                  <Text style={styles.listSheetMeta}>
-                    {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {already && (
-                  <Text style={styles.listSheetAdded}>{'\u2713'} Added</Text>
-                )}
+                {g}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={[styles.sheetLabel, { marginTop: 14 }]}>ADD FILMS</Text>
+        <View style={styles.filmChipRow}>
+          {newListFilmIds.map((fid) => {
+            const f = pickerFilms.find((x) => x.id === fid);
+            if (!f) return null;
+            return (
+              <Pressable key={fid} onPress={() => toggleFilmInNewList(fid)}>
+                <Image
+                  source={{ uri: f.posterUrl }}
+                  style={styles.filmChipPoster}
+                  resizeMode="cover"
+                />
               </Pressable>
             );
-          })
-        )}
+          })}
+          <Pressable
+            style={styles.filmChipAdd}
+            onPress={() => setShowFilmPicker(true)}
+          >
+            <Text style={styles.filmChipPlus}>+</Text>
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={handleCreateList}
+          style={[
+            styles.sheetCreateBtn,
+            !newListName.trim() && { opacity: 0.4 },
+          ]}
+          disabled={!newListName.trim()}
+        >
+          <Text style={styles.sheetCreateText}>Create list</Text>
+        </Pressable>
+      </BottomSheet>
+
+      {/* Film Picker bottom sheet */}
+      <BottomSheet
+        visible={showFilmPicker}
+        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
+        title="Add films"
+      >
+        <View
+          style={[
+            styles.pickerSearchBar,
+            searchFocused && styles.pickerSearchBarFocused,
+          ]}
+        >
+          <TextInput
+            value={filmSearchInput}
+            onChangeText={handlePickerSearchChange}
+            placeholder="Search films..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            style={styles.sheetTextInput}
+            autoFocus
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+        </View>
+        <ScrollView style={{ maxHeight: 320, marginTop: 10 }}>
+          {filteredPickerFilms.map((f) => {
+            const selected = newListFilmIds.includes(f.id);
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => toggleFilmInNewList(f.id)}
+                style={styles.pickerRow}
+              >
+                <Image
+                  source={{ uri: f.posterUrl }}
+                  style={styles.pickerPoster}
+                  resizeMode="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pickerTitle} numberOfLines={1}>
+                    {f.title}
+                  </Text>
+                  <Text style={styles.pickerYear}>{f.year}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.pickerCheck,
+                    selected && styles.pickerCheckActive,
+                  ]}
+                >
+                  {selected && <Text style={styles.pickerCheckMark}>{'\u2713'}</Text>}
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Pressable
+          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
+          style={styles.sheetCreateBtn}
+        >
+          <Text style={styles.sheetCreateText}>
+            Done ({newListFilmIds.length} selected)
+          </Text>
+        </Pressable>
       </BottomSheet>
     </View>
   );
@@ -1150,5 +1350,166 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 11,
     color: colors.gold,
+  },
+
+  // ---- Create new list row ----
+  createNewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 4,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(200,169,81,0.12)',
+  },
+  createNewPlus: {
+    fontSize: 16,
+    color: colors.gold,
+    fontFamily: fonts.bodyMedium,
+  },
+  createNewText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.gold,
+  },
+
+  // ---- Create list form ----
+  sheetLabel: {
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.5)',
+    textTransform: 'uppercase',
+    fontFamily: fonts.body,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  sheetInput: {
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sheetTextInput: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.ivory,
+    padding: 0,
+  },
+  genreTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  genreTag: {
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.12)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  genreTagActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  genreTagText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.5)',
+  },
+  genreTagTextActive: {
+    color: colors.background,
+  },
+  filmChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  filmChipPoster: {
+    width: 44,
+    height: 64,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.1)',
+  },
+  filmChipAdd: {
+    width: 44,
+    height: 64,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(200,169,81,0.2)',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filmChipPlus: {
+    fontSize: 16,
+    color: 'rgba(200,169,81,0.3)',
+  },
+  sheetCreateBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  sheetCreateText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.background,
+  },
+
+  // ---- Film picker ----
+  pickerSearchBar: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pickerSearchBarFocused: {
+    borderColor: colors.gold,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(245,240,225,0.04)',
+  },
+  pickerPoster: {
+    width: 40,
+    height: 60,
+    borderRadius: 4,
+  },
+  pickerTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.ivory,
+  },
+  pickerYear: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.35)',
+  },
+  pickerCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(200,169,81,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerCheckActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  pickerCheckMark: {
+    fontSize: 12,
+    color: colors.background,
   },
 });
