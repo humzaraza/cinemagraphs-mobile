@@ -78,9 +78,11 @@ This document captures all finalized UI/UX decisions. Update this whenever a des
 - Pinch-to-zoom, beat labels, tooltips
 
 ## Recently Viewed (Profile Hub)
-- Currently empty state placeholder
-- Wire up after auth (Prompt 9)
-- Needs AsyncStorage local tracking or API endpoint for page view logging
+- Local-only via AsyncStorage (key: "recently_viewed"), no API endpoint
+- Stores up to 20 film IDs with timestamps, deduplicates by filmId
+- Film detail page calls addRecentlyViewed(id) on mount
+- Profile hub shows horizontal ScrollView of poster thumbnails (60x90, rounded corners)
+- Falls back to empty state text when no history
 
 ## Lists
 - Lists sub-tab shows card per list with poster strip, name, genre tag, film count
@@ -106,6 +108,34 @@ This document captures all finalized UI/UX decisions. Update this whenever a des
 - 5 info cards: Sentiment graphs, The ticket stub, Write a review, Live react, Lists
 - Cards: gold-tinted background, gold border, 12px border radius
 - Accessible from Settings anytime
+
+## Auth Flow
+- AuthProvider wraps entire app, stores JWT in expo-secure-store
+- On mount: reads stored token, validates via GET /api/user/profile, clears if invalid
+- Navigation guard: auto-redirects to (auth)/landing if no token, to (tabs) if token
+- Landing screen: reanimated entrance animation (logo fade, dashed line, tagline, buttons slide up)
+- Sign in / Create account: single screen with tab toggle, gold active tab
+- OTP: 6-digit input boxes (42x50), auto-advance, backspace returns to previous
+- Forgot password: email input, teal confirmation on success
+- Onboarding: checks AsyncStorage "has_seen_onboarding", redirects to /settings/about on first login
+
+## Auth Gating
+- useAuthGate() hook returns { gate, sheet } for any component
+- gate(action) checks isAuthenticated; if not, shows bottom sheet "Sign in to continue"
+- Sheet has "Sign in" (navigates to landing) and "Not now" (dismisses)
+- Does NOT redirect user away from current screen unless they tap Sign in
+- Applied to: Add to list (film detail), profile (shows unauthenticated state)
+
+## Google / Apple OAuth
+- Apple: expo-apple-authentication, iOS only, sends identityToken to /api/auth/mobile/apple
+- Google: placeholder (needs client IDs from Google Cloud Console)
+- Both route through handlePostAuth for token storage + onboarding check
+
+## Settings Wiring
+- Sign out button calls AuthProvider signOut (clears SecureStore, navigates to landing)
+- Privacy toggles (publicProfile, allowFollowers, privateGraphs) load from GET /api/user/settings
+- Toggle changes call PUT /api/user/settings, optimistic update with rollback on failure
+- User card shows real name/email from AuthProvider
 
 ## Instagram Stories Sharing
 - Use Instagram Share API (not Web Share API) for mobile

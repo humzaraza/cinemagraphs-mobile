@@ -11,6 +11,7 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
+import AuthProvider from '../src/providers/AuthProvider';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -23,16 +24,14 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  console.log('fonts loaded:', fontsLoaded);
-
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
   }
 
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, gestureEnabled: true }} />
-    </>
+    </AuthProvider>
   );
 }

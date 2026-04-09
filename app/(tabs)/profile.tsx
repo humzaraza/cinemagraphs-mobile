@@ -20,10 +20,13 @@ import {
   fetchUserFilms,
   fetchUserWatchlist,
   fetchUserLists,
+  createUserList,
 } from '../../src/lib/api';
 import type { MockUser, MockFilm, MockWatchlistFilm, MockList } from '../../src/data/mockProfile';
 import { createList } from '../../src/lib/lists';
 import BottomSheet from '../../src/components/BottomSheet';
+import { useAuth } from '../../src/providers/AuthProvider';
+import { getRecentlyViewed } from '../../src/lib/recentlyViewed';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -317,11 +320,13 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, user: authUser } = useAuth();
 
   const [user, setUser] = useState<MockUser | null>(null);
   const [films, setFilms] = useState<MockFilm[]>([]);
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
   const [lists, setLists] = useState<MockList[]>([]);
+  const [recentFilmIds, setRecentFilmIds] = useState<string[]>([]);
 
   const [subTab, setSubTab] = useState<SubTab>('profile');
   const [filmFilter, setFilmFilter] = useState<FilmFilter>('reviewed');
@@ -339,11 +344,13 @@ export default function ProfileScreen() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchUserProfile().then(setUser);
-    fetchUserFilms().then(setFilms);
-    fetchUserWatchlist().then(setWatchlist);
-    fetchUserLists().then(setLists);
-  }, []);
+    if (!isAuthenticated) return;
+    fetchUserProfile().then((p) => { if (p) setUser(p.user ?? p); }).catch(() => {});
+    fetchUserFilms().then(setFilms).catch(() => {});
+    fetchUserWatchlist().then(setWatchlist).catch(() => {});
+    fetchUserLists().then(setLists).catch(() => {});
+    getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
+  }, [isAuthenticated]);
 
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
@@ -370,6 +377,24 @@ export default function ProfileScreen() {
     },
     [],
   );
+
+  // Unauthenticated state
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.unauthWrap}>
+          <Text style={styles.unauthLogo}>Cinemagraphs</Text>
+          <Text style={styles.unauthText}>Sign in to see your profile</Text>
+          <Pressable
+            onPress={() => router.push('/(auth)/landing' as any)}
+            style={styles.unauthBtn}
+          >
+            <Text style={styles.unauthBtnText}>Sign in</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   if (!user) {
     return (
@@ -426,11 +451,37 @@ export default function ProfileScreen() {
 
         {/* Recently viewed */}
         <Text style={styles.sectionLabel}>RECENTLY VIEWED</Text>
-        <View style={styles.emptySection}>
-          <Text style={styles.emptyText}>
-            Once you start browsing, your recently viewed films will appear here
-          </Text>
-        </View>
+        {recentFilmIds.length === 0 ? (
+          <View style={styles.emptySection}>
+            <Text style={styles.emptyText}>
+              Once you start browsing, your recently viewed films will appear here
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.recentScroll}
+            contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
+          >
+            {recentFilmIds.slice(0, 10).map((fid) => {
+              const f = films.find((x) => x.id === fid);
+              if (!f) return null;
+              return (
+                <Pressable
+                  key={fid}
+                  onPress={() => router.push(`/film/${fid}` as any)}
+                >
+                  <Image
+                    source={{ uri: f.posterUrl }}
+                    style={styles.recentPoster}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Section rows */}
         {sectionRows.map((row, i) => (
@@ -1344,5 +1395,46 @@ const styles = StyleSheet.create({
   pickerCheckMark: {
     fontSize: 12,
     color: colors.background,
+  },
+
+  // Unauthenticated state
+  unauthWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 14,
+  },
+  unauthLogo: {
+    fontFamily: fonts.heading,
+    fontSize: 26,
+    color: colors.gold,
+  },
+  unauthText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: 'rgba(245,240,225,0.5)',
+  },
+  unauthBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 36,
+    marginTop: 4,
+  },
+  unauthBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.background,
+  },
+
+  // Recently viewed
+  recentScroll: {
+    marginBottom: 16,
+  },
+  recentPoster: {
+    width: 60,
+    height: 90,
+    borderRadius: 6,
+    backgroundColor: 'rgba(245,240,225,0.06)',
   },
 });

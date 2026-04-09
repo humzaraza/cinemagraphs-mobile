@@ -24,6 +24,8 @@ import { colors, fonts, spacing, borderRadius } from '../../../src/constants/the
 import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms } from '../../../src/lib/api';
 import { addFilmToList, createList } from '../../../src/lib/lists';
 import BottomSheet from '../../../src/components/BottomSheet';
+import { useAuthGate } from '../../../src/components/AuthGate';
+import { addRecentlyViewed } from '../../../src/lib/recentlyViewed';
 import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
 import type { MockList, MockFilm } from '../../../src/data/mockProfile';
 
@@ -631,6 +633,7 @@ export default function FilmDetailScreen() {
   const [error, setError] = useState(false);
   const [lists, setLists] = useState<MockList[]>([]);
   const [showListSheet, setShowListSheet] = useState(false);
+  const { gate: authGate, sheet: authSheet } = useAuthGate();
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -662,7 +665,8 @@ export default function FilmDetailScreen() {
 
   useEffect(() => {
     load();
-    fetchUserLists().then(setLists);
+    if (id) addRecentlyViewed(id);
+    fetchUserLists().then(setLists).catch(() => {});
     fetchUserFilms().then((films) => {
       const unique = films.filter(
         (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
@@ -732,7 +736,7 @@ export default function FilmDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
       >
-        <Backdrop film={film} onAddToList={() => setShowListSheet(true)} />
+        <Backdrop film={film} onAddToList={() => authGate(() => setShowListSheet(true))} />
 
         <View style={styles.content}>
           <MetadataRow film={film} />
@@ -929,6 +933,8 @@ export default function FilmDetailScreen() {
           </Text>
         </Pressable>
       </BottomSheet>
+
+      {authSheet}
     </View>
   );
 }

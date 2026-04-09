@@ -135,36 +135,198 @@ export async function postReaction(filmId: string, data: {
 }
 
 // ---------------------------------------------------------------------------
-// Profile placeholders (return mock data until auth is wired in Prompt 9)
+// Auth
 // ---------------------------------------------------------------------------
 
-import {
-  mockUser,
-  mockFilms,
-  mockWatchlist,
-  mockLists,
-  type MockUser,
-  type MockFilm,
-  type MockWatchlistFilm,
-  type MockList,
-} from '../data/mockProfile';
-
-// TODO: Replace with GET /api/user/[id] after auth (Prompt 9)
-export async function fetchUserProfile(): Promise<MockUser> {
-  return mockUser;
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
 }
 
-// TODO: Replace with GET /api/user/[id]/films after auth (Prompt 9)
-export async function fetchUserFilms(): Promise<MockFilm[]> {
-  return mockFilms;
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
 }
 
-// TODO: Replace with GET /api/user/[id]/watchlist after auth (Prompt 9)
-export async function fetchUserWatchlist(): Promise<MockWatchlistFilm[]> {
-  return mockWatchlist;
+export async function loginWithEmail(email: string, password: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/mobile/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Sign in failed');
+  }
+  return res.json();
 }
 
-// TODO: Replace with GET /api/user/[id]/lists after auth (Prompt 9)
-export async function fetchUserLists(): Promise<MockList[]> {
-  return mockLists;
+export async function registerWithEmail(email: string, password: string, name: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Registration failed');
+  }
+  return res.json();
+}
+
+export async function verifyOTP(email: string, code: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, mobile: true }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Verification failed');
+  }
+  return res.json();
+}
+
+export async function resendOTP(email: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not resend code');
+  }
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not send reset link');
+  }
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not reset password');
+  }
+}
+
+export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/mobile/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Google sign in failed');
+  }
+  return res.json();
+}
+
+export async function loginWithApple(identityToken: string, fullName?: string | null): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/auth/mobile/apple`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identityToken, fullName }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Apple sign in failed');
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Profile (real API calls)
+// ---------------------------------------------------------------------------
+
+export async function fetchUserProfile(): Promise<any> {
+  const res = await apiFetch('/user/profile');
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchUserFilms(type?: string): Promise<any[]> {
+  const q = type ? `?type=${type}` : '';
+  const res = await apiFetch(`/user/films${q}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.films ?? [];
+}
+
+export async function fetchUserWatchlist(): Promise<any[]> {
+  const res = await apiFetch('/user/watchlist');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.films ?? [];
+}
+
+export async function fetchUserLists(): Promise<any[]> {
+  const res = await apiFetch('/user/lists');
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.lists ?? [];
+}
+
+export async function createUserList(name: string, genreTag: string, filmIds: string[]): Promise<any> {
+  const res = await apiFetch('/user/lists', {
+    method: 'POST',
+    body: JSON.stringify({ name, genreTag, filmIds }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create list');
+  }
+  return res.json();
+}
+
+export async function addFilmToListAPI(listId: string, filmId: string): Promise<any> {
+  const res = await apiFetch(`/user/lists/${listId}/films`, {
+    method: 'POST',
+    body: JSON.stringify({ filmId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to add film');
+  }
+  return res.json();
+}
+
+export async function removeFilmFromListAPI(listId: string, filmId: string): Promise<void> {
+  await apiFetch(`/user/lists/${listId}/films`, {
+    method: 'DELETE',
+    body: JSON.stringify({ filmId }),
+  });
+}
+
+export async function deleteUserList(listId: string): Promise<void> {
+  await apiFetch(`/user/lists/${listId}`, { method: 'DELETE' });
+}
+
+export async function fetchUserSettings(): Promise<any> {
+  const res = await apiFetch('/user/settings');
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateUserSettings(settings: Record<string, any>): Promise<void> {
+  await apiFetch('/user/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
 }

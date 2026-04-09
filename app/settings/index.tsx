@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { useAuth } from '../../src/providers/AuthProvider';
+import { fetchUserSettings, updateUserSettings } from '../../src/lib/api';
 
 function ChevronRight() {
   return (
@@ -68,10 +70,27 @@ function ToggleRow({
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { signOut, user: authUser } = useAuth();
 
   const [publicProfile, setPublicProfile] = useState(true);
   const [allowFollowers, setAllowFollowers] = useState(true);
   const [privateGraphs, setPrivateGraphs] = useState(false);
+
+  useEffect(() => {
+    fetchUserSettings()
+      .then((s) => {
+        if (!s) return;
+        if (s.publicProfile !== undefined) setPublicProfile(s.publicProfile);
+        if (s.allowFollowers !== undefined) setAllowFollowers(s.allowFollowers);
+        if (s.privateGraphs !== undefined) setPrivateGraphs(s.privateGraphs);
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleSetting = (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    updateUserSettings({ [key]: value }).catch(() => setter(!value));
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -96,11 +115,13 @@ export default function SettingsScreen() {
         {/* User card */}
         <View style={styles.userCard}>
           <View style={styles.userAvatar}>
-            <Text style={styles.userInitial}>H</Text>
+            <Text style={styles.userInitial}>
+              {(authUser?.name ?? 'U').charAt(0).toUpperCase()}
+            </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>humza</Text>
-            <Text style={styles.userEmail}>humza@cinemagraphs.ca</Text>
+            <Text style={styles.userName}>{authUser?.name ?? 'User'}</Text>
+            <Text style={styles.userEmail}>{authUser?.email ?? ''}</Text>
           </View>
           <Pressable
             onPress={() => router.push('/settings/edit-profile' as any)}
@@ -135,19 +156,19 @@ export default function SettingsScreen() {
           <ToggleRow
             label="Public profile"
             value={publicProfile}
-            onToggle={setPublicProfile}
+            onToggle={(v) => toggleSetting('publicProfile', v, setPublicProfile)}
           />
           <View style={styles.divider} />
           <ToggleRow
             label="Allow followers"
             value={allowFollowers}
-            onToggle={setAllowFollowers}
+            onToggle={(v) => toggleSetting('allowFollowers', v, setAllowFollowers)}
           />
           <View style={styles.divider} />
           <ToggleRow
             label="Private graphs"
             value={privateGraphs}
-            onToggle={setPrivateGraphs}
+            onToggle={(v) => toggleSetting('privateGraphs', v, setPrivateGraphs)}
           />
         </View>
 
@@ -171,7 +192,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sign out */}
-        <Pressable style={styles.signOutBtn}>
+        <Pressable style={styles.signOutBtn} onPress={signOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
 
