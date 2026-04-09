@@ -104,7 +104,7 @@ export default function ListDetailScreen() {
           setList(found ?? null);
         })
         .catch((e) => console.error('[ListDetail] fetchUserLists error:', e)),
-      fetchUserFilms()
+      fetchUserFilms('reviewed')
         .then(setAllFilms)
         .catch((e) => console.error('[ListDetail] fetchUserFilms error:', e)),
     ]).finally(() => setLoaded(true));

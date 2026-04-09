@@ -23,7 +23,7 @@ import {
   createUserList,
 } from '../../src/lib/api';
 import type { MockUser, MockFilm, MockWatchlistFilm, MockList } from '../../src/data/mockProfile';
-import { createList } from '../../src/lib/lists';
+// createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed } from '../../src/lib/recentlyViewed';
@@ -375,7 +375,16 @@ export default function ProfileScreen() {
         }
       })
       .finally(() => setProfileLoaded(true));
-    fetchUserFilms().then(setFilms).catch((e) => console.error('[Profile] fetchUserFilms error:', e));
+    Promise.all([
+      fetchUserFilms('reviewed'),
+      fetchUserFilms('watched'),
+    ])
+      .then(([reviewed, watched]) => {
+        const all = [...reviewed, ...watched];
+        const unique = all.filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
+        setFilms(unique);
+      })
+      .catch((e) => console.error('[Profile] fetchUserFilms error:', e));
     fetchUserWatchlist().then(setWatchlist).catch((e) => console.error('[Profile] fetchUserWatchlist error:', e));
     fetchUserLists().then(setLists).catch((e) => console.error('[Profile] fetchUserLists error:', e));
     getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
@@ -630,18 +639,19 @@ export default function ProfileScreen() {
     f.title.toLowerCase().includes(filmSearch.toLowerCase()),
   );
 
-  const handleCreateList = () => {
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
     try {
-      const list = createList(newListName, newListGenre, newListFilmIds, lists);
-      setLists((prev) => [list, ...prev]);
+      const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
+      setLists((prev) => [apiList, ...prev]);
       setShowCreateList(false);
       setNewListName('');
       setNewListGenre('Drama');
       setNewListFilmIds([]);
       setFilmSearchInput('');
       setFilmSearch('');
-    } catch (_e) {
-      // validation error, name field will show inline
+    } catch (e) {
+      console.error('[Profile] createList error:', e);
     }
   };
 

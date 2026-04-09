@@ -22,7 +22,7 @@ import Svg, {
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
 import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms, addFilmToListAPI, createUserList } from '../../../src/lib/api';
-import { addFilmToList, createList } from '../../../src/lib/lists';
+import { addFilmToList } from '../../../src/lib/lists';
 import BottomSheet from '../../../src/components/BottomSheet';
 import { useAuthGate } from '../../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../../src/lib/recentlyViewed';
@@ -674,7 +674,7 @@ export default function FilmDetailScreen() {
     load();
     if (id) addRecentlyViewed(id);
     fetchUserLists().then(setLists).catch(() => {});
-    fetchUserFilms().then((films) => {
+    fetchUserFilms('reviewed').then((films) => {
       const unique = films.filter(
         (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
       );
@@ -708,26 +708,19 @@ export default function FilmDetailScreen() {
     setShowCreateFlow(true);
   };
 
-  const handleCreateList = () => {
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
     try {
-      const localList = createList(newListName, newListGenre, newListFilmIds, lists);
-      setLists((prev) => [localList, ...prev]);
+      const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
+      setLists((prev) => [apiList, ...prev]);
       setShowCreateFlow(false);
       setNewListName('');
       setNewListGenre('Drama');
       setNewListFilmIds([]);
       setFilmSearchInput('');
       setFilmSearch('');
-      // Persist to API
-      createUserList(localList.name, localList.genreTag, localList.filmIds)
-        .then((apiList) => {
-          if (apiList?.id) {
-            setLists((prev) => prev.map((l) => l.id === localList.id ? { ...localList, id: apiList.id } : l));
-          }
-        })
-        .catch((e) => console.error('[CreateList] API error:', e));
-    } catch (_e) {
-      // validation error
+    } catch (e) {
+      console.error('[CreateList] API error:', e);
     }
   };
 
