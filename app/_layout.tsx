@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import {
   PlayfairDisplay_400Regular,
@@ -16,7 +17,16 @@ import AuthProvider, { useAuth } from '../src/providers/AuthProvider';
 export { ErrorBoundary } from 'expo-router';
 
 function AuthGatedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding, clearOnboarding } = useAuth();
+  const router = useRouter();
+
+  // One-time onboarding redirect after first sign-in
+  useEffect(() => {
+    if (isAuthenticated && needsOnboarding) {
+      clearOnboarding();
+      router.push('/settings/about' as any);
+    }
+  }, [isAuthenticated, needsOnboarding]);
 
   if (isLoading) {
     return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;

@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter } from 'expo-router';
-import { InteractionManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   loginWithEmail,
@@ -17,11 +15,17 @@ import {
   type AuthResponse,
 } from '../lib/api';
 
+// ---------------------------------------------------------------------------
+// Context shape
+// ---------------------------------------------------------------------------
+
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  needsOnboarding: boolean;
+  clearOnboarding: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   verifyOtp: (email: string, code: string) => Promise<void>;
@@ -35,6 +39,8 @@ const AuthContext = createContext<AuthContextValue>({
   token: null,
   isLoading: true,
   isAuthenticated: false,
+  needsOnboarding: false,
+  clearOnboarding: () => {},
   signIn: async () => {},
   signUp: async () => {},
   verifyOtp: async () => {},
@@ -47,12 +53,16 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+// ---------------------------------------------------------------------------
+// SecureStore helpers
+// ---------------------------------------------------------------------------
+
 async function storeAuth(data: AuthResponse) {
-  const token = data.token;
-  if (typeof token !== 'string' || !token) {
+  const t = data.token;
+  if (typeof t !== 'string' || !t) {
     throw new Error('Auth response missing token');
   }
-  await setToken(token);
+  await setToken(t);
   await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user ?? {}));
 }
 
@@ -61,74 +71,70 @@ async function clearAuth() {
   await SecureStore.deleteItemAsync('auth_user');
 }
 
-async function checkOnboarding(): Promise<boolean> {
-  const seen = await AsyncStorage.getItem('has_seen_onboarding');
-  return seen !== 'true';
-}
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  // Restore session on mount
+  // --- Restore session on mount ---
   useEffect(() => {
     (async () => {
       try {
         const stored = await getToken();
-        if (!stored) {
-          setIsLoading(false);
-          return;
-        }
+        if (!stored) return;
+
         const res = await apiFetch('/user/profile');
         if (res.ok) {
           const profile = await res.json();
           setUser(profile.user ?? profile);
           setTokenState(stored);
         } else {
-          const cachedUser = await SecureStore.getItemAsync('auth_user');
-          if (cachedUser) {
-            setUser(JSON.parse(cachedUser));
+          // API rejected token, try cached user as offline fallback
+          const cached = await SecureStore.getItemAsync('auth_user');
+          if (cached) {
+            setUser(JSON.parse(cached));
             setTokenState(stored);
           } else {
             await clearAuth();
           }
         }
       } catch {
+        // Network error, fall back to cached user
         const stored = await getToken();
-        const cachedUser = await SecureStore.getItemAsync('auth_user');
-        if (stored && cachedUser) {
-          setUser(JSON.parse(cachedUser));
+        const cached = await SecureStore.getItemAsync('auth_user');
+        if (stored && cached) {
+          setUser(JSON.parse(cached));
           setTokenState(stored);
         } else {
           await clearAuth();
         }
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     })();
   }, []);
 
-  // No navigation guard -- _layout.tsx declaratively renders (auth) or (tabs)
-  // based on isAuthenticated. No imperative router.replace calls needed.
-
+  // --- Internal: store auth result and check onboarding ---
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
     await storeAuth(data);
     setUser(data.user);
-    const needsOnboarding = await checkOnboarding();
-    if (needsOnboarding) {
+
+    const seen = await AsyncStorage.getItem('has_seen_onboarding');
+    if (seen !== 'true') {
       await AsyncStorage.setItem('has_seen_onboarding', 'true');
+      setNeedsOnboarding(true);
     }
-    // Setting token makes isAuthenticated true, which causes _layout.tsx
-    // to declaratively switch from (auth) to (tabs) screens.
+
+    // Setting token last so isAuthenticated flips after everything is ready
     setTokenState(data.token);
-    // After tabs mount, push onboarding if needed
-    if (needsOnboarding) {
-      InteractionManager.runAfterInteractions(() => {
-        router.push('/settings/about' as any);
-      });
-    }
-  }, [router]);
+  }, []);
+
+  // --- Public auth methods (no navigation, state only) ---
 
   const signIn = useCallback(async (email: string, password: string) => {
     const data = await loginWithEmail(email, password);
@@ -137,6 +143,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
     await registerWithEmail(email, password, name);
+    // Backend sends OTP. Caller navigates to OTP screen.
   }, []);
 
   const verifyOtp = useCallback(async (email: string, code: string) => {
@@ -148,8 +155,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await clearAuth();
     setUser(null);
     setTokenState(null);
-    // Setting token to null makes isAuthenticated false, which causes
-    // _layout.tsx to declaratively switch to (auth) screens.
   }, []);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
@@ -162,6 +167,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await handlePostAuth(data);
   }, [handlePostAuth]);
 
+  const clearOnboarding = useCallback(() => {
+    setNeedsOnboarding(false);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -169,6 +178,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         token,
         isLoading,
         isAuthenticated: !!token,
+        needsOnboarding,
+        clearOnboarding,
         signIn,
         signUp,
         verifyOtp,
