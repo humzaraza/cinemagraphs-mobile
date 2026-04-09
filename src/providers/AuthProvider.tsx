@@ -77,6 +77,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     (async () => {
       try {
         const stored = await getToken();
+        console.log('AuthProvider mount: stored token =', stored ? `${stored.substring(0, 20)}...` : null);
         if (!stored) {
           setIsLoading(false);
           return;
@@ -124,6 +125,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [token, segments, isLoading]);
 
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
+    console.log('verify response:', JSON.stringify(data));
     await storeAuth(data);
     setUser(data.user);
     setTokenState(data.token);
