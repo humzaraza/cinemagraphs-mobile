@@ -11,9 +11,34 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
-import AuthProvider from '../src/providers/AuthProvider';
+import AuthProvider, { useAuth } from '../src/providers/AuthProvider';
 
 export { ErrorBoundary } from 'expo-router';
+
+function AuthGatedLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
+      {isAuthenticated ? (
+        <>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="list" />
+          <Stack.Screen name="graph" />
+          <Stack.Screen name="live-react" />
+        </>
+      ) : (
+        <Stack.Screen name="(auth)" />
+      )}
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -31,7 +56,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, gestureEnabled: true }} />
+      <AuthGatedLayout />
     </AuthProvider>
   );
 }

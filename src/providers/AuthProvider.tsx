@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { InteractionManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   loginWithEmail,
@@ -69,9 +70,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const isPostAuthRef = useRef(false);
   const router = useRouter();
-  const segments = useSegments();
 
   // Restore session on mount
   useEffect(() => {
@@ -82,7 +81,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           setIsLoading(false);
           return;
         }
-        // Validate token
         const res = await apiFetch('/user/profile');
         if (res.ok) {
           const profile = await res.json();
@@ -111,28 +109,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     })();
   }, []);
 
-  // Navigation guard -- skipped when handlePostAuth is navigating
-  useEffect(() => {
-    if (isLoading || isPostAuthRef.current) return;
-    const inAuth = segments[0] === '(auth)';
-    if (!token && !inAuth) {
-      router.replace('/(auth)/landing' as any);
-    } else if (token && inAuth) {
-      router.replace('/(tabs)' as any);
-    }
-  }, [token, segments, isLoading]);
+  // No navigation guard -- _layout.tsx declaratively renders (auth) or (tabs)
+  // based on isAuthenticated. No imperative router.replace calls needed.
 
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
-    isPostAuthRef.current = true;
     await storeAuth(data);
     setUser(data.user);
-    setTokenState(data.token);
     const needsOnboarding = await checkOnboarding();
     if (needsOnboarding) {
       await AsyncStorage.setItem('has_seen_onboarding', 'true');
-      router.replace('/settings/about' as any);
-    } else {
-      router.replace('/(tabs)' as any);
+    }
+    // Setting token makes isAuthenticated true, which causes _layout.tsx
+    // to declaratively switch from (auth) to (tabs) screens.
+    setTokenState(data.token);
+    // After tabs mount, push onboarding if needed
+    if (needsOnboarding) {
+      InteractionManager.runAfterInteractions(() => {
+        router.push('/settings/about' as any);
+      });
     }
   }, [router]);
 
@@ -151,12 +145,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
-    isPostAuthRef.current = false;
     await clearAuth();
     setUser(null);
     setTokenState(null);
-    router.replace('/(auth)/landing' as any);
-  }, [router]);
+    // Setting token to null makes isAuthenticated false, which causes
+    // _layout.tsx to declaratively switch to (auth) screens.
+  }, []);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
     const data = await loginWithGoogle(idToken);
