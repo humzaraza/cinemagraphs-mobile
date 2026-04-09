@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -10,6 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import { colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 
@@ -53,6 +55,26 @@ export default function LandingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signInWithGoogle, signInWithApple } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    redirectUri: makeRedirectUri({ scheme: 'cinemagraphsmobile' }),
+  });
+
+  useEffect(() => {
+    if (!response) return;
+    if (response.type === 'success') {
+      const idToken =
+        response.authentication?.idToken ?? response.params?.id_token;
+      if (idToken) {
+        setGoogleLoading(true);
+        signInWithGoogle(idToken)
+          .catch(() => {})
+          .finally(() => setGoogleLoading(false));
+      }
+    }
+  }, [response]);
 
   // Entrance animations
   const logoOpacity = useSharedValue(0);
@@ -77,11 +99,8 @@ export default function LandingScreen() {
     transform: [{ translateY: buttonsTranslateY.value }],
   }));
 
-  const handleGoogle = async () => {
-    // Google OAuth handled in a dedicated hook. For now navigate to email.
-    // The actual Google ID token flow requires expo-auth-session setup
-    // which needs the client IDs. This will be wired after Humza adds them.
-    router.push('/(auth)/auth' as any);
+  const handleGoogle = () => {
+    promptAsync();
   };
 
   const handleApple = async () => {
@@ -122,27 +141,38 @@ export default function LandingScreen() {
       >
         <Pressable
           onPress={handleGoogle}
-          style={({ pressed }) => [styles.googleButton, pressed && styles.buttonPressed]}
+          disabled={!request || googleLoading}
+          style={({ pressed }) => [
+            styles.googleButton,
+            pressed && styles.buttonPressed,
+            googleLoading && styles.buttonDisabled,
+          ]}
         >
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-              fill="#4285F4"
-            />
-            <Path
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              fill="#34A853"
-            />
-            <Path
-              d="M5.84 14.09A6.97 6.97 0 015.47 12c0-.72.13-1.43.37-2.09V7.07H2.18A11.96 11.96 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z"
-              fill="#FBBC05"
-            />
-            <Path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              fill="#EA4335"
-            />
-          </Svg>
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
+          {googleLoading ? (
+            <ActivityIndicator size="small" color="#0D0D1A" />
+          ) : (
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                fill="#4285F4"
+              />
+              <Path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <Path
+                d="M5.84 14.09A6.97 6.97 0 015.47 12c0-.72.13-1.43.37-2.09V7.07H2.18A11.96 11.96 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z"
+                fill="#FBBC05"
+              />
+              <Path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </Svg>
+          )}
+          <Text style={styles.googleButtonText}>
+            {googleLoading ? 'Signing in...' : 'Continue with Google'}
+          </Text>
         </Pressable>
 
         {Platform.OS === 'ios' && (
@@ -279,5 +309,8 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
