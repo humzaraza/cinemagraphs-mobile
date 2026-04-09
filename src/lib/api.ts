@@ -33,7 +33,9 @@ export async function apiFetch(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  return fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  console.log('[API]', options.method ?? 'GET', url);
+  return fetch(url, {
     ...options,
     headers,
   });
@@ -259,8 +261,12 @@ export async function loginWithApple(identityToken: string, fullName?: string | 
 // ---------------------------------------------------------------------------
 
 export async function fetchUserProfile(): Promise<any> {
+  const token = await getToken();
   const res = await apiFetch('/user/profile');
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.error('[API] fetchUserProfile failed:', res.status, 'token:', token?.slice(0, 20) ?? 'null');
+    return null;
+  }
   return res.json();
 }
 
@@ -293,6 +299,7 @@ export async function createUserList(name: string, genreTag: string, filmIds: st
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    console.error('[API] createUserList failed:', res.status, err);
     throw new Error(err.error || 'Failed to create list');
   }
   return res.json();

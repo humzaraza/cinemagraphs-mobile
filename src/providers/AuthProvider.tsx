@@ -93,8 +93,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const profile = await res.json();
           setUser(profile.user ?? profile);
           setTokenState(stored);
+        } else if (res.status === 401 || res.status === 403 || res.status === 404) {
+          // Token invalid or user deleted - sign out
+          console.error('[Auth] Token rejected on mount, status:', res.status);
+          await clearAuth();
         } else {
-          // API rejected token, try cached user as offline fallback
+          // Other error (500, network hiccup) - try cached user as offline fallback
           const cached = await SecureStore.getItemAsync('auth_user');
           if (cached) {
             setUser(JSON.parse(cached));
