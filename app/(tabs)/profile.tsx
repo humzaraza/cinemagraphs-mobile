@@ -345,11 +345,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetchUserProfile().then((p) => {
-      if (!p) return;
-      console.log('profile API response:', JSON.stringify(p));
-      setUser(p.user ?? p);
-    }).catch(() => {});
+    fetchUserProfile().then((p) => { if (p) setUser(p.user ?? p); }).catch(() => {});
     fetchUserFilms().then(setFilms).catch(() => {});
     fetchUserWatchlist().then(setWatchlist).catch(() => {});
     fetchUserLists().then(setLists).catch(() => {});

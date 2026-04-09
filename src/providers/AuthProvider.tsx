@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -69,6 +69,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isPostAuthRef = useRef(false);
   const router = useRouter();
   const segments = useSegments();
 
@@ -77,7 +78,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     (async () => {
       try {
         const stored = await getToken();
-        console.log('AuthProvider mount: stored token =', stored ? `${stored.substring(0, 20)}...` : null);
         if (!stored) {
           setIsLoading(false);
           return;
@@ -89,7 +89,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           setUser(profile.user ?? profile);
           setTokenState(stored);
         } else {
-          // Token invalid, but try cached user as offline fallback
           const cachedUser = await SecureStore.getItemAsync('auth_user');
           if (cachedUser) {
             setUser(JSON.parse(cachedUser));
@@ -99,7 +98,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           }
         }
       } catch {
-        // Network error, fall back to cached user
         const stored = await getToken();
         const cachedUser = await SecureStore.getItemAsync('auth_user');
         if (stored && cachedUser) {
@@ -113,9 +111,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     })();
   }, []);
 
-  // Navigation guard
+  // Navigation guard -- skipped when handlePostAuth is navigating
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isPostAuthRef.current) return;
     const inAuth = segments[0] === '(auth)';
     if (!token && !inAuth) {
       router.replace('/(auth)/landing' as any);
@@ -125,7 +123,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [token, segments, isLoading]);
 
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
-    console.log('verify response:', JSON.stringify(data));
+    isPostAuthRef.current = true;
     await storeAuth(data);
     setUser(data.user);
     setTokenState(data.token);
@@ -145,7 +143,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
     await registerWithEmail(email, password, name);
-    // Registration sends OTP, caller navigates to OTP screen
   }, []);
 
   const verifyOtp = useCallback(async (email: string, code: string) => {
@@ -154,6 +151,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
+    isPostAuthRef.current = false;
     await clearAuth();
     setUser(null);
     setTokenState(null);
