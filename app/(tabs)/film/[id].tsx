@@ -725,7 +725,7 @@ export default function FilmDetailScreen() {
             setLists((prev) => prev.map((l) => l.id === localList.id ? { ...localList, id: apiList.id } : l));
           }
         })
-        .catch(() => {});
+        .catch((e) => console.error('[CreateList] API error:', e));
     } catch (_e) {
       // validation error
     }
@@ -785,7 +785,7 @@ export default function FilmDetailScreen() {
                   setLists((prev) =>
                     prev.map((l) => (l.id === list.id ? updated : l)),
                   );
-                  addFilmToListAPI(list.id, id).catch(() => {});
+                  addFilmToListAPI(list.id, id).catch((e) => console.error('[AddToList] API error:', e));
                   setShowListSheet(false);
                 }
               }}

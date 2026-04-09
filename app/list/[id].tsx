@@ -97,11 +97,16 @@ export default function ListDetailScreen() {
   useEffect(() => {
     setLoaded(false);
     Promise.all([
-      fetchUserLists().then((lists) => {
-        const found = lists.find((l) => l.id === id);
-        setList(found ?? null);
-      }),
-      fetchUserFilms().then(setAllFilms),
+      fetchUserLists()
+        .then((lists) => {
+          const found = lists.find((l) => l.id === id);
+          if (!found) console.error('[ListDetail] List not found in API response, id:', id);
+          setList(found ?? null);
+        })
+        .catch((e) => console.error('[ListDetail] fetchUserLists error:', e)),
+      fetchUserFilms()
+        .then(setAllFilms)
+        .catch((e) => console.error('[ListDetail] fetchUserFilms error:', e)),
     ]).finally(() => setLoaded(true));
   }, [id]);
 

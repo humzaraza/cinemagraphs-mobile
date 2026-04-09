@@ -332,6 +332,8 @@ export default function ProfileScreen() {
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
   const [lists, setLists] = useState<MockList[]>([]);
   const [recentFilmIds, setRecentFilmIds] = useState<string[]>([]);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profileError, setProfileError] = useState(false);
 
   const [subTab, setSubTab] = useState<SubTab>('profile');
   const [filmFilter, setFilmFilter] = useState<FilmFilter>('reviewed');
@@ -348,16 +350,38 @@ export default function ProfileScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!isAuthenticated) return;
-      fetchUserProfile().then((p) => { if (p) setUser(p.user ?? p); }).catch(() => {});
-      fetchUserFilms().then(setFilms).catch(() => {});
-      fetchUserWatchlist().then(setWatchlist).catch(() => {});
-      fetchUserLists().then(setLists).catch(() => {});
-      getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
-    }, [isAuthenticated]),
-  );
+  const loadProfile = useCallback(() => {
+    if (!isAuthenticated) return;
+    setProfileError(false);
+    fetchUserProfile()
+      .then((p) => {
+        if (p) {
+          setUser(p.user ?? p);
+        } else {
+          // API returned null/empty - fall back to authUser
+          if (authUser) {
+            setUser({ ...authUser, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
+          }
+          console.error('[Profile] fetchUserProfile returned null');
+        }
+      })
+      .catch((e) => {
+        console.error('[Profile] fetchUserProfile error:', e);
+        // Fall back to authUser so we don't stuck on loading
+        if (authUser) {
+          setUser({ ...authUser, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
+        } else {
+          setProfileError(true);
+        }
+      })
+      .finally(() => setProfileLoaded(true));
+    fetchUserFilms().then(setFilms).catch((e) => console.error('[Profile] fetchUserFilms error:', e));
+    fetchUserWatchlist().then(setWatchlist).catch((e) => console.error('[Profile] fetchUserWatchlist error:', e));
+    fetchUserLists().then(setLists).catch((e) => console.error('[Profile] fetchUserLists error:', e));
+    getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
+  }, [isAuthenticated, authUser]);
+
+  useFocusEffect(loadProfile);
 
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
@@ -402,10 +426,23 @@ export default function ProfileScreen() {
     );
   }
 
-  if (!user) {
+  if (!user && !profileLoaded) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.unauthWrap}>
+          <Text style={styles.unauthText}>Could not load profile</Text>
+          <Pressable onPress={loadProfile} style={styles.unauthBtn}>
+            <Text style={styles.unauthBtnText}>Try again</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
