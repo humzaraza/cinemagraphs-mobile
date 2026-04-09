@@ -84,10 +84,25 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           setUser(profile.user ?? profile);
           setTokenState(stored);
         } else {
-          await clearAuth();
+          // Token invalid, but try cached user as offline fallback
+          const cachedUser = await SecureStore.getItemAsync('auth_user');
+          if (cachedUser) {
+            setUser(JSON.parse(cachedUser));
+            setTokenState(stored);
+          } else {
+            await clearAuth();
+          }
         }
       } catch {
-        await clearAuth();
+        // Network error, fall back to cached user
+        const stored = await getToken();
+        const cachedUser = await SecureStore.getItemAsync('auth_user');
+        if (stored && cachedUser) {
+          setUser(JSON.parse(cachedUser));
+          setTokenState(stored);
+        } else {
+          await clearAuth();
+        }
       }
       setIsLoading(false);
     })();
