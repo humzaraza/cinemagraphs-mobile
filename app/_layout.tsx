@@ -16,17 +16,17 @@ import AuthProvider, { useAuth } from '../src/providers/AuthProvider';
 
 export { ErrorBoundary } from 'expo-router';
 
-function AuthGatedLayout() {
+function RootNav() {
   const { isAuthenticated, isLoading, needsOnboarding, clearOnboarding } = useAuth();
   const router = useRouter();
 
-  // One-time onboarding redirect after first sign-in
   useEffect(() => {
+    if (isLoading) return;
     if (isAuthenticated && needsOnboarding) {
       clearOnboarding();
       router.push('/settings/about' as any);
     }
-  }, [isAuthenticated, needsOnboarding]);
+  }, [isAuthenticated, isLoading, needsOnboarding]);
 
   if (isLoading) {
     return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
@@ -34,17 +34,13 @@ function AuthGatedLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="settings" />
-          <Stack.Screen name="list" />
-          <Stack.Screen name="graph" />
-          <Stack.Screen name="live-react" />
-        </>
-      ) : (
-        <Stack.Screen name="(auth)" />
-      )}
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="list" />
+      <Stack.Screen name="graph" />
+      <Stack.Screen name="live-react" />
+      <Stack.Screen name="index" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
@@ -66,7 +62,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="light" />
-      <AuthGatedLayout />
+      <RootNav />
     </AuthProvider>
   );
 }

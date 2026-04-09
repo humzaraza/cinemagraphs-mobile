@@ -1,11 +1,15 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fonts } from '../../src/constants/theme';
+import { useAuth } from '../../src/providers/AuthProvider';
 
 export default function TabLayout() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Redirect href="/(auth)/landing" />;
+
   return (
     <Tabs
       screenOptions={{
