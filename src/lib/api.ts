@@ -8,6 +8,9 @@ export async function getToken(): Promise<string | null> {
 }
 
 export async function setToken(token: string): Promise<void> {
+  if (typeof token !== 'string' || !token) {
+    throw new Error('setToken requires a non-empty string');
+  }
   await SecureStore.setItemAsync('auth_token', token);
 }
 

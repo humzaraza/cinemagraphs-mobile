@@ -47,8 +47,12 @@ export function useAuth() {
 }
 
 async function storeAuth(data: AuthResponse) {
-  await setToken(data.token);
-  await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user));
+  const token = data.token;
+  if (typeof token !== 'string' || !token) {
+    throw new Error('Auth response missing token');
+  }
+  await setToken(token);
+  await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user ?? {}));
 }
 
 async function clearAuth() {
