@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Polyline, Line, Circle, Rect } from 'react-native-svg';
 import { colors, fonts } from '../src/constants/theme';
+import { useAuth } from '../src/providers/AuthProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -122,6 +123,7 @@ const SLIDES: Slide[] = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { clearOnboarding } = useAuth();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -136,6 +138,7 @@ export default function OnboardingScreen() {
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   const done = () => {
+    clearOnboarding();
     router.replace('/(tabs)/explore' as any);
   };
 

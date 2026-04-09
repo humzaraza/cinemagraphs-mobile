@@ -17,13 +17,12 @@ import AuthProvider, { useAuth } from '../src/providers/AuthProvider';
 export { ErrorBoundary } from 'expo-router';
 
 function RootNav() {
-  const { isAuthenticated, isLoading, needsOnboarding, clearOnboarding } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated && needsOnboarding) {
-      clearOnboarding();
       router.push('/onboarding' as any);
     }
   }, [isAuthenticated, isLoading, needsOnboarding]);
