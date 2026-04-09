@@ -9,7 +9,7 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
@@ -27,6 +27,15 @@ import { createList } from '../../src/lib/lists';
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed } from '../../src/lib/recentlyViewed';
+
+const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
+
+function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | null }): string | null {
+  const path = film.posterUrl || (film as any).posterPath;
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${TMDB_POSTER}${path}`;
+}
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -242,6 +251,7 @@ function PosterCell({
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
+  const posterUri = getPosterUri(film);
 
   return (
     <Pressable
@@ -249,11 +259,11 @@ function PosterCell({
       style={styles.posterCell}
     >
       <View style={styles.posterImageContainer}>
-        {imgError ? (
+        {imgError || !posterUri ? (
           <PosterFallback title={film.title} />
         ) : (
           <Image
-            source={{ uri: film.posterUrl }}
+            source={{ uri: posterUri }}
             style={styles.posterImageInner}
             resizeMode="cover"
             onError={() => setImgError(true)}
@@ -285,6 +295,7 @@ function PosterCell({
 function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
+  const posterUri = getPosterUri(film);
 
   return (
     <Pressable
@@ -292,11 +303,11 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
       style={styles.posterCell}
     >
       <View style={styles.posterImageContainer}>
-        {imgError ? (
+        {imgError || !posterUri ? (
           <PosterFallback title={film.title} />
         ) : (
           <Image
-            source={{ uri: film.posterUrl }}
+            source={{ uri: posterUri }}
             style={styles.posterImageInner}
             resizeMode="cover"
             onError={() => setImgError(true)}
@@ -337,14 +348,16 @@ export default function ProfileScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetchUserProfile().then((p) => { if (p) setUser(p.user ?? p); }).catch(() => {});
-    fetchUserFilms().then(setFilms).catch(() => {});
-    fetchUserWatchlist().then(setWatchlist).catch(() => {});
-    fetchUserLists().then(setLists).catch(() => {});
-    getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
-  }, [isAuthenticated]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      fetchUserProfile().then((p) => { if (p) setUser(p.user ?? p); }).catch(() => {});
+      fetchUserFilms().then(setFilms).catch(() => {});
+      fetchUserWatchlist().then(setWatchlist).catch(() => {});
+      fetchUserLists().then(setLists).catch(() => {});
+      getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
+    }, [isAuthenticated]),
+  );
 
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(

@@ -44,11 +44,8 @@ export default function Sparkline({
 
   const scores = dataPoints.map((dp) => dp.score);
   const rawMin = Math.min(...scores);
-  const rawMax = Math.max(...scores);
-  const range = rawMax - rawMin;
-  const yPad = range < 0.5 ? 0.5 : range * 0.15;
-  const yMin = rawMin - yPad;
-  const yMax = rawMax + yPad;
+  const yMin = Math.max(0, Math.floor(rawMin) - 1);
+  const yMax = 10;
   const yRange = yMax - yMin || 1;
 
   // Simple sparkline (no axes)
@@ -156,13 +153,13 @@ export default function Sparkline({
         x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
         textAnchor="end" fontSize={LABEL_FONT_SIZE}
         fill={LABEL_COLOR}      >
-        {rawMax.toFixed(1)}
+        {yMax}
       </SvgText>
       <SvgText
         x={yLabelW - 4} y={chartBottom}
         textAnchor="end" fontSize={LABEL_FONT_SIZE}
         fill={LABEL_COLOR}      >
-        {rawMin.toFixed(1)}
+        {yMin}
       </SvgText>
       {/* X-axis labels */}
       <SvgText

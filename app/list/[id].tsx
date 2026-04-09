@@ -92,19 +92,38 @@ export default function ListDetailScreen() {
   const [list, setList] = useState<MockList | null>(null);
   const [allFilms, setAllFilms] = useState<MockFilm[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('graph');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchUserLists().then((lists) => {
-      const found = lists.find((l) => l.id === id);
-      setList(found ?? null);
-    });
-    fetchUserFilms().then(setAllFilms);
+    setLoaded(false);
+    Promise.all([
+      fetchUserLists().then((lists) => {
+        const found = lists.find((l) => l.id === id);
+        setList(found ?? null);
+      }),
+      fetchUserFilms().then(setAllFilms),
+    ]).finally(() => setLoaded(true));
   }, [id]);
+
+  if (!loaded) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Text style={styles.loading}>Loading...</Text>
+      </View>
+    );
+  }
 
   if (!list) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={styles.loading}>Loading...</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 12 }}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 18l-6-6 6-6" stroke={colors.gold} strokeWidth={2} />
+            </Svg>
+          </Pressable>
+          <Text style={styles.title}>List not found</Text>
+        </View>
       </View>
     );
   }

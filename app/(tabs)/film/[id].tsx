@@ -21,7 +21,7 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms } from '../../../src/lib/api';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms, addFilmToListAPI, createUserList } from '../../../src/lib/api';
 import { addFilmToList, createList } from '../../../src/lib/lists';
 import BottomSheet from '../../../src/components/BottomSheet';
 import { useAuthGate } from '../../../src/components/AuthGate';
@@ -272,13 +272,18 @@ function SentimentArc({ film }: { film: FilmDetail }) {
   const graphWidth = SCREEN_WIDTH - CONTENT_PADDING * 2 - 20; // 20 = card padding
   const plotW = graphWidth - GRAPH_PAD_LEFT - GRAPH_PAD_RIGHT;
   const plotH = GRAPH_HEIGHT - GRAPH_PAD_TOP - GRAPH_PAD_BOTTOM;
-  const midY = GRAPH_PAD_TOP + plotH * 0.5;
   const n = sg.dataPoints.length;
 
+  // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
+  const allScores = sg.dataPoints.map((dp) => dp.score);
+  const yFloor = Math.max(0, Math.floor(Math.min(...allScores)) - 1);
+  const yRange = 10 - yFloor || 1;
+  const midY = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
+
   function toPoint(index: number, score: number): string {
-    const clamped = Math.max(0, Math.min(10, score));
+    const clamped = Math.max(yFloor, Math.min(10, score));
     const x = GRAPH_PAD_LEFT + (index / Math.max(1, n - 1)) * plotW;
-    const y = GRAPH_PAD_TOP + (1 - clamped / 10) * plotH;
+    const y = GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }
 
@@ -319,7 +324,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
             strokeWidth={0.5}
           />
 
-          {/* 2. Y-axis labels: 0, 5, 10 */}
+          {/* 2. Y-axis labels */}
           <SvgText
             x={GRAPH_PAD_LEFT - 4}
             y={GRAPH_PAD_TOP + 4}
@@ -329,6 +334,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
           >
             10
           </SvgText>
+          {5 > yFloor && (
           <SvgText
             x={GRAPH_PAD_LEFT - 4}
             y={midY + 3}
@@ -338,6 +344,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
           >
             5
           </SvgText>
+          )}
           <SvgText
             x={GRAPH_PAD_LEFT - 4}
             y={GRAPH_PAD_TOP + plotH}
@@ -345,7 +352,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
             fontSize={9}
             fill="rgba(245,240,225,0.25)"
           >
-            0
+            {yFloor}
           </SvgText>
 
           {/* 3. X-axis line */}
@@ -703,14 +710,22 @@ export default function FilmDetailScreen() {
 
   const handleCreateList = () => {
     try {
-      const list = createList(newListName, newListGenre, newListFilmIds, lists);
-      setLists((prev) => [list, ...prev]);
+      const localList = createList(newListName, newListGenre, newListFilmIds, lists);
+      setLists((prev) => [localList, ...prev]);
       setShowCreateFlow(false);
       setNewListName('');
       setNewListGenre('Drama');
       setNewListFilmIds([]);
       setFilmSearchInput('');
       setFilmSearch('');
+      // Persist to API
+      createUserList(localList.name, localList.genreTag, localList.filmIds)
+        .then((apiList) => {
+          if (apiList?.id) {
+            setLists((prev) => prev.map((l) => l.id === localList.id ? { ...localList, id: apiList.id } : l));
+          }
+        })
+        .catch(() => {});
     } catch (_e) {
       // validation error
     }
@@ -770,6 +785,8 @@ export default function FilmDetailScreen() {
                   setLists((prev) =>
                     prev.map((l) => (l.id === list.id ? updated : l)),
                   );
+                  addFilmToListAPI(list.id, id).catch(() => {});
+                  setShowListSheet(false);
                 }
               }}
               style={styles.listSheetRow}

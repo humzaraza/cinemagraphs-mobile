@@ -183,6 +183,11 @@ export default function ExpandedGraphScreen() {
   const svgWidth = Math.max(n * 60, 500);
   const svgHeight = graphAreaHeight;
 
+  // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
+  const allScores = dataPoints.map((dp) => dp.score);
+  const yFloor = allScores.length > 0 ? Math.max(0, Math.floor(Math.min(...allScores)) - 1) : 0;
+  const yRange = 10 - yFloor || 1;
+
   // Map data point index to x,y
   function getX(i: number): number {
     if (n <= 1) return svgWidth / 2;
@@ -190,8 +195,8 @@ export default function ExpandedGraphScreen() {
   }
 
   function getY(score: number): number {
-    const clamped = Math.max(0, Math.min(10, score));
-    return GRAPH_PAD_TOP + (1 - clamped / 10) * plotHeight;
+    const clamped = Math.max(yFloor, Math.min(10, score));
+    return GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotHeight;
   }
 
   // Polyline points
@@ -239,7 +244,7 @@ export default function ExpandedGraphScreen() {
       <View style={styles.graphRow}>
         {/* Pinned Y-axis */}
         <View style={[styles.yAxis, { height: graphAreaHeight }]}>
-          {Array.from({ length: 10 }, (_, i) => 10 - i).map((val) => (
+          {Array.from({ length: 10 - yFloor }, (_, i) => 10 - i).map((val) => (
             <Text key={val} style={styles.yLabel}>
               {val}
             </Text>

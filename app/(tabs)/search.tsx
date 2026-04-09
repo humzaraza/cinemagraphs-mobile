@@ -75,13 +75,6 @@ function CategoryIcon({ name }: { name: string }) {
   const sw = 1.5;
 
   switch (name) {
-    case 'Genre':
-      return (
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Circle cx={12} cy={12} r={9} stroke={stroke} strokeWidth={sw} />
-          <Path d="M9 9l6 3-6 3V9z" stroke={stroke} strokeWidth={sw} />
-        </Svg>
-      );
     case 'Release date':
       return (
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -103,20 +96,6 @@ function CategoryIcon({ name }: { name: string }) {
           <Path d="M3 20L7 10l4 6 4-10 6 14" stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
         </Svg>
       );
-    case 'Streaming service':
-      return (
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Path d="M2 6a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" stroke={stroke} strokeWidth={sw} />
-          <Line x1={8} y1={20} x2={16} y2={20} stroke={stroke} strokeWidth={sw} />
-        </Svg>
-      );
-    case 'Directors':
-      return (
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Circle cx={12} cy={8} r={4} stroke={stroke} strokeWidth={sw} />
-          <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={stroke} strokeWidth={sw} />
-        </Svg>
-      );
     case 'Recently added':
       return (
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -125,7 +104,13 @@ function CategoryIcon({ name }: { name: string }) {
         </Svg>
       );
     default:
-      return null;
+      // Genre categories
+      return (
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Circle cx={12} cy={12} r={9} stroke={stroke} strokeWidth={sw} />
+          <Path d="M9 9l6 3-6 3V9z" stroke={stroke} strokeWidth={sw} />
+        </Svg>
+      );
   }
 }
 
@@ -134,34 +119,49 @@ function CategoryIcon({ name }: { name: string }) {
 // ---------------------------------------------------------------------------
 
 const CATEGORIES = [
-  'Genre',
-  'Release date',
+  'Drama',
+  'Action',
+  'Horror',
+  'Sci-Fi',
+  'Comedy',
+  'Thriller',
   'Highest rated',
   'Most dramatic arcs',
-  'Streaming service',
-  'Directors',
+  'Release date',
   'Recently added',
 ];
 
-// Maps browse categories to filtering logic.
-// "Genre" shows a sub-list, others filter/sort the cached film list.
-// Categories without a direct genre match use closest approximation.
+// Genre filter: matches against the film's genres array (case-insensitive)
+function genreFilter(genre: string) {
+  const lower = genre.toLowerCase();
+  return (films: Film[]) => films.filter((f) =>
+    f.genres?.some((g) => {
+      const gl = g.toLowerCase();
+      if (lower === 'sci-fi') return gl === 'sci-fi' || gl === 'science fiction';
+      return gl === lower;
+    }),
+  );
+}
+
 const CATEGORY_FILTERS: Record<string, (films: Film[]) => Film[]> = {
-  'Genre': (films) => films, // handled separately via genre sub-filter
-  'Release date': (films) => [...films].sort((a, b) => (b.year ?? 0) - (a.year ?? 0)),
+  'Drama': genreFilter('Drama'),
+  'Action': genreFilter('Action'),
+  'Horror': genreFilter('Horror'),
+  'Sci-Fi': genreFilter('Sci-Fi'),
+  'Comedy': genreFilter('Comedy'),
+  'Thriller': genreFilter('Thriller'),
   'Highest rated': (films) => [...films].sort((a, b) =>
     (b.sentimentGraph?.overallScore ?? 0) - (a.sentimentGraph?.overallScore ?? 0)),
   'Most dramatic arcs': (films) => {
-    // Sort by arc range (max - min datapoint) as a proxy for "dramatic"
     const range = (f: Film) => {
       const pts = f.sentimentGraph?.dataPoints;
       if (!pts || pts.length < 2) return 0;
-      return Math.max(...pts) - Math.min(...pts);
+      const scores = pts.map((p) => p.score);
+      return Math.max(...scores) - Math.min(...scores);
     };
     return [...films].sort((a, b) => range(b) - range(a));
   },
-  'Streaming service': (films) => films, // No streaming data in API yet
-  'Directors': (films) => films, // No director field in Film type yet
+  'Release date': (films) => [...films].sort((a, b) => (b.year ?? 0) - (a.year ?? 0)),
   'Recently added': (films) => [...films].reverse(),
 };
 
