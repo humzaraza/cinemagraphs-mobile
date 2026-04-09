@@ -245,10 +245,7 @@ function PosterCell({
 
   return (
     <Pressable
-      onPress={() => {
-        console.log('[Profile] PosterCell tap:', film.id, '->', `/film/${film.id}`);
-        router.push(`/film/${film.id}` as any);
-      }}
+      onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.posterCell}
     >
       <View style={styles.posterImageContainer}>
@@ -291,10 +288,7 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
 
   return (
     <Pressable
-      onPress={() => {
-        console.log('[Profile] WatchlistCell tap:', film.id, '->', `/film/${film.id}`);
-        router.push(`/film/${film.id}` as any);
-      }}
+      onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.posterCell}
     >
       <View style={styles.posterImageContainer}>
@@ -355,7 +349,6 @@ export default function ProfileScreen() {
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
     (row: string) => {
-      console.log('[Profile] Row tap:', row);
       switch (row) {
         case 'Reviewed':
           setFilmFilter('reviewed');
@@ -372,7 +365,7 @@ export default function ProfileScreen() {
           setSubTab('lists');
           break;
         default:
-          console.log('[Profile] Unhandled row:', row);
+          break;
       }
     },
     [],
@@ -433,17 +426,17 @@ export default function ProfileScreen() {
 
         {/* Stats card */}
         <View style={styles.statsCard}>
-          <Pressable style={styles.statCol} onPress={() => console.log('Films')}>
+          <Pressable style={styles.statCol}>
             <Text style={styles.statNumber}>{user?.stats?.films ?? user?.filmCount ?? 0}</Text>
             <Text style={styles.statLabel}>Films</Text>
           </Pressable>
           <View style={styles.statDivider} />
-          <Pressable style={styles.statCol} onPress={() => console.log('Following')}>
+          <Pressable style={styles.statCol}>
             <Text style={styles.statNumber}>{user?.stats?.following ?? user?.followingCount ?? 0}</Text>
             <Text style={styles.statLabel}>Following</Text>
           </Pressable>
           <View style={styles.statDivider} />
-          <Pressable style={styles.statCol} onPress={() => console.log('Followers')}>
+          <Pressable style={styles.statCol}>
             <Text style={styles.statNumber}>{user?.stats?.followers ?? user?.followerCount ?? 0}</Text>
             <Text style={styles.statLabel}>Followers</Text>
           </Pressable>

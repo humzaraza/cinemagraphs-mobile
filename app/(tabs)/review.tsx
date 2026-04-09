@@ -9,6 +9,8 @@ import {
   TextInput,
   Share,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -331,7 +333,6 @@ export default function ReviewScreen() {
       ending: ending || undefined,
       otherThoughts: otherText || undefined,
     };
-    console.log('Submitting review (State A):', JSON.stringify(payload, null, 2));
     setSubmitting(true);
     setErrorMsg('');
     try {
@@ -361,7 +362,6 @@ export default function ReviewScreen() {
       ending: ending || undefined,
       otherThoughts: otherText || undefined,
     };
-    console.log('Submitting review (State B):', JSON.stringify(payload, null, 2));
     setSubmitting(true);
     setErrorMsg('');
     try {
@@ -564,7 +564,7 @@ export default function ReviewScreen() {
     const dp = selectBeats(film.sentimentGraph?.dataPoints ?? []);
 
     return (
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <BackHeader />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
@@ -638,13 +638,13 @@ export default function ReviewScreen() {
             <Text style={styles.submitText}>Submit review</Text>
           </Pressable>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
   // ----- FORM B (no beats) -----
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <BackHeader />
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
@@ -713,7 +713,7 @@ export default function ReviewScreen() {
           <Text style={styles.submitText}>Preview review</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

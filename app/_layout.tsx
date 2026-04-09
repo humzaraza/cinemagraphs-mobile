@@ -24,7 +24,7 @@ function RootNav() {
     if (isLoading) return;
     if (isAuthenticated && needsOnboarding) {
       clearOnboarding();
-      router.push('/settings/about' as any);
+      router.push('/onboarding' as any);
     }
   }, [isAuthenticated, isLoading, needsOnboarding]);
 
@@ -40,6 +40,7 @@ function RootNav() {
       <Stack.Screen name="list" />
       <Stack.Screen name="graph" />
       <Stack.Screen name="live-react" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="index" />
       <Stack.Screen name="+not-found" />
     </Stack>

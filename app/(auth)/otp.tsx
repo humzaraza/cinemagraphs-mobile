@@ -6,6 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +75,11 @@ export default function OTPScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <KeyboardAvoidingView
+      style={[styles.container, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {/* Back */}
       <Pressable onPress={() => router.back()} style={styles.backBtn}>
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -150,7 +158,8 @@ export default function OTPScreen() {
           )}
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 

@@ -27,7 +27,7 @@ import type { Film } from '../../src/types/film';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_WIDTH = 90;
 const POSTER_HEIGHT = 130;
-const TICKER_SPEED = 32000;
+const TICKER_SPEED = 44800;
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w185';
 
 function getPosterUri(film: Film): string | null {

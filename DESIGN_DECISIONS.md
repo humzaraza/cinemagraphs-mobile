@@ -137,6 +137,34 @@ This document captures all finalized UI/UX decisions. Update this whenever a des
 - Toggle changes call PUT /api/user/settings, optimistic update with rollback on failure
 - User card shows real name/email from AuthProvider
 
+## App Icon and Splash
+- App icon: gold C on #0D0D1A, Playfair Display Bold (exported from Canva)
+- Splash screen: same motif, #0D0D1A background, resizeMode "contain"
+- Android adaptive icon: same foreground, #0D0D1A background (not white)
+
+## Onboarding Carousel
+- 3-slide horizontal carousel with dot indicators
+- Slide 1: Sentiment graphs (gold polyline arc SVG illustration)
+- Slide 2: Write a review (gold slider SVG illustration)
+- Slide 3: Lists and watchlist (gold grid SVG illustration)
+- "Next" button on slides 1-2, "Get started" on slide 3
+- "Skip" top-right on all slides
+- Replaces How It Works redirect for first-time login onboarding
+- How It Works (about.tsx) still accessible from Settings
+
+## Ticker Speed
+- Movie Market ticker slowed by 40% (32s to 44.8s per full cycle)
+- Feels like a calm scrolling ticker, not a racing one
+
+## Browse Categories
+- 7 categories: Genre, Release date, Highest rated, Most dramatic arcs, Streaming service, Directors, Recently added
+- Highest rated: sorts cached films by overallScore descending
+- Most dramatic arcs: sorts by max-min range of sentiment datapoints
+- Release date: sorts by year descending
+- Recently added: reverses the cached film list
+- Genre, Streaming service, Directors: pass-through (no filtering data available yet)
+- Active category shown as label in results header
+
 ## Instagram Stories Sharing
 - Use Instagram Share API (not Web Share API) for mobile
 - Reference Spotify share sheet UX

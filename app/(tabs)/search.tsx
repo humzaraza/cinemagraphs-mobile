@@ -143,14 +143,36 @@ const CATEGORIES = [
   'Recently added',
 ];
 
-function BrowseCategories() {
+// Maps browse categories to filtering logic.
+// "Genre" shows a sub-list, others filter/sort the cached film list.
+// Categories without a direct genre match use closest approximation.
+const CATEGORY_FILTERS: Record<string, (films: Film[]) => Film[]> = {
+  'Genre': (films) => films, // handled separately via genre sub-filter
+  'Release date': (films) => [...films].sort((a, b) => (b.year ?? 0) - (a.year ?? 0)),
+  'Highest rated': (films) => [...films].sort((a, b) =>
+    (b.sentimentGraph?.overallScore ?? 0) - (a.sentimentGraph?.overallScore ?? 0)),
+  'Most dramatic arcs': (films) => {
+    // Sort by arc range (max - min datapoint) as a proxy for "dramatic"
+    const range = (f: Film) => {
+      const pts = f.sentimentGraph?.dataPoints;
+      if (!pts || pts.length < 2) return 0;
+      return Math.max(...pts) - Math.min(...pts);
+    };
+    return [...films].sort((a, b) => range(b) - range(a));
+  },
+  'Streaming service': (films) => films, // No streaming data in API yet
+  'Directors': (films) => films, // No director field in Film type yet
+  'Recently added': (films) => [...films].reverse(),
+};
+
+function BrowseCategories({ onSelect }: { onSelect: (cat: string) => void }) {
   return (
     <View>
       <Text style={styles.browseLabel}>BROWSE</Text>
       {CATEGORIES.map((cat, i) => (
         <Pressable
           key={cat}
-          onPress={() => console.log('Category:', cat)}
+          onPress={() => onSelect(cat)}
           style={[
             styles.categoryRow,
             i < CATEGORIES.length - 1 && styles.categoryDivider,
@@ -229,9 +251,10 @@ export default function SearchScreen() {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [loadingFilms, setLoadingFilms] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isSearching = focused || query.length > 0;
+  const isSearching = focused || query.length > 0 || activeCategory !== null;
 
   // Fetch all films once on mount
   useEffect(() => {
@@ -277,8 +300,23 @@ export default function SearchScreen() {
     setHasSearched(false);
     setSearching(false);
     setFocused(false);
+    setActiveCategory(null);
     Keyboard.dismiss();
   }, []);
+
+  const onCategorySelect = useCallback(
+    (cat: string) => {
+      const filter = CATEGORY_FILTERS[cat];
+      if (!filter) return;
+      setActiveCategory(cat);
+      setResults(filter(allFilms));
+      setHasSearched(true);
+      setQuery('');
+      setFocused(false);
+      Keyboard.dismiss();
+    },
+    [allFilms]
+  );
 
   const renderResult = useCallback(
     ({ item }: { item: Film }) => <ResultCard film={item} />,
@@ -323,7 +361,7 @@ export default function SearchScreen() {
         <FlatList
           data={[]}
           renderItem={null}
-          ListHeaderComponent={<BrowseCategories />}
+          ListHeaderComponent={<BrowseCategories onSelect={onCategorySelect} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -346,7 +384,9 @@ export default function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             hasSearched ? (
-              <Text style={styles.resultCount}>{results.length} result{results.length !== 1 ? 's' : ''}</Text>
+              <Text style={styles.resultCount}>
+                {activeCategory ? `${activeCategory} \u00B7 ` : ''}{results.length} result{results.length !== 1 ? 's' : ''}
+              </Text>
             ) : null
           }
         />

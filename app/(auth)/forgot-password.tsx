@@ -6,6 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +41,11 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <KeyboardAvoidingView
+      style={[styles.container, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Pressable onPress={() => router.back()} style={styles.backBtn}>
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
@@ -92,7 +100,8 @@ export default function ForgotPasswordScreen() {
           </>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
