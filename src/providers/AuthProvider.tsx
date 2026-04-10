@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -81,8 +81,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  // --- Restore session on mount ---
+  // --- Restore session on mount (runs exactly once) ---
+  const didRestore = useRef(false);
   useEffect(() => {
+    if (didRestore.current) return;
+    didRestore.current = true;
     (async () => {
       try {
         const stored = await getToken();

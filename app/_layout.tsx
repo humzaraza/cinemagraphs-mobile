@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Stack, Redirect } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -23,14 +23,10 @@ export { ErrorBoundary } from 'expo-router';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNav() {
-  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
-  }
-
-  if (isAuthenticated && needsOnboarding) {
-    return <Redirect href="/onboarding" />;
   }
 
   return (

@@ -7,7 +7,8 @@ import { colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 export default function TabLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, needsOnboarding } = useAuth();
+  if (isAuthenticated && needsOnboarding) return <Redirect href="/onboarding" />;
   if (!isAuthenticated) return <Redirect href="/(auth)/landing" />;
 
   return (
