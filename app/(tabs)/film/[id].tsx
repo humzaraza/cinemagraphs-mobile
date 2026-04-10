@@ -769,7 +769,7 @@ export default function FilmDetailScreen() {
         {lists.map((list) => {
           const listFilmIds = list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId);
           const already = listFilmIds.some((fid: string) => fid === id);
-          const filmCount = listFilmIds.length;
+          const filmCount = list.filmCount ?? listFilmIds.length;
           return (
             <Pressable
               key={list.id}

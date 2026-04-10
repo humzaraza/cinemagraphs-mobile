@@ -66,7 +66,7 @@ function PosterCell({ film }: { film: MockFilm }) {
           </View>
         ) : (
           <Image
-            source={{ uri: film.posterUrl ?? ((film as any).posterPath ? "https://image.tmdb.org/t/p/w185" + (film as any).posterPath : undefined) }}
+            source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? ((film as any).posterPath ? "https://image.tmdb.org/t/p/w185" + (film as any).posterPath : undefined) }}
             style={styles.posterImageInner}
             resizeMode="cover"
             onError={() => setImgError(true)}
@@ -75,14 +75,14 @@ function PosterCell({ film }: { film: MockFilm }) {
       </View>
       <View style={styles.posterSparkline}>
         <Sparkline
-          dataPoints={film.sparklineData.map((s) => ({ score: s }))}
+          dataPoints={((film.sparklineData ?? []).map((s) => ({ score: s })))}
           width={POSTER_W - 4}
           height={16}
           strokeColor={colors.teal}
           strokeWidth={1.2}
         />
       </View>
-      <Text style={styles.posterScore}>{film.personalScore.toFixed(1)}</Text>
+      <Text style={styles.posterScore}>{(film.personalScore ?? film.score ?? 0).toFixed(1)}</Text>
     </Pressable>
   );
 }
@@ -94,7 +94,7 @@ export default function ListDetailScreen() {
 
   const [list, setList] = useState<any | null>(null);
   const [allFilms, setAllFilms] = useState<MockFilm[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('graph');
+  const [viewMode, setViewMode] = useState<ViewMode>('poster');
   const [loaded, setLoaded] = useState(false);
 
   // Add film modal state
@@ -169,7 +169,7 @@ export default function ListDetailScreen() {
   const unique = allFilms.filter(
     (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
   );
-  const listFilms = filmIds
+  const listFilms = (list.films && list.films.length > 0) ? list.films : filmIds
     .map((fid: string) => unique.find((f) => f.id === fid))
     .filter(Boolean) as MockFilm[];
 
@@ -259,7 +259,7 @@ export default function ListDetailScreen() {
                 style={styles.searchRow}
               >
                 <Image
-                  source={{ uri: film.posterUrl ?? (film.posterPath ? "https://image.tmdb.org/t/p/w185" + film.posterPath : undefined) }}
+                  source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? (film.posterPath ? "https://image.tmdb.org/t/p/w185" + film.posterPath : undefined) }}
                   style={styles.searchPoster}
                   resizeMode="cover"
                 />

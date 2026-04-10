@@ -95,14 +95,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (res.ok) {
           const profile = await res.json();
           const restoredUser = profile.user ?? profile;
-          const uid = restoredUser?.id ?? restoredUser?.email;
-          if (uid) {
-            const seen = await AsyncStorage.getItem(`has_seen_onboarding_${uid}`);
-            console.log('[Auth] session restore onboarding check, uid:', uid, 'seen:', seen);
-            if (seen !== 'true') {
-              setNeedsOnboarding(true);
-            }
-          }
           setUser(restoredUser);
           setTokenState(stored);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {

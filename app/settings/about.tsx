@@ -35,7 +35,7 @@ export default function AboutScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.replace('/(tabs)' as any)} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
             <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
           </Svg>

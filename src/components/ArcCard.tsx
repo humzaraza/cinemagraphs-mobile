@@ -33,12 +33,12 @@ export default function ArcCard({
       onPress={() => router.push(`/film/${film.id}` as any)}
       style={[
         styles.arcCard,
-        { borderLeftWidth: 3, borderLeftColor: hexToRgba(film.dominantColor, 0.5) },
+        { borderLeftWidth: 3, borderLeftColor: hexToRgba(film.dominantColor ?? '#C8A951', 0.5) },
       ]}
     >
       {/* Dominant color gradient accent */}
       <LinearGradient
-        colors={[hexToRgba(film.dominantColor, 0.5), 'transparent']}
+        colors={[hexToRgba(film.dominantColor ?? '#C8A951', 0.5), 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.arcColorAccent}
@@ -62,7 +62,7 @@ export default function ArcCard({
           {film.title}
         </Text>
         <Sparkline
-          dataPoints={film.sparklineData.map((s) => ({ score: s }))}
+          dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
           width={sparklineWidth}
           height={50}
           strokeColor={colors.gold}
@@ -78,7 +78,7 @@ export default function ArcCard({
       </View>
 
       {/* Score */}
-      <Text style={styles.arcScore}>{film.personalScore.toFixed(1)}</Text>
+      <Text style={styles.arcScore}>{(film.personalScore ?? film.score ?? 0).toFixed(1)}</Text>
     </Pressable>
   );
 }
