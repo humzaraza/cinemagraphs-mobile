@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,17 +43,6 @@ export default function ArcCard({
     ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
     : film.posterUrl;
 
-  useEffect(() => {
-    try {
-      const { getColors } = require('react-native-image-colors');
-      if (posterUri && getColors) {
-        getColors(posterUri, { fallback, cache: true, key: posterUri }).then((result: any) => {
-          if (result.platform === 'ios') setBgColor(result.background ?? fallback);
-          else if (result.platform === 'android') setBgColor(result.dominant ?? fallback);
-        }).catch(() => {});
-      }
-    } catch {}
-  }, [posterUri]);
 
   return (
     <Pressable
