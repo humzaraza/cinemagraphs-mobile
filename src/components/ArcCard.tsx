@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getColors } from 'react-native-image-colors';
 import { colors, fonts, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
 import type { MockFilm } from '../data/mockProfile';
@@ -24,6 +25,7 @@ export default function ArcCard({
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
+  const [bgColor, setBgColor] = useState('#C8A951');
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
   const sparklineWidth = cw - 90;
 
@@ -31,13 +33,22 @@ export default function ArcCard({
     ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
     : film.posterUrl;
 
+  useEffect(() => {
+    if (posterUri) {
+      getColors(posterUri, { fallback: '#C8A951', cache: true, key: posterUri }).then(result => {
+        if (result.platform === 'ios') setBgColor(result.background ?? '#C8A951');
+        else if (result.platform === 'android') setBgColor(result.dominant ?? '#C8A951');
+      }).catch(() => {});
+    }
+  }, [film.posterUrl]);
+
   return (
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.arcCard}
     >
       <LinearGradient
-        colors={[hexToRgba(film.dominantColor ?? '#C8A951', 0.4), 'transparent']}
+        colors={[hexToRgba(bgColor, 0.4), 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.arcColorAccent}
