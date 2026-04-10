@@ -125,9 +125,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // --- Internal: store auth result and check onboarding ---
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
+    // 1. Store token to SecureStore
     await storeAuth(data);
-    setUser(data.user);
 
+    // 2. Check onboarding BEFORE setting user/token (which trigger navigation)
     const userId = data.user?.id ?? data.user?.email;
     console.log('[Auth] handlePostAuth called, userId:', userId);
     if (userId) {
@@ -143,7 +144,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       console.warn('[Auth] handlePostAuth: no userId found on data.user, keys:', Object.keys(data.user ?? {}));
     }
 
-    // Setting token last so isAuthenticated flips after everything is ready
+    // 3. Set user and token last so isAuthenticated flips after needsOnboarding is ready
+    setUser(data.user);
     setTokenState(data.token);
   }, []);
 
