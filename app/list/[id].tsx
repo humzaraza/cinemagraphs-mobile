@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,8 +15,10 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserLists, fetchUserFilms } from '../../src/lib/api';
+import { fetchUserLists, fetchAllFilms, addFilmToListAPI } from '../../src/lib/api';
+import BottomSheet from '../../src/components/BottomSheet';
 import type { MockFilm } from '../../src/data/mockProfile';
+import type { Film } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAD = 16;
@@ -94,32 +97,55 @@ export default function ListDetailScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('graph');
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+  // Add film modal state
+  const [showAddFilm, setShowAddFilm] = useState(false);
+  const [searchFilms, setSearchFilms] = useState<Film[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadList = useCallback(() => {
     setLoaded(false);
-    console.log('[ListDetail] Loading list id:', id);
     Promise.all([
       fetchUserLists()
         .then((lists) => {
-          console.log('[ListDetail] Got', lists.length, 'lists, looking for id:', id);
-          console.log('[ListDetail] Available list ids:', lists.map((l) => l.id));
           const found = lists.find((l) => l.id === id);
-          if (found) {
-            console.log('[ListDetail] Found list:', found.name, 'keys:', Object.keys(found));
-            console.log('[ListDetail] filmIds:', found.filmIds, 'films:', found.films?.length);
-          } else {
-            console.error('[ListDetail] List not found in API response, id:', id);
-          }
           setList(found ?? null);
         })
         .catch((e) => console.error('[ListDetail] fetchUserLists error:', e)),
-      fetchUserFilms('reviewed')
-        .then((films) => {
-          console.log('[ListDetail] Got', films.length, 'reviewed films');
-          setAllFilms(films);
-        })
-        .catch((e) => console.error('[ListDetail] fetchUserFilms error:', e)),
+      fetchAllFilms()
+        .then(setSearchFilms)
+        .catch((e) => console.error('[ListDetail] fetchAllFilms error:', e)),
     ]).finally(() => setLoaded(true));
   }, [id]);
+
+  useEffect(() => {
+    loadList();
+  }, [loadList]);
+
+  const handleSearchChange = (text: string) => {
+    setSearchInput(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => setSearchQuery(text), 300);
+  };
+
+  const filmIds = list ? (list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId)) : [];
+
+  const filteredSearch = searchFilms.filter((f) =>
+    f.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  const handleAddFilm = async (filmId: string) => {
+    if (!id) return;
+    try {
+      await addFilmToListAPI(id, filmId);
+      const lists = await fetchUserLists();
+      const found = lists.find((l) => l.id === id);
+      setList(found ?? null);
+    } catch (e) {
+      console.error('[ListDetail] addFilmToListAPI error:', e);
+    }
+  };
 
   if (!loaded) {
     return (
@@ -147,7 +173,6 @@ export default function ListDetailScreen() {
   const unique = allFilms.filter(
     (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
   );
-  const filmIds = list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId);
   const listFilms = filmIds
     .map((fid: string) => unique.find((f) => f.id === fid))
     .filter(Boolean) as MockFilm[];
@@ -179,7 +204,7 @@ export default function ListDetailScreen() {
         </View>
 
         <Text style={styles.meta}>
-          {list.genreTag} {'\u00B7'} {listFilms.length} film{listFilms.length !== 1 ? 's' : ''}
+          {list.genreTag} {'\u00B7'} {filmIds.length} film{filmIds.length !== 1 ? 's' : ''}
         </Text>
 
         {viewMode === 'graph' ? (
@@ -201,7 +226,59 @@ export default function ListDetailScreen() {
             <Text style={styles.emptyText}>No films in this list yet</Text>
           </View>
         )}
+
+        {/* Add films button */}
+        <Pressable
+          onPress={() => setShowAddFilm(true)}
+          style={styles.addFilmBtn}
+        >
+          <Text style={styles.addFilmBtnText}>+ Add films</Text>
+        </Pressable>
       </ScrollView>
+
+      {/* Add film bottom sheet */}
+      <BottomSheet
+        visible={showAddFilm}
+        onClose={() => { setShowAddFilm(false); setSearchInput(''); setSearchQuery(''); }}
+        title="Add film to list"
+      >
+        <View style={styles.searchInputWrap}>
+          <TextInput
+            value={searchInput}
+            onChangeText={handleSearchChange}
+            placeholder="Search all films..."
+            placeholderTextColor="rgba(245,240,225,0.2)"
+            style={styles.searchInput}
+          />
+        </View>
+        <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
+          {filteredSearch.slice(0, 30).map((film) => {
+            const alreadyInList = filmIds.includes(film.id);
+            return (
+              <Pressable
+                key={film.id}
+                onPress={() => {
+                  if (!alreadyInList) handleAddFilm(film.id);
+                }}
+                style={styles.searchRow}
+              >
+                <Image
+                  source={{ uri: film.posterUrl ?? undefined }}
+                  style={styles.searchPoster}
+                  resizeMode="cover"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.searchTitle} numberOfLines={1}>{film.title}</Text>
+                  <Text style={styles.searchYear}>{film.year}</Text>
+                </View>
+                {alreadyInList && (
+                  <Text style={styles.alreadyAdded}>{'\u2713'}</Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }
@@ -296,10 +373,70 @@ const styles = StyleSheet.create({
   },
 
   // Empty
-  emptyWrap: { alignItems: 'center', paddingVertical: 60 },
+  emptyWrap: { alignItems: 'center', paddingVertical: 40 },
   emptyText: {
     fontFamily: fonts.body,
     fontSize: 12,
     color: 'rgba(255,255,255,0.3)',
+  },
+
+  // Add film button
+  addFilmBtn: {
+    marginHorizontal: PAD,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.25)',
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  addFilmBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.gold,
+  },
+
+  // Search modal
+  searchInputWrap: {
+    marginBottom: 10,
+  },
+  searchInput: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.ivory,
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  searchPoster: {
+    width: 36,
+    height: 54,
+    borderRadius: 3,
+    backgroundColor: 'rgba(30,30,60,0.6)',
+  },
+  searchTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.ivory,
+  },
+  searchYear: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(245,240,225,0.35)',
+    marginTop: 1,
+  },
+  alreadyAdded: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.teal,
   },
 });

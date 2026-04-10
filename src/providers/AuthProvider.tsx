@@ -181,15 +181,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
-    const userId = user?.id ?? user?.email;
     await clearAuth();
-    if (userId) {
-      await AsyncStorage.removeItem(`has_seen_onboarding_${userId}`);
-    }
     setUser(null);
     setTokenState(null);
     setNeedsOnboarding(false);
-  }, [user]);
+  }, []);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
     const data = await loginWithGoogle(idToken);
