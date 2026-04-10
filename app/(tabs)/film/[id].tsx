@@ -21,7 +21,7 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, addFilmToListAPI, createUserList } from '../../../src/lib/api';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList } from '../../../src/lib/api';
 // lists.ts local helpers no longer needed - using API directly
 import BottomSheet from '../../../src/components/BottomSheet';
 import { useAuthGate } from '../../../src/components/AuthGate';
@@ -154,7 +154,7 @@ function DetailSkeleton() {
 // Backdrop with gradient, back button, watched badge
 // ---------------------------------------------------------------------------
 
-function Backdrop({ film, onAddToList }: { film: FilmDetail; onAddToList?: () => void }) {
+function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film: FilmDetail; onAddToList?: () => void; inWatchlist: boolean; onToggleWatchlist?: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const backdropUri = getBackdropUri(film.backdropUrl);
@@ -195,6 +195,19 @@ function Backdrop({ film, onAddToList }: { film: FilmDetail; onAddToList?: () =>
           </Svg>
           <Text style={styles.watchedText}>Watched</Text>
         </View>
+        <Pressable
+          onPress={() => onToggleWatchlist?.()}
+          style={styles.addToListBtn}
+        >
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M5 3a2 2 0 00-2 2v16l9-4 9 4V5a2 2 0 00-2-2H5z"
+              stroke={colors.gold}
+              strokeWidth={1.8}
+              fill={inWatchlist ? colors.gold : 'none'}
+            />
+          </Svg>
+        </Pressable>
         <Pressable
           onPress={() => onAddToList?.()}
           style={styles.addToListBtn}
@@ -637,6 +650,7 @@ export default function FilmDetailScreen() {
   const [film, setFilm] = useState<FilmDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [inWatchlist, setInWatchlist] = useState(false);
   const [lists, setLists] = useState<any[]>([]);
   const [showListSheet, setShowListSheet] = useState(false);
   const { gate: authGate, sheet: authSheet } = useAuthGate();
@@ -673,6 +687,9 @@ export default function FilmDetailScreen() {
     load();
     if (id) addRecentlyViewed(id);
     fetchUserLists().then(setLists).catch(() => {});
+    fetchUserWatchlist()
+      .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))
+      .catch(() => {});
     fetchAllFilms().then((films) => {
       const unique = films.filter(
         (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
@@ -697,6 +714,21 @@ export default function FilmDetailScreen() {
     setNewListFilmIds((prev) =>
       prev.includes(filmId) ? prev.filter((fid) => fid !== filmId) : [...prev, filmId],
     );
+  };
+
+  const handleToggleWatchlist = async () => {
+    if (!id) return;
+    try {
+      if (inWatchlist) {
+        await removeFromWatchlist(id);
+        setInWatchlist(false);
+      } else {
+        await addToWatchlist(id);
+        setInWatchlist(true);
+      }
+    } catch (e) {
+      console.error('[Watchlist] toggle error:', e);
+    }
   };
 
   const openCreateFlow = () => {
@@ -743,7 +775,7 @@ export default function FilmDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
       >
-        <Backdrop film={film} onAddToList={() => authGate(() => setShowListSheet(true))} />
+        <Backdrop film={film} onAddToList={() => authGate(() => setShowListSheet(true))} inWatchlist={inWatchlist} onToggleWatchlist={() => authGate(handleToggleWatchlist)} />
 
         <View style={styles.content}>
           <MetadataRow film={film} />

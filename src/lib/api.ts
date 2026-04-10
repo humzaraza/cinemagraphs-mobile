@@ -285,6 +285,28 @@ export async function fetchUserWatchlist(): Promise<any[]> {
   return Array.isArray(data) ? data : data.films ?? [];
 }
 
+export async function addToWatchlist(filmId: string): Promise<void> {
+  const res = await apiFetch('/user/watchlist', {
+    method: 'POST',
+    body: JSON.stringify({ filmId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to add to watchlist');
+  }
+}
+
+export async function removeFromWatchlist(filmId: string): Promise<void> {
+  const res = await apiFetch('/user/watchlist', {
+    method: 'DELETE',
+    body: JSON.stringify({ filmId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to remove from watchlist');
+  }
+}
+
 export async function fetchUserLists(): Promise<any[]> {
   const res = await apiFetch('/user/lists');
   if (!res.ok) {

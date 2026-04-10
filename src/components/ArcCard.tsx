@@ -25,69 +25,72 @@ export default function ArcCard({
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
-  // card padding (10) + poster (50) + gaps (10+10) + score (~40) + card padding (10)
-  const sparklineWidth = cw - 130;
+  const sparklineWidth = cw - 90;
+
+  const posterUri = film.posterUrl?.startsWith('/')
+    ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
+    : film.posterUrl;
 
   return (
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
-      style={[
-        styles.arcCard,
-        { borderLeftWidth: 3, borderLeftColor: hexToRgba(film.dominantColor ?? '#C8A951', 0.5) },
-      ]}
+      style={styles.arcCard}
     >
-      {/* Dominant color gradient accent */}
       <LinearGradient
-        colors={[hexToRgba(film.dominantColor ?? '#C8A951', 0.5), 'transparent']}
+        colors={[hexToRgba(film.dominantColor ?? '#C8A951', 0.4), 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.arcColorAccent}
       />
 
-      {/* Poster thumbnail */}
-      {imgError ? (
-        <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
-      ) : (
-        <Image
-          source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? undefined }}
-          style={styles.arcPoster}
-          resizeMode="cover"
-          onError={() => setImgError(true)}
-        />
-      )}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* Poster thumbnail */}
+        {imgError ? (
+          <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
+        ) : (
+          <Image
+            source={{ uri: posterUri ?? undefined }}
+            style={styles.arcPoster}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        )}
 
-      {/* Title + graph */}
-      <View style={styles.arcMiddle}>
-        <Text style={styles.arcTitle} numberOfLines={1}>
-          {film.title}
-        </Text>
-        <Sparkline
-          dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
-          width={sparklineWidth}
-          height={50}
-          strokeColor={colors.gold}
-          strokeWidth={2}
-          showAxes
-          showMidline
-          runtimeMinutes={film.runtime}
-          peakDotColor={colors.teal}
-          peakDotRadius={3.5}
-          lowDotColor="#E24B4A"
-          lowDotRadius={3.5}
-        />
+        {/* Title + score + graph */}
+        <View style={{ flex: 1 }}>
+          {/* Title row with score */}
+          <View style={styles.titleRow}>
+            <Text style={styles.arcTitle} numberOfLines={1}>
+              {film.title}
+            </Text>
+            <Text style={styles.arcScore}>
+              {(film.personalScore ?? film.score ?? 0).toFixed(1)}
+            </Text>
+          </View>
+
+          {/* Sparkline graph */}
+          <Sparkline
+            dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
+            width={sparklineWidth}
+            height={55}
+            strokeColor={colors.gold}
+            strokeWidth={2}
+            showAxes
+            showMidline
+            runtimeMinutes={film.runtime}
+            peakDotColor={colors.teal}
+            peakDotRadius={3.5}
+            lowDotColor="#E24B4A"
+            lowDotRadius={3.5}
+          />
+        </View>
       </View>
-
-      {/* Score */}
-      <Text style={styles.arcScore}>{(film.personalScore ?? film.score ?? 0).toFixed(1)}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   arcCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: borderRadius.lg,
     padding: 10,
@@ -107,25 +110,28 @@ const styles = StyleSheet.create({
     height: 75,
     minWidth: 50,
     maxWidth: 50,
-    borderRadius: 6,
+    borderRadius: 4,
     backgroundColor: '#1a1a2e',
   },
   arcPosterPlaceholder: {
     backgroundColor: 'rgba(30,30,60,0.8)',
   },
-  arcMiddle: {
-    flex: 1,
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   arcTitle: {
-    fontFamily: fonts.headingBold,
+    fontFamily: fonts.heading,
     fontSize: 14,
     color: colors.ivory,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
   arcScore: {
-    fontFamily: fonts.headingBold,
-    fontSize: 20,
+    fontFamily: fonts.heading,
+    fontSize: 16,
     color: colors.gold,
-    alignSelf: 'center',
   },
 });
