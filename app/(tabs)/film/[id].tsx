@@ -21,13 +21,12 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserFilms, addFilmToListAPI, createUserList } from '../../../src/lib/api';
-import { addFilmToList } from '../../../src/lib/lists';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, addFilmToListAPI, createUserList } from '../../../src/lib/api';
+// lists.ts local helpers no longer needed - using API directly
 import BottomSheet from '../../../src/components/BottomSheet';
 import { useAuthGate } from '../../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../../src/lib/recentlyViewed';
 import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
-import type { MockList, MockFilm } from '../../../src/data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
@@ -638,7 +637,7 @@ export default function FilmDetailScreen() {
   const [film, setFilm] = useState<FilmDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [lists, setLists] = useState<MockList[]>([]);
+  const [lists, setLists] = useState<any[]>([]);
   const [showListSheet, setShowListSheet] = useState(false);
   const { gate: authGate, sheet: authSheet } = useAuthGate();
 
@@ -652,7 +651,7 @@ export default function FilmDetailScreen() {
   const [filmSearch, setFilmSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [pickerFilms, setPickerFilms] = useState<MockFilm[]>([]);
+  const [pickerFilms, setPickerFilms] = useState<Film[]>([]);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -674,7 +673,7 @@ export default function FilmDetailScreen() {
     load();
     if (id) addRecentlyViewed(id);
     fetchUserLists().then(setLists).catch(() => {});
-    fetchUserFilms('reviewed').then((films) => {
+    fetchAllFilms().then((films) => {
       const unique = films.filter(
         (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
       );
@@ -768,18 +767,18 @@ export default function FilmDetailScreen() {
         title="Add to list"
       >
         {lists.map((list) => {
-          const already = list.filmIds.includes(id ?? '');
+          const listFilmIds = list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId);
+          const already = listFilmIds.some((fid: string) => fid === id);
+          const filmCount = listFilmIds.length;
           return (
             <Pressable
               key={list.id}
               onPress={() => {
                 if (!already && id) {
-                  const updated = addFilmToList(list, id);
-                  setLists((prev) =>
-                    prev.map((l) => (l.id === list.id ? updated : l)),
-                  );
                   addFilmToListAPI(list.id, id).catch((e) => console.error('[AddToList] API error:', e));
                   setShowListSheet(false);
+                  // Refresh lists to get updated data
+                  fetchUserLists().then(setLists).catch(() => {});
                 }
               }}
               style={styles.listSheetRow}
@@ -787,7 +786,7 @@ export default function FilmDetailScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.listSheetName}>{list.name}</Text>
                 <Text style={styles.listSheetMeta}>
-                  {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
+                  {list.genreTag} {'\u00B7'} {filmCount} film{filmCount !== 1 ? 's' : ''}
                 </Text>
               </View>
               {already && (
@@ -852,7 +851,7 @@ export default function FilmDetailScreen() {
             return (
               <Pressable key={fid} onPress={() => toggleFilmInNewList(fid)}>
                 <Image
-                  source={{ uri: f.posterUrl }}
+                  source={{ uri: f.posterUrl ?? undefined }}
                   style={styles.filmChipPoster}
                   resizeMode="cover"
                 />
@@ -912,7 +911,7 @@ export default function FilmDetailScreen() {
                 style={styles.pickerRow}
               >
                 <Image
-                  source={{ uri: f.posterUrl }}
+                  source={{ uri: f.posterUrl ?? undefined }}
                   style={styles.pickerPoster}
                   resizeMode="cover"
                 />

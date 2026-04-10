@@ -192,7 +192,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Sign out */}
-        <Pressable style={styles.signOutBtn} onPress={signOut}>
+        <Pressable style={styles.signOutBtn} onPress={() => { signOut(); router.replace('/'); }}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
 

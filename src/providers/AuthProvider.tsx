@@ -130,7 +130,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     const seen = await AsyncStorage.getItem('has_seen_onboarding');
     if (seen !== 'true') {
-      await AsyncStorage.setItem('has_seen_onboarding', 'true');
       setNeedsOnboarding(true);
     }
 
@@ -171,8 +170,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await handlePostAuth(data);
   }, [handlePostAuth]);
 
-  const clearOnboarding = useCallback(() => {
+  const clearOnboarding = useCallback(async () => {
     setNeedsOnboarding(false);
+    await AsyncStorage.setItem('has_seen_onboarding', 'true');
   }, []);
 
   return (

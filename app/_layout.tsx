@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_700Bold,
@@ -22,6 +25,7 @@ function RootNav() {
 
   useEffect(() => {
     if (isLoading) return;
+    console.log('[Onboarding] needsOnboarding:', needsOnboarding, 'isAuthenticated:', isAuthenticated);
     if (isAuthenticated && needsOnboarding) {
       router.push('/onboarding' as any);
     }
@@ -55,14 +59,22 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
+  const onLayoutReady = useCallback(async () => {
+    if (fontsLoaded) {
+      try { await SplashScreen.hideAsync(); } catch {}
+    }
+  }, [fontsLoaded]);
+
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: '#0D0D1A' }} />;
   }
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <RootNav />
-    </AuthProvider>
+    <View style={{ flex: 1 }} onLayout={onLayoutReady}>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <RootNav />
+      </AuthProvider>
+    </View>
   );
 }
