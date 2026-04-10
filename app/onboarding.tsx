@@ -137,8 +137,8 @@ export default function OnboardingScreen() {
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-  const done = () => {
-    clearOnboarding();
+  const done = async () => {
+    await clearOnboarding();
     router.replace('/(tabs)/explore' as any);
   };
 
