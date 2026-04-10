@@ -78,7 +78,7 @@ function PosterCell({ film }: { film: MockFilm }) {
           dataPoints={((film.sparklineData ?? []).map((s) => ({ score: s })))}
           width={POSTER_W - 4}
           height={16}
-          strokeColor={colors.teal}
+          strokeColor={colors.gold}
           strokeWidth={1.2}
         />
       </View>
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   posterScore: {
     fontFamily: fonts.body,
     fontSize: 11,
-    color: colors.teal,
+    color: colors.gold,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -437,6 +437,6 @@ const styles = StyleSheet.create({
   alreadyAdded: {
     fontFamily: fonts.body,
     fontSize: 14,
-    color: colors.teal,
+    color: colors.gold,
   },
 });

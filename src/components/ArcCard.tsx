@@ -49,7 +49,7 @@ export default function ArcCard({
         <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
       ) : (
         <Image
-          source={{ uri: film.posterUrl }}
+          source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? undefined }}
           style={styles.arcPoster}
           resizeMode="cover"
           onError={() => setImgError(true)}
