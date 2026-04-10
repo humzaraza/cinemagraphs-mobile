@@ -91,7 +91,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         const res = await apiFetch('/user/profile');
         if (res.ok) {
           const profile = await res.json();
-          setUser(profile.user ?? profile);
+          const restoredUser = profile.user ?? profile;
+          const uid = restoredUser?.id ?? restoredUser?.email;
+          if (uid) {
+            const seen = await AsyncStorage.getItem(`has_seen_onboarding_${uid}`);
+            console.log('[Auth] session restore onboarding check, uid:', uid, 'seen:', seen);
+            if (seen !== 'true') {
+              setNeedsOnboarding(true);
+            }
+          }
+          setUser(restoredUser);
           setTokenState(stored);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
@@ -152,7 +161,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   // --- Public auth methods (no navigation, state only) ---
 
   const signIn = useCallback(async (email: string, password: string) => {
+    console.log('[Auth] signIn function called');
     const data = await loginWithEmail(email, password);
+    console.log('[Auth] signIn API response received, user:', data.user?.id ?? data.user?.email);
     await handlePostAuth(data);
   }, [handlePostAuth]);
 

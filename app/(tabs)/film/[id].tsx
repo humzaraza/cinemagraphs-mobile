@@ -773,12 +773,16 @@ export default function FilmDetailScreen() {
           return (
             <Pressable
               key={list.id}
-              onPress={() => {
+              onPress={async () => {
                 if (!already && id) {
-                  addFilmToListAPI(list.id, id).catch((e) => console.error('[AddToList] API error:', e));
+                  try {
+                    await addFilmToListAPI(list.id, id);
+                    const updated = await fetchUserLists();
+                    setLists(updated);
+                  } catch (e) {
+                    console.error('[AddToList] API error:', e);
+                  }
                   setShowListSheet(false);
-                  // Refresh lists to get updated data
-                  fetchUserLists().then(setLists).catch(() => {});
                 }
               }}
               style={styles.listSheetRow}
