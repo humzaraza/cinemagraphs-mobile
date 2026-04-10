@@ -297,6 +297,13 @@ export async function fetchUserLists(): Promise<any[]> {
   return lists;
 }
 
+export async function fetchUserList(listId: string): Promise<any> {
+  const res = await apiFetch('/user/lists/' + listId);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.list ?? data;
+}
+
 export async function createUserList(name: string, genreTag: string, filmIds: string[]): Promise<any> {
   console.log('[API] createUserList called with:', { name, genreTag, filmIds });
   const res = await apiFetch('/user/lists', {

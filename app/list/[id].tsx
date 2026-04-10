@@ -15,7 +15,7 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserLists, fetchAllFilms, addFilmToListAPI } from '../../src/lib/api';
+import { fetchUserList, fetchAllFilms, addFilmToListAPI } from '../../src/lib/api';
 import BottomSheet from '../../src/components/BottomSheet';
 import type { MockFilm } from '../../src/data/mockProfile';
 import type { Film } from '../../src/types/film';
@@ -66,7 +66,7 @@ function PosterCell({ film }: { film: MockFilm }) {
           </View>
         ) : (
           <Image
-            source={{ uri: film.posterUrl }}
+            source={{ uri: film.posterUrl ?? ((film as any).posterPath ? "https://image.tmdb.org/t/p/w185" + (film as any).posterPath : undefined) }}
             style={styles.posterImageInner}
             resizeMode="cover"
             onError={() => setImgError(true)}
@@ -107,14 +107,11 @@ export default function ListDetailScreen() {
   const loadList = useCallback(() => {
     setLoaded(false);
     Promise.all([
-      fetchUserLists()
-        .then((lists) => {
-          const found = lists.find((l) => l.id === id);
-          setList(found ?? null);
-        })
-        .catch((e) => console.error('[ListDetail] fetchUserLists error:', e)),
+      fetchUserList(id!)
+        .then((found) => { setList(found ?? null); })
+        .catch((e) => console.error('[ListDetail] fetchUserList error:', e)),
       fetchAllFilms()
-        .then(setSearchFilms)
+        .then((films) => { setSearchFilms(films); setAllFilms(films as any); })
         .catch((e) => console.error('[ListDetail] fetchAllFilms error:', e)),
     ]).finally(() => setLoaded(true));
   }, [id]);
@@ -139,9 +136,8 @@ export default function ListDetailScreen() {
     if (!id) return;
     try {
       await addFilmToListAPI(id, filmId);
-      const lists = await fetchUserLists();
-      const found = lists.find((l) => l.id === id);
-      setList(found ?? null);
+      const updated = await fetchUserList(id);
+      setList(updated ?? null);
     } catch (e) {
       console.error('[ListDetail] addFilmToListAPI error:', e);
     }
@@ -263,7 +259,7 @@ export default function ListDetailScreen() {
                 style={styles.searchRow}
               >
                 <Image
-                  source={{ uri: film.posterUrl ?? undefined }}
+                  source={{ uri: film.posterUrl ?? (film.posterPath ? "https://image.tmdb.org/t/p/w185" + film.posterPath : undefined) }}
                   style={styles.searchPoster}
                   resizeMode="cover"
                 />
