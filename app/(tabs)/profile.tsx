@@ -356,7 +356,7 @@ export default function ProfileScreen() {
     fetchUserProfile()
       .then((p) => {
         if (p) {
-          setUser(p.user ?? p);
+          setUser({ ...(p.user ?? p), stats: p.stats ?? {} });
         } else {
           // API returned null/empty - fall back to authUser
           if (authUser) {
