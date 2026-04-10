@@ -128,9 +128,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await storeAuth(data);
     setUser(data.user);
 
-    const seen = await AsyncStorage.getItem('has_seen_onboarding');
-    if (seen !== 'true') {
-      setNeedsOnboarding(true);
+    const userId = data.user?.id ?? data.user?.email;
+    if (userId) {
+      const seen = await AsyncStorage.getItem(`has_seen_onboarding_${userId}`);
+      if (seen !== 'true') {
+        setNeedsOnboarding(true);
+      }
     }
 
     // Setting token last so isAuthenticated flips after everything is ready
@@ -155,10 +158,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
+    const userId = user?.id ?? user?.email;
     await clearAuth();
+    if (userId) {
+      await AsyncStorage.removeItem(`has_seen_onboarding_${userId}`);
+    }
     setUser(null);
     setTokenState(null);
-  }, []);
+    setNeedsOnboarding(false);
+  }, [user]);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
     const data = await loginWithGoogle(idToken);
@@ -172,8 +180,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const clearOnboarding = useCallback(async () => {
     setNeedsOnboarding(false);
-    await AsyncStorage.setItem('has_seen_onboarding', 'true');
-  }, []);
+    const userId = user?.id ?? user?.email;
+    if (userId) {
+      await AsyncStorage.setItem(`has_seen_onboarding_${userId}`, 'true');
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider

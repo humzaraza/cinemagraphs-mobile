@@ -15,7 +15,7 @@ import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
 import { fetchUserLists, fetchUserFilms } from '../../src/lib/api';
-import type { MockList, MockFilm } from '../../src/data/mockProfile';
+import type { MockFilm } from '../../src/data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAD = 16;
@@ -89,23 +89,34 @@ export default function ListDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [list, setList] = useState<MockList | null>(null);
+  const [list, setList] = useState<any | null>(null);
   const [allFilms, setAllFilms] = useState<MockFilm[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('graph');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
+    console.log('[ListDetail] Loading list id:', id);
     Promise.all([
       fetchUserLists()
         .then((lists) => {
+          console.log('[ListDetail] Got', lists.length, 'lists, looking for id:', id);
+          console.log('[ListDetail] Available list ids:', lists.map((l) => l.id));
           const found = lists.find((l) => l.id === id);
-          if (!found) console.error('[ListDetail] List not found in API response, id:', id);
+          if (found) {
+            console.log('[ListDetail] Found list:', found.name, 'keys:', Object.keys(found));
+            console.log('[ListDetail] filmIds:', found.filmIds, 'films:', found.films?.length);
+          } else {
+            console.error('[ListDetail] List not found in API response, id:', id);
+          }
           setList(found ?? null);
         })
         .catch((e) => console.error('[ListDetail] fetchUserLists error:', e)),
       fetchUserFilms('reviewed')
-        .then(setAllFilms)
+        .then((films) => {
+          console.log('[ListDetail] Got', films.length, 'reviewed films');
+          setAllFilms(films);
+        })
         .catch((e) => console.error('[ListDetail] fetchUserFilms error:', e)),
     ]).finally(() => setLoaded(true));
   }, [id]);
@@ -136,8 +147,9 @@ export default function ListDetailScreen() {
   const unique = allFilms.filter(
     (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
   );
-  const listFilms = list.filmIds
-    .map((fid) => unique.find((f) => f.id === fid))
+  const filmIds = list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId);
+  const listFilms = filmIds
+    .map((fid: string) => unique.find((f) => f.id === fid))
     .filter(Boolean) as MockFilm[];
 
   const cardWidth = SCREEN_WIDTH - PAD * 2;

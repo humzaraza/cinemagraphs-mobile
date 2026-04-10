@@ -22,7 +22,7 @@ import {
   fetchUserLists,
   createUserList,
 } from '../../src/lib/api';
-import type { MockUser, MockFilm, MockWatchlistFilm, MockList } from '../../src/data/mockProfile';
+import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockProfile';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuth } from '../../src/providers/AuthProvider';
@@ -330,7 +330,7 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<(MockUser & Record<string, any>) | null>(null);
   const [films, setFilms] = useState<MockFilm[]>([]);
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
-  const [lists, setLists] = useState<MockList[]>([]);
+  const [lists, setLists] = useState<any[]>([]);
   const [recentFilmIds, setRecentFilmIds] = useState<string[]>([]);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileError, setProfileError] = useState(false);
@@ -642,8 +642,13 @@ export default function ProfileScreen() {
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
+      console.log('[Profile] Creating list:', newListName.trim(), newListGenre, newListFilmIds);
       const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
-      setLists((prev) => [apiList, ...prev]);
+      console.log('[Profile] createUserList returned:', JSON.stringify(apiList).slice(0, 300));
+      // API may return { list: {...} } or {...} directly
+      const listObj = apiList.list ?? apiList;
+      console.log('[Profile] listObj.id:', listObj.id, 'keys:', Object.keys(listObj));
+      setLists((prev) => [listObj, ...prev]);
       setShowCreateList(false);
       setNewListName('');
       setNewListGenre('Drama');
@@ -691,8 +696,9 @@ export default function ProfileScreen() {
       ) : (
         <View style={{ gap: 10, marginTop: 8 }}>
           {lists.map((list) => {
-            const listFilms = list.filmIds
-              .map((id) => allUniqueFilms.find((f) => f.id === id))
+            const filmIds = list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId);
+            const listFilms = filmIds
+              .map((fid: string) => allUniqueFilms.find((f) => f.id === fid))
               .filter(Boolean) as MockFilm[];
             return (
               <Pressable

@@ -287,12 +287,18 @@ export async function fetchUserWatchlist(): Promise<any[]> {
 
 export async function fetchUserLists(): Promise<any[]> {
   const res = await apiFetch('/user/lists');
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.error('[API] fetchUserLists failed:', res.status);
+    return [];
+  }
   const data = await res.json();
-  return Array.isArray(data) ? data : data.lists ?? [];
+  const lists = Array.isArray(data) ? data : data.lists ?? [];
+  console.log('[API] fetchUserLists returned', lists.length, 'lists, first:', JSON.stringify(lists[0])?.slice(0, 200));
+  return lists;
 }
 
 export async function createUserList(name: string, genreTag: string, filmIds: string[]): Promise<any> {
+  console.log('[API] createUserList called with:', { name, genreTag, filmIds });
   const res = await apiFetch('/user/lists', {
     method: 'POST',
     body: JSON.stringify({ name, genreTag, filmIds }),
@@ -302,7 +308,9 @@ export async function createUserList(name: string, genreTag: string, filmIds: st
     console.error('[API] createUserList failed:', res.status, err);
     throw new Error(err.error || 'Failed to create list');
   }
-  return res.json();
+  const data = await res.json();
+  console.log('[API] createUserList response:', JSON.stringify(data).slice(0, 300));
+  return data;
 }
 
 export async function addFilmToListAPI(listId: string, filmId: string): Promise<any> {
