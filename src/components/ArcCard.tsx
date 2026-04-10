@@ -2,12 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getColors } from 'react-native-image-colors';
 import { colors, fonts, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
 import type { MockFilm } from '../data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
+const PALETTE = ['#8B4513','#2E4057','#6B2737','#1B4332','#4A1942','#2C3E50','#5D4E37','#3D1F00','#1A3A5C','#4B2840'];
+
+function hashColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return PALETTE[Math.abs(hash) % PALETTE.length];
+}
 
 export function hexToRgba(hex: string, alpha: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -25,7 +34,8 @@ export default function ArcCard({
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
-  const [bgColor, setBgColor] = useState('#C8A951');
+  const fallback = hashColor(film.title ?? film.id ?? 'film');
+  const [bgColor, setBgColor] = useState(fallback);
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
   const sparklineWidth = cw - 90;
 
@@ -34,13 +44,16 @@ export default function ArcCard({
     : film.posterUrl;
 
   useEffect(() => {
-    if (posterUri) {
-      getColors(posterUri, { fallback: '#C8A951', cache: true, key: posterUri }).then(result => {
-        if (result.platform === 'ios') setBgColor(result.background ?? '#C8A951');
-        else if (result.platform === 'android') setBgColor(result.dominant ?? '#C8A951');
-      }).catch(() => {});
-    }
-  }, [film.posterUrl]);
+    try {
+      const { getColors } = require('react-native-image-colors');
+      if (posterUri && getColors) {
+        getColors(posterUri, { fallback, cache: true, key: posterUri }).then((result: any) => {
+          if (result.platform === 'ios') setBgColor(result.background ?? fallback);
+          else if (result.platform === 'android') setBgColor(result.dominant ?? fallback);
+        }).catch(() => {});
+      }
+    } catch {}
+  }, [posterUri]);
 
   return (
     <Pressable
