@@ -726,7 +726,7 @@ export default function ProfileScreen() {
                     {list.name}
                   </Text>
                   <Text style={styles.listCardMeta}>
-                    {list.genreTag} {'\u00B7'} {list.filmIds.length} film{list.filmIds.length !== 1 ? 's' : ''}
+                    {list.genreTag} {'\u00B7'} {filmIds.length} film{filmIds.length !== 1 ? 's' : ''}
                   </Text>
                 </View>
                 <ChevronRight />

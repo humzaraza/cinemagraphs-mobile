@@ -24,9 +24,10 @@ function RootNav() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('[Layout] isAuthenticated:', isAuthenticated, 'needsOnboarding:', needsOnboarding, 'isLoading:', isLoading);
     if (isLoading) return;
-    console.log('[Onboarding] needsOnboarding:', needsOnboarding, 'isAuthenticated:', isAuthenticated);
     if (isAuthenticated && needsOnboarding) {
+      console.log('[Layout] Pushing to /onboarding');
       router.push('/onboarding' as any);
     }
   }, [isAuthenticated, isLoading, needsOnboarding]);

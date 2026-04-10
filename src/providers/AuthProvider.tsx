@@ -129,11 +129,18 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setUser(data.user);
 
     const userId = data.user?.id ?? data.user?.email;
+    console.log('[Auth] handlePostAuth called, userId:', userId);
     if (userId) {
-      const seen = await AsyncStorage.getItem(`has_seen_onboarding_${userId}`);
+      const key = `has_seen_onboarding_${userId}`;
+      const seen = await AsyncStorage.getItem(key);
+      console.log('[Auth] has_seen_onboarding key:', key);
+      console.log('[Auth] has_seen_onboarding value:', seen);
+      console.log('[Auth] setting needsOnboarding to:', seen !== 'true');
       if (seen !== 'true') {
         setNeedsOnboarding(true);
       }
+    } else {
+      console.warn('[Auth] handlePostAuth: no userId found on data.user, keys:', Object.keys(data.user ?? {}));
     }
 
     // Setting token last so isAuthenticated flips after everything is ready
