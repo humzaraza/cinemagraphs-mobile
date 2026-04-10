@@ -708,15 +708,15 @@ export default function ProfileScreen() {
               >
                 {/* Poster strip */}
                 <View style={styles.listPosterStrip}>
-                  {listFilms.slice(0, 4).map((f) => (
+                  {(list.previewPosters ?? []).slice(0, 4).map((p: string, i: number) => (
                     <Image
-                      key={f.id}
-                      source={{ uri: f.posterUrl }}
+                      key={i}
+                      source={{ uri: p.startsWith('/') ? 'https://image.tmdb.org/t/p/w185' + p : p }}
                       style={styles.listThumb}
                       resizeMode="cover"
                     />
                   ))}
-                  {listFilms.length === 0 && (
+                  {(!list.previewPosters || list.previewPosters.length === 0) && (
                     <View style={[styles.listThumb, { backgroundColor: 'rgba(30,30,60,0.6)' }]} />
                   )}
                 </View>

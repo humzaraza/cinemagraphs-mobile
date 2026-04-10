@@ -106,19 +106,23 @@ export default function ListDetailScreen() {
 
   const loadList = useCallback(() => {
     setLoaded(false);
-    Promise.all([
-      fetchUserList(id!)
-        .then((found) => { setList(found ?? null); })
-        .catch((e) => console.error('[ListDetail] fetchUserList error:', e)),
-      fetchAllFilms()
-        .then((films) => { setSearchFilms(films); setAllFilms(films as any); })
-        .catch((e) => console.error('[ListDetail] fetchAllFilms error:', e)),
-    ]).finally(() => setLoaded(true));
+    fetchUserList(id!)
+      .then((found) => { setList(found ?? null); })
+      .catch((e) => console.error('[ListDetail] fetchUserList error:', e))
+      .finally(() => setLoaded(true));
   }, [id]);
 
   useEffect(() => {
     loadList();
   }, [loadList]);
+
+  useEffect(() => {
+    if (showAddFilm && searchFilms.length === 0) {
+      fetchAllFilms()
+        .then((films) => { setSearchFilms(films); setAllFilms(films as any); })
+        .catch((e) => console.error('[ListDetail] fetchAllFilms error:', e));
+    }
+  }, [showAddFilm]);
 
   const handleSearchChange = (text: string) => {
     setSearchInput(text);

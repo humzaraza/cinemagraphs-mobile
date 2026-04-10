@@ -855,7 +855,7 @@ export default function FilmDetailScreen() {
             return (
               <Pressable key={fid} onPress={() => toggleFilmInNewList(fid)}>
                 <Image
-                  source={{ uri: f.posterUrl ?? undefined }}
+                  source={{ uri: getPosterUri(f) ?? undefined }}
                   style={styles.filmChipPoster}
                   resizeMode="cover"
                 />
@@ -915,7 +915,7 @@ export default function FilmDetailScreen() {
                 style={styles.pickerRow}
               >
                 <Image
-                  source={{ uri: f.posterUrl ?? undefined }}
+                  source={{ uri: getPosterUri(f) ?? undefined }}
                   style={styles.pickerPoster}
                   resizeMode="cover"
                 />
