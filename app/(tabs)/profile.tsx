@@ -466,12 +466,12 @@ export default function ProfileScreen() {
   // -----------------------------------------------------------------------
   const renderProfileHub = () => {
     const sectionRows: { label: string; count: number }[] = [
-      { label: 'Reviewed', count: user?.counts?.reviewed ?? user?.reviewCount ?? 0 },
-      { label: 'Watched', count: user?.counts?.watched ?? user?.watchedCount ?? 0 },
-      { label: 'Watchlist', count: user?.counts?.watchlist ?? user?.watchlistCount ?? 0 },
-      { label: 'Lists', count: user?.counts?.lists ?? user?.listCount ?? 0 },
-      { label: 'Following', count: user?.stats?.following ?? user?.followingCount ?? 0 },
-      { label: 'Followers', count: user?.stats?.followers ?? user?.followerCount ?? 0 },
+      { label: 'Reviewed', count: user?.counts?.reviewed ?? user?.stats?.reviewCount ?? user?.reviewCount ?? 0 },
+      { label: 'Watched', count: user?.counts?.watched ?? user?.stats?.watchedCount ?? user?.watchedCount ?? 0 },
+      { label: 'Watchlist', count: user?.counts?.watchlist ?? user?.stats?.watchlistCount ?? user?.watchlistCount ?? 0 },
+      { label: 'Lists', count: user?.counts?.lists ?? user?.stats?.listCount ?? user?.listCount ?? 0 },
+      { label: 'Following', count: user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0 },
+      { label: 'Followers', count: user?.stats?.followerCount ?? user?.stats?.followers ?? user?.followerCount ?? 0 },
     ];
 
     return (
@@ -486,17 +486,17 @@ export default function ProfileScreen() {
         {/* Stats card */}
         <View style={styles.statsCard}>
           <Pressable style={styles.statCol}>
-            <Text style={styles.statNumber}>{user?.stats?.films ?? user?.filmCount ?? 0}</Text>
+            <Text style={styles.statNumber}>{(user?.stats?.reviewCount ?? 0) + (user?.stats?.watchedCount ?? 0)}</Text>
             <Text style={styles.statLabel}>Films</Text>
           </Pressable>
           <View style={styles.statDivider} />
           <Pressable style={styles.statCol}>
-            <Text style={styles.statNumber}>{user?.stats?.following ?? user?.followingCount ?? 0}</Text>
+            <Text style={styles.statNumber}>{user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0}</Text>
             <Text style={styles.statLabel}>Following</Text>
           </Pressable>
           <View style={styles.statDivider} />
           <Pressable style={styles.statCol}>
-            <Text style={styles.statNumber}>{user?.stats?.followers ?? user?.followerCount ?? 0}</Text>
+            <Text style={styles.statNumber}>{user?.stats?.followerCount ?? user?.stats?.followers ?? user?.followerCount ?? 0}</Text>
             <Text style={styles.statLabel}>Followers</Text>
           </Pressable>
         </View>
