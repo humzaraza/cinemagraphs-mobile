@@ -377,3 +377,30 @@ export async function updateUserSettings(settings: Record<string, any>): Promise
     body: JSON.stringify(settings),
   });
 }
+
+export async function updateUserProfile(data: { name?: string; username?: string; bio?: string }): Promise<any> {
+  const res = await apiFetch('/user/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const error: any = new Error(err.error || 'Failed to update profile');
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const res = await apiFetch('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const error: any = new Error(err.error || 'Failed to change password');
+    error.status = res.status;
+    throw error;
+  }
+}

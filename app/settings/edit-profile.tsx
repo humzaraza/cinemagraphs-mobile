@@ -1,12 +1,101 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '../../src/constants/theme';
+import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { fetchUserProfile, updateUserProfile } from '../../src/lib/api';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    fetchUserProfile()
+      .then((profile) => {
+        if (profile) {
+          setName(profile.name ?? '');
+          setUsername(profile.username ?? '');
+          setBio(profile.bio ?? '');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = 'Name is required';
+    else if (name.trim().length > 50) errs.name = 'Name must be 50 characters or less';
+    if (username.trim().length > 0) {
+      if (username.trim().length < 3 || username.trim().length > 20) {
+        errs.username = 'Username must be 3-20 characters';
+      } else if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+        errs.username = 'Letters, numbers, and underscores only';
+      }
+    }
+    if (bio.length > 160) errs.bio = 'Bio must be 160 characters or less';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    setErrors({});
+    try {
+      await updateUserProfile({
+        name: name.trim(),
+        username: username.trim() || undefined,
+        bio: bio.trim() || undefined,
+      });
+      setSuccess(true);
+      setTimeout(() => router.back(), 800);
+    } catch (e: any) {
+      if (e.status === 409) {
+        setErrors({ username: 'Username already taken' });
+      } else {
+        setErrors({ general: e.message || 'Something went wrong' });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+              <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
+            </Svg>
+          </Pressable>
+          <Text style={styles.title}>Edit profile</Text>
+          <View style={{ width: 32 }} />
+        </View>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.gold} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -19,9 +108,73 @@ export default function EditProfileScreen() {
         <Text style={styles.title}>Edit profile</Text>
         <View style={{ width: 32 }} />
       </View>
-      <View style={styles.center}>
-        <Text style={styles.subtitle}>Coming soon</Text>
-      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Name */}
+        <Text style={styles.label}>NAME</Text>
+        <TextInput
+          value={name}
+          onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: '' })); }}
+          maxLength={50}
+          style={[styles.input, errors.name ? styles.inputError : null]}
+          placeholderTextColor="rgba(245,240,225,0.2)"
+          placeholder="Your name"
+        />
+        {!!errors.name && <Text style={styles.error}>{errors.name}</Text>}
+
+        {/* Username */}
+        <Text style={styles.label}>USERNAME</Text>
+        <TextInput
+          value={username}
+          onChangeText={(t) => { setUsername(t); setErrors((e) => ({ ...e, username: '' })); }}
+          maxLength={20}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[styles.input, errors.username ? styles.inputError : null]}
+          placeholderTextColor="rgba(245,240,225,0.2)"
+          placeholder="username"
+        />
+        {!!errors.username && <Text style={styles.error}>{errors.username}</Text>}
+
+        {/* Bio */}
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>BIO</Text>
+          <Text style={styles.charCount}>{bio.length}/160</Text>
+        </View>
+        <TextInput
+          value={bio}
+          onChangeText={(t) => { setBio(t); setErrors((e) => ({ ...e, bio: '' })); }}
+          maxLength={160}
+          multiline
+          numberOfLines={4}
+          style={[styles.input, styles.bioInput, errors.bio ? styles.inputError : null]}
+          placeholderTextColor="rgba(245,240,225,0.2)"
+          placeholder="Tell us about yourself"
+          textAlignVertical="top"
+        />
+        {!!errors.bio && <Text style={styles.error}>{errors.bio}</Text>}
+
+        {!!errors.general && <Text style={[styles.error, { marginTop: 12 }]}>{errors.general}</Text>}
+
+        {success && <Text style={styles.successText}>Profile updated</Text>}
+
+        {/* Save button */}
+        <Pressable
+          onPress={handleSave}
+          disabled={saving}
+          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+        >
+          {saving ? (
+            <ActivityIndicator color={colors.background} size="small" />
+          ) : (
+            <Text style={styles.saveBtnText}>Save changes</Text>
+          )}
+        </Pressable>
+      </ScrollView>
     </View>
   );
 }
@@ -33,6 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     marginTop: 12,
+    marginBottom: 20,
   },
   backBtn: { width: 32, height: 32, justifyContent: 'center' },
   title: {
@@ -44,9 +198,70 @@ const styles = StyleSheet.create({
     marginRight: -32,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  subtitle: {
+  content: { paddingHorizontal: 16 },
+  label: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.5)',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginTop: 16,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  charCount: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.35)',
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.3)',
+    marginTop: 16,
+  },
+  input: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.ivory,
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.15)',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  bioInput: {
+    minHeight: 80,
+    paddingTop: 10,
+  },
+  inputError: {
+    borderColor: '#E24B4A',
+  },
+  error: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: '#E24B4A',
+    marginTop: 4,
+  },
+  successText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: '#2DD4A8',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  saveBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: borderRadius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.background,
   },
 });
