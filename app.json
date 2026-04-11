@@ -37,7 +37,11 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      ["expo-image-picker", {
+        "cameraPermission": "Allow Cinemagraphs to take photos for your profile picture",
+        "photosPermission": "Allow Cinemagraphs to access your photos for your profile picture"
+      }]
     ],
     "experiments": {
       "typedRoutes": true

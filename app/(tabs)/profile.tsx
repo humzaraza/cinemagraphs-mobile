@@ -109,8 +109,22 @@ function ChevronRight() {
 // Avatar
 // ---------------------------------------------------------------------------
 
-function Avatar({ size, initial }: { size: number; initial: string }) {
+function Avatar({ size, initial, imageUrl }: { size: number; initial: string; imageUrl?: string | null }) {
   const fontSize = size < 48 ? 16 : 20;
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: 1.5,
+          borderColor: 'rgba(200,169,81,0.3)',
+        }}
+      />
+    );
+  }
   return (
     <View
       style={[
@@ -478,7 +492,7 @@ export default function ProfileScreen() {
       <>
         {/* Avatar + username + bio */}
         <View style={styles.avatarSection}>
-          <Avatar size={56} initial={user?.avatarInitial ?? (user?.name ?? 'U').charAt(0).toUpperCase()} />
+          <Avatar size={56} initial={user?.avatarInitial ?? (user?.name ?? 'U').charAt(0).toUpperCase()} imageUrl={user?.image} />
           <Text style={styles.username}>{user?.name ?? ''}</Text>
           <Text style={styles.bio}>{user?.bio ?? ''}</Text>
         </View>
@@ -777,7 +791,7 @@ export default function ProfileScreen() {
         {/* Header - same on every sub-tab */}
         <View style={styles.collapsedHeader}>
           <View style={[styles.collapsedCenter, subTab === 'profile' && { opacity: 0 }]}>
-            <Avatar size={44} initial={user.avatarInitial} />
+            <Avatar size={44} initial={user.avatarInitial} imageUrl={user?.image} />
             <Text style={styles.collapsedName}>{user.name}</Text>
           </View>
           <Pressable

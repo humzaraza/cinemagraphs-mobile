@@ -7,22 +7,31 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import { fetchUserProfile, updateUserProfile } from '../../src/lib/api';
+import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../src/lib/api';
+import { useAuth } from '../../src/providers/AuthProvider';
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user: authUser, setUser } = useAuth();
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
 
@@ -33,6 +42,7 @@ export default function EditProfileScreen() {
           setName(profile.name ?? '');
           setUsername(profile.username ?? '');
           setBio(profile.bio ?? '');
+          setImageUrl(profile.image ?? authUser?.image ?? null);
         }
       })
       .catch(() => {})
@@ -78,6 +88,55 @@ export default function EditProfileScreen() {
     }
   };
 
+  const pickImage = async (source: 'camera' | 'library') => {
+    const opts: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    };
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(opts)
+      : await ImagePicker.launchImageLibraryAsync(opts);
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+
+    if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+      Alert.alert('File too large', 'Please choose an image under 2 MB.');
+      return;
+    }
+
+    const previousUrl = imageUrl;
+    setImageUrl(asset.uri);
+    setUploadingAvatar(true);
+
+    try {
+      const { url } = await uploadAvatar(asset.uri);
+      setImageUrl(url);
+      if (authUser) {
+        setUser({ ...authUser, image: url });
+      }
+    } catch {
+      setImageUrl(previousUrl);
+      setErrors({ avatar: 'Failed to upload photo' });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const showImageOptions = () => {
+    Alert.alert('Profile photo', '', [
+      { text: 'Take Photo', onPress: () => pickImage('camera') },
+      { text: 'Choose from Library', onPress: () => pickImage('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const initial = (name || authUser?.name || 'U').charAt(0).toUpperCase();
+
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -114,6 +173,36 @@ export default function EditProfileScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Avatar */}
+        <View style={styles.avatarSection}>
+          <Pressable onPress={showImageOptions} style={styles.avatarWrap}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+            {uploadingAvatar && (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color="#fff" size="small" />
+              </View>
+            )}
+            <View style={styles.cameraBadge}>
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"
+                  stroke="#fff"
+                  strokeWidth={2}
+                />
+                <Circle cx={12} cy={13} r={4} stroke="#fff" strokeWidth={2} />
+              </Svg>
+            </View>
+          </Pressable>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
+          {!!errors.avatar && <Text style={styles.error}>{errors.avatar}</Text>}
+        </View>
+
         {/* Name */}
         <Text style={styles.label}>NAME</Text>
         <TextInput
@@ -199,6 +288,64 @@ const styles = StyleSheet.create({
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingHorizontal: 16 },
+
+  // Avatar
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatarWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    fontFamily: fonts.heading,
+    fontSize: 28,
+    color: colors.background,
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#2DD4A8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  avatarHint: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(245,240,225,0.35)',
+    marginTop: 8,
+  },
+
+  // Form
   label: {
     fontFamily: fonts.bodyMedium,
     fontSize: 10,

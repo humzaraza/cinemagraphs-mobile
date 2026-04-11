@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   Pressable,
@@ -114,11 +115,15 @@ export default function SettingsScreen() {
       >
         {/* User card */}
         <View style={styles.userCard}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userInitial}>
-              {(authUser?.name ?? 'U').charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          {authUser?.image ? (
+            <Image source={{ uri: authUser.image }} style={styles.userAvatar} />
+          ) : (
+            <View style={styles.userAvatar}>
+              <Text style={styles.userInitial}>
+                {(authUser?.name ?? 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>{authUser?.name ?? 'User'}</Text>
             <Text style={styles.userEmail}>{authUser?.email ?? ''}</Text>

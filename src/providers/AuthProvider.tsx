@@ -21,6 +21,7 @@ import {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  setUser: (u: AuthUser | null) => void;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -36,6 +37,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
+  setUser: () => {},
   token: null,
   isLoading: true,
   isAuthenticated: false,
@@ -201,6 +203,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         token,
         isLoading,
         isAuthenticated: !!token,
