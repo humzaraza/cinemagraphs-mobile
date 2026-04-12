@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, borderRadius } from '../constants/theme';
+import { colors, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
 import type { MockFilm } from '../data/mockProfile';
 
@@ -37,12 +37,11 @@ export default function ArcCard({
   const fallback = hashColor(film.title ?? film.id ?? 'film');
   const [bgColor, setBgColor] = useState(fallback);
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
-  const sparklineWidth = cw - 90;
+  const sparklineWidth = cw - 110;
 
   const posterUri = film.posterUrl?.startsWith('/')
     ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
     : film.posterUrl;
-
 
   return (
     <Pressable
@@ -50,42 +49,33 @@ export default function ArcCard({
       style={styles.arcCard}
     >
       <LinearGradient
-        colors={[hexToRgba(bgColor, 0.4), 'transparent']}
+        colors={[hexToRgba(bgColor, 0.45), 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.arcColorAccent}
       />
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {/* Poster thumbnail */}
-        {imgError ? (
-          <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
-        ) : (
-          <Image
-            source={{ uri: posterUri ?? undefined }}
-            style={styles.arcPoster}
-            resizeMode="cover"
-            onError={() => setImgError(true)}
-          />
-        )}
+      <View style={styles.row}>
+        {/* Poster with hue glow */}
+        <View style={[styles.posterGlow, { shadowColor: bgColor }]}>
+          {imgError ? (
+            <View style={[styles.arcPoster, styles.arcPosterPlaceholder]} />
+          ) : (
+            <Image
+              source={{ uri: posterUri ?? undefined }}
+              style={styles.arcPoster}
+              resizeMode="cover"
+              onError={() => setImgError(true)}
+            />
+          )}
+        </View>
 
-        {/* Title + score + graph */}
-        <View style={{ flex: 1 }}>
-          {/* Title row with score */}
-          <View style={styles.titleRow}>
-            <Text style={styles.arcTitle} numberOfLines={1}>
-              {film.title}
-            </Text>
-            <Text style={styles.arcScore}>
-              {(film.personalScore ?? film.score ?? 0).toFixed(1)}
-            </Text>
-          </View>
-
-          {/* Sparkline graph */}
+        {/* Sparkline graph */}
+        <View style={styles.graphWrap}>
           <Sparkline
             dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
             width={sparklineWidth}
-            height={55}
+            height={65}
             strokeColor={colors.gold}
             strokeWidth={2}
             showAxes
@@ -118,33 +108,29 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  posterGlow: {
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
   arcPoster: {
-    width: 50,
-    height: 75,
-    minWidth: 50,
-    maxWidth: 50,
-    borderRadius: 4,
+    width: 70,
+    height: 105,
+    minWidth: 70,
+    maxWidth: 70,
+    borderRadius: 6,
     backgroundColor: '#1a1a2e',
   },
   arcPosterPlaceholder: {
     backgroundColor: 'rgba(30,30,60,0.8)',
   },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  arcTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 14,
-    color: colors.ivory,
+  graphWrap: {
     flex: 1,
-    marginRight: 8,
-  },
-  arcScore: {
-    fontFamily: fonts.heading,
-    fontSize: 16,
-    color: colors.gold,
+    justifyContent: 'center',
   },
 });
