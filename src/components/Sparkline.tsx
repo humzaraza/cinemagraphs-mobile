@@ -20,10 +20,11 @@ interface SparklineProps {
 function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}m`;
+  return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}m`;
 }
 
-const LABEL_COLOR = 'rgba(245,240,225,0.55)';
+const AXIS_COLOR = 'rgba(245,240,225,0.15)';
+const LABEL_COLOR = 'rgba(245,240,225,0.35)';
 const MIDLINE_COLOR = 'rgba(255,255,255,0.25)';
 const LABEL_FONT_SIZE = 9;
 
@@ -53,7 +54,7 @@ export default function Sparkline({
 
   // Simple sparkline (no axes)
   if (!showAxes) {
-    const pad = 2;
+    const pad = 4;
     const cw = width - pad * 2;
     const ch = height - pad * 2;
 
@@ -98,10 +99,11 @@ export default function Sparkline({
   }
 
   // With axes: everything rendered inside a single SVG
-  const yLabelW = hideLabels ? 4 : 30;
-  const xLabelH = hideLabels ? 2 : 14;
+  const dotR = peakDotRadius ?? 3;
+  const yLabelW = hideLabels ? 4 : 22;
+  const xLabelH = hideLabels ? 2 : 12;
   const chartLeft = yLabelW;
-  const chartTop = 2;
+  const chartTop = dotR + 2;
   const chartRight = width - 2;
   const chartBottom = height - xLabelH;
   const cw = chartRight - chartLeft;
@@ -135,9 +137,9 @@ export default function Sparkline({
         stroke={MIDLINE_COLOR} strokeWidth={1} strokeDasharray="3,3"
       />
       {/* Y-axis line */}
-      <Line x1={chartLeft} y1={chartTop} x2={chartLeft} y2={chartBottom} stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} />
+      <Line x1={chartLeft} y1={chartTop} x2={chartLeft} y2={chartBottom} stroke={AXIS_COLOR} strokeWidth={0.5} />
       {/* X-axis line */}
-      <Line x1={chartLeft} y1={chartBottom} x2={chartRight} y2={chartBottom} stroke="rgba(255,255,255,0.2)" strokeWidth={0.5} />
+      <Line x1={chartLeft} y1={chartBottom} x2={chartRight} y2={chartBottom} stroke={AXIS_COLOR} strokeWidth={0.5} />
       {/* Data line */}
       <Polyline
         points={points} fill="none" stroke={strokeColor}
@@ -145,7 +147,7 @@ export default function Sparkline({
       />
       {/* Peak dot */}
       {peakDotColor && (
-        <Circle cx={peakX} cy={peakY} r={peakDotRadius ?? 3} fill={peakDotColor} />
+        <Circle cx={peakX} cy={peakY} r={dotR} fill={peakDotColor} />
       )}
       {/* Low dot */}
       {lowDotColor && (
@@ -154,34 +156,26 @@ export default function Sparkline({
       {/* Y-axis labels */}
       {!hideLabels && (
         <SvgText
-          x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
+          x={yLabelW - 3} y={chartTop + LABEL_FONT_SIZE - 2}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
-          fill={LABEL_COLOR}        >
+          fill={LABEL_COLOR}>
           {yMax}
         </SvgText>
       )}
       {!hideLabels && (
         <SvgText
-          x={yLabelW - 4} y={chartBottom}
+          x={yLabelW - 3} y={chartBottom}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
-          fill={LABEL_COLOR}        >
+          fill={LABEL_COLOR}>
           {yMin}
         </SvgText>
       )}
-      {/* X-axis labels */}
-      {!hideLabels && (
-        <SvgText
-          x={chartLeft} y={height - 2}
-          textAnchor="start" fontSize={LABEL_FONT_SIZE}
-          fill={LABEL_COLOR}        >
-          0m
-        </SvgText>
-      )}
+      {/* X-axis runtime label (end only, no "0m" start label) */}
       {!hideLabels && runtimeMinutes != null && (
         <SvgText
-          x={chartRight} y={height - 2}
+          x={chartRight} y={height - 1}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
-          fill={LABEL_COLOR}        >
+          fill={LABEL_COLOR}>
           {formatRuntime(runtimeMinutes)}
         </SvgText>
       )}

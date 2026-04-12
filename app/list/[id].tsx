@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   posterSparkline: {
-    marginTop: 3,
+    marginTop: 2,
   },
 
   // Empty
