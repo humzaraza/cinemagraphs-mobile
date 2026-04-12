@@ -406,15 +406,6 @@ export default function ProfileScreen() {
 
   useFocusEffect(loadProfile);
 
-  // Sync auth context image into local user state on focus (no API call)
-  useFocusEffect(
-    useCallback(() => {
-      if (authUser?.image && user) {
-        setUser((prev) => prev ? { ...prev, image: authUser.image } : prev);
-      }
-    }, [authUser?.image]),
-  );
-
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
     (row: string) => {
@@ -501,7 +492,7 @@ export default function ProfileScreen() {
       <>
         {/* Avatar + username + bio */}
         <View style={styles.avatarSection}>
-          <Avatar size={56} initial={user?.avatarInitial ?? (user?.name ?? 'U').charAt(0).toUpperCase()} imageUrl={user?.image} />
+          <Avatar size={56} initial={user?.avatarInitial ?? (user?.name ?? 'U').charAt(0).toUpperCase()} imageUrl={authUser?.image ?? user?.image} />
           <Text style={styles.username}>{user?.name ?? ''}</Text>
           <Text style={styles.bio}>{user?.bio ?? ''}</Text>
         </View>
@@ -800,7 +791,7 @@ export default function ProfileScreen() {
         {/* Header - same on every sub-tab */}
         <View style={styles.collapsedHeader}>
           <View style={[styles.collapsedCenter, subTab === 'profile' && { opacity: 0 }]}>
-            <Avatar size={44} initial={user.avatarInitial} imageUrl={user?.image} />
+            <Avatar size={44} initial={user.avatarInitial} imageUrl={authUser?.image ?? user?.image} />
             <Text style={styles.collapsedName}>{user.name}</Text>
           </View>
           <Pressable
