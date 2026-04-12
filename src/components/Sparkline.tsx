@@ -46,8 +46,9 @@ export default function Sparkline({
 
   const scores = dataPoints.map((dp) => dp.score);
   const rawMin = Math.min(...scores);
+  const rawMax = Math.max(...scores);
   const yMin = Math.max(0, Math.floor(rawMin) - 1);
-  const yMax = 10;
+  const yMax = Math.min(10, Math.ceil(rawMax) + 1);
   const yRange = yMax - yMin || 1;
 
   // Simple sparkline (no axes)
