@@ -75,12 +75,11 @@ export default function ArcCard({
           <Sparkline
             dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
             width={sparklineWidth}
-            height={100}
+            height={90}
             strokeColor={colors.gold}
             strokeWidth={2}
             showAxes
             showMidline
-            hideLabels
             runtimeMinutes={film.runtime}
             peakDotColor={colors.teal}
             peakDotRadius={3.5}
