@@ -406,6 +406,15 @@ export default function ProfileScreen() {
 
   useFocusEffect(loadProfile);
 
+  // Sync auth context image into local user state on focus (no API call)
+  useFocusEffect(
+    useCallback(() => {
+      if (authUser?.image && user) {
+        setUser((prev) => prev ? { ...prev, image: authUser.image } : prev);
+      }
+    }, [authUser?.image]),
+  );
+
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
     (row: string) => {
