@@ -140,7 +140,8 @@ function PosterCard({ film }: { film: Film }) {
           <Text style={styles.posterPlaceholderText}>{film.title}</Text>
         </View>
       )}
-      <TicketStub />
+      {/* TODO: unhide ticket stub when watched feature is ready */}
+      {false && <TicketStub />}
     </Pressable>
   );
 }

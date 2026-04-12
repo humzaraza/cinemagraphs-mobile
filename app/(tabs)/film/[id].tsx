@@ -184,6 +184,8 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
 
       {/* Watched badge + add-to-list button */}
       <View style={styles.badgeRow}>
+        {/* TODO: unhide ticket stub when watched feature is ready */}
+        {false && (
         <View style={styles.watchedBadge}>
           <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
             <Path
@@ -195,6 +197,7 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
           </Svg>
           <Text style={styles.watchedText}>Watched</Text>
         </View>
+        )}
         <Pressable
           onPress={() => onToggleWatchlist?.()}
           style={styles.addToListBtn}
