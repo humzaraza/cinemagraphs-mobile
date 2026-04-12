@@ -37,7 +37,7 @@ export default function ArcCard({
   const fallback = hashColor(film.title ?? film.id ?? 'film');
   const [bgColor, setBgColor] = useState(fallback);
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
-  const sparklineWidth = cw - 110;
+  const sparklineWidth = cw - 94;
 
   const posterUri = film.posterUrl?.startsWith('/')
     ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
@@ -75,11 +75,12 @@ export default function ArcCard({
           <Sparkline
             dataPoints={((film.sparklineData ?? film.sentimentGraph?.dataPoints?.map((d: any) => d.score)) ?? []).map((s) => ({ score: s }))}
             width={sparklineWidth}
-            height={65}
+            height={100}
             strokeColor={colors.gold}
             strokeWidth={2}
             showAxes
             showMidline
+            hideLabels
             runtimeMinutes={film.runtime}
             peakDotColor={colors.teal}
             peakDotRadius={3.5}
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
   arcCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: borderRadius.lg,
-    padding: 10,
+    padding: 6,
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.08)',
     overflow: 'hidden',
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
   },
   posterGlow: {
     shadowOffset: { width: 0, height: 0 },

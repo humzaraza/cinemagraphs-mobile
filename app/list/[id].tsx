@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
 
   // Arc cards (graph view)
-  arcList: { paddingHorizontal: PAD, gap: 10 },
+  arcList: { paddingHorizontal: PAD, gap: 6 },
 
   // Poster grid
   posterGrid: {

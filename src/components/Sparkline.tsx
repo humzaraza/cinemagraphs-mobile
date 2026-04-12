@@ -9,6 +9,7 @@ interface SparklineProps {
   strokeWidth?: number;
   showAxes?: boolean;
   showMidline?: boolean;
+  hideLabels?: boolean;
   runtimeMinutes?: number | null;
   peakDotColor?: string;
   peakDotRadius?: number;
@@ -34,6 +35,7 @@ export default function Sparkline({
   strokeWidth = 1.5,
   showAxes = false,
   showMidline = false,
+  hideLabels = false,
   runtimeMinutes,
   peakDotColor,
   peakDotRadius,
@@ -95,8 +97,8 @@ export default function Sparkline({
   }
 
   // With axes: everything rendered inside a single SVG
-  const yLabelW = 30;
-  const xLabelH = 14;
+  const yLabelW = hideLabels ? 4 : 30;
+  const xLabelH = hideLabels ? 2 : 14;
   const chartLeft = yLabelW;
   const chartTop = 2;
   const chartRight = width - 2;
@@ -149,26 +151,32 @@ export default function Sparkline({
         <Circle cx={lowX} cy={lowY} r={lowDotRadius ?? 3} fill={lowDotColor} />
       )}
       {/* Y-axis labels */}
-      <SvgText
-        x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
-        textAnchor="end" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR}      >
-        {yMax}
-      </SvgText>
-      <SvgText
-        x={yLabelW - 4} y={chartBottom}
-        textAnchor="end" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR}      >
-        {yMin}
-      </SvgText>
+      {!hideLabels && (
+        <SvgText
+          x={yLabelW - 4} y={chartTop + LABEL_FONT_SIZE - 1}
+          textAnchor="end" fontSize={LABEL_FONT_SIZE}
+          fill={LABEL_COLOR}        >
+          {yMax}
+        </SvgText>
+      )}
+      {!hideLabels && (
+        <SvgText
+          x={yLabelW - 4} y={chartBottom}
+          textAnchor="end" fontSize={LABEL_FONT_SIZE}
+          fill={LABEL_COLOR}        >
+          {yMin}
+        </SvgText>
+      )}
       {/* X-axis labels */}
-      <SvgText
-        x={chartLeft} y={height - 2}
-        textAnchor="start" fontSize={LABEL_FONT_SIZE}
-        fill={LABEL_COLOR}      >
-        0m
-      </SvgText>
-      {runtimeMinutes != null && (
+      {!hideLabels && (
+        <SvgText
+          x={chartLeft} y={height - 2}
+          textAnchor="start" fontSize={LABEL_FONT_SIZE}
+          fill={LABEL_COLOR}        >
+          0m
+        </SvgText>
+      )}
+      {!hideLabels && runtimeMinutes != null && (
         <SvgText
           x={chartRight} y={height - 2}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
