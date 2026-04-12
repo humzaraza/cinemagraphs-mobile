@@ -38,7 +38,7 @@ function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | n
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const POSTER_GAP = 8;
+const POSTER_GAP = 6;
 const POSTER_COLS = 3;
 const POSTER_PAD = 16;
 const POSTER_W = (SCREEN_WIDTH - POSTER_PAD * 2 - POSTER_GAP * (POSTER_COLS - 1)) / POSTER_COLS;
@@ -285,18 +285,18 @@ function PosterCell({
         )}
       </View>
       {showSparkline && (
-        <>
-          <View style={styles.posterSparkline}>
-            <Sparkline
-              dataPoints={film.sparklineData.map((s) => ({ score: s }))}
-              width={POSTER_W - 4}
-              height={16}
-              strokeColor={colors.teal}
-              strokeWidth={1.2}
-            />
-          </View>
-          <Text style={styles.posterScore}>{film.personalScore.toFixed(1)}</Text>
-        </>
+        <View style={styles.posterSparkline}>
+          <Sparkline
+            dataPoints={film.sparklineData.map((s) => ({ score: s }))}
+            width={POSTER_W}
+            height={36}
+            strokeColor={colors.teal}
+            strokeWidth={1}
+            showAxes
+            showMidline
+            runtimeMinutes={film.runtime}
+          />
+        </View>
       )}
     </Pressable>
   );
@@ -1223,13 +1223,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   posterSparkline: {
-    marginTop: 4,
-  },
-  posterScore: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.teal,
-    textAlign: 'center',
     marginTop: 2,
   },
 
