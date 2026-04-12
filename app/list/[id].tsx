@@ -25,7 +25,7 @@ const PAD = 16;
 const POSTER_GAP = 8;
 const POSTER_COLS = 3;
 const POSTER_W = (SCREEN_WIDTH - PAD * 2 - POSTER_GAP * (POSTER_COLS - 1)) / POSTER_COLS;
-const POSTER_H = POSTER_W * 1.5;
+const POSTER_H = POSTER_W * 1.35;
 type ViewMode = 'poster' | 'graph';
 
 function GridIcon({ active }: { active: boolean }) {
@@ -76,13 +76,15 @@ function PosterCell({ film }: { film: MockFilm }) {
       <View style={styles.posterSparkline}>
         <Sparkline
           dataPoints={((film.sparklineData ?? []).map((s) => ({ score: s })))}
-          width={POSTER_W - 4}
-          height={16}
+          width={POSTER_W}
+          height={34}
           strokeColor={colors.gold}
-          strokeWidth={1.2}
+          strokeWidth={1}
+          showAxes
+          showMidline
+          runtimeMinutes={film.runtime}
         />
       </View>
-      <Text style={styles.posterScore}>{(film.personalScore ?? film.score ?? 0).toFixed(1)}</Text>
     </Pressable>
   );
 }
@@ -332,7 +334,7 @@ const styles = StyleSheet.create({
   },
   posterCell: {
     width: POSTER_W,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   posterImageContainer: {
     width: POSTER_W,
@@ -362,14 +364,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   posterSparkline: {
-    marginTop: 4,
-  },
-  posterScore: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.gold,
-    textAlign: 'center',
-    marginTop: 2,
+    marginTop: 3,
   },
 
   // Empty
