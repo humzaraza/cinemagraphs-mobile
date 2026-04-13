@@ -24,7 +24,7 @@ interface SparklineProps {
 function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}m`;
+  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}m`;
 }
 
 const AXIS_COLOR = 'rgba(245,240,225,0.15)';

@@ -84,10 +84,6 @@ export default function ArcCard({
             dynamicYAxis
             hideStartLabel
             fixPeakClipping
-            peakDotColor={colors.teal}
-            peakDotRadius={3.5}
-            lowDotColor="#E24B4A"
-            lowDotRadius={3.5}
           />
         </View>
       </View>
