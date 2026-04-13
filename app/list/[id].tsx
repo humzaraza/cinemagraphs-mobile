@@ -52,8 +52,6 @@ function PosterCell({ film }: { film: MockFilm }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
-  console.log('[list-debug] film keys:', Object.keys(film), 'runtime:', film.runtime, 'runtimeMinutes:', (film as any).runtimeMinutes);
-
   return (
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
@@ -369,9 +367,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   posterSparkline: {
+    width: POSTER_W,
     marginTop: 2,
     overflow: 'hidden',
-    width: POSTER_W,
   },
 
   // Empty

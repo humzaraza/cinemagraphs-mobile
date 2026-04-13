@@ -109,7 +109,7 @@ export default function Sparkline({
   const yLabelW = hideLabels ? 4 : 22;
   const xLabelH = hideLabels ? 2 : 12;
   const chartLeft = yLabelW;
-  const chartTop = fixPeakClipping ? dotR + dotR : 2;
+  const chartTop = fixPeakClipping ? 10 : 2;
   const chartRight = width - 2;
   const chartBottom = height - xLabelH;
   const cw = chartRight - chartLeft;
@@ -136,7 +136,7 @@ export default function Sparkline({
   const midY = chartTop + ch / 2;
 
   return (
-    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+    <Svg width={width} height={fixPeakClipping ? height + 8 : height} viewBox={`0 0 ${width} ${fixPeakClipping ? height + 8 : height}`}>
       {/* Dashed midline */}
       <Line
         x1={chartLeft} y1={midY} x2={chartRight} y2={midY}
