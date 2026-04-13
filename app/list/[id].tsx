@@ -77,7 +77,7 @@ function PosterCell({ film }: { film: MockFilm }) {
         <Sparkline
           dataPoints={((film.sparklineData ?? []).map((s) => ({ score: s })))}
           width={POSTER_W}
-          height={36}
+          height={48}
           strokeColor={colors.gold}
           strokeWidth={1}
           showAxes
@@ -86,6 +86,7 @@ function PosterCell({ film }: { film: MockFilm }) {
           dynamicYAxis
           hideStartLabel
           fixPeakClipping
+          yLabelWidth={14}
         />
       </View>
     </Pressable>

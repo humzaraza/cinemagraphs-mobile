@@ -18,6 +18,7 @@ interface SparklineProps {
   dynamicYAxis?: boolean;
   hideStartLabel?: boolean;
   fixPeakClipping?: boolean;
+  yLabelWidth?: number;
 }
 
 function formatRuntime(minutes: number): string {
@@ -48,6 +49,7 @@ export default function Sparkline({
   dynamicYAxis = false,
   hideStartLabel = false,
   fixPeakClipping = false,
+  yLabelWidth,
 }: SparklineProps) {
   if (dataPoints.length < 2) return null;
 
@@ -106,7 +108,7 @@ export default function Sparkline({
 
   // With axes: everything rendered inside a single SVG
   const dotR = peakDotRadius ?? 3;
-  const yLabelW = hideLabels ? 4 : 22;
+  const yLabelW = hideLabels ? 4 : (yLabelWidth ?? 22);
   const xLabelH = hideLabels ? 2 : 12;
   const chartLeft = yLabelW;
   const chartTop = fixPeakClipping ? 10 : 2;
@@ -179,7 +181,7 @@ export default function Sparkline({
       {/* X-axis labels */}
       {!hideLabels && !hideStartLabel && (
         <SvgText
-          x={chartLeft} y={height - 1}
+          x={chartLeft} y={(fixPeakClipping ? height + 8 : height) - 1}
           textAnchor="start" fontSize={LABEL_FONT_SIZE}
           fill={LABEL_COLOR}>
           0m
@@ -187,7 +189,7 @@ export default function Sparkline({
       )}
       {!hideLabels && runtimeMinutes != null && (
         <SvgText
-          x={chartRight} y={height - 1}
+          x={chartRight} y={(fixPeakClipping ? height + 8 : height) - 1}
           textAnchor="end" fontSize={LABEL_FONT_SIZE}
           fill={LABEL_COLOR}>
           {formatRuntime(runtimeMinutes)}
