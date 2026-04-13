@@ -678,6 +678,8 @@ export default function FilmDetailScreen() {
       .then((data) => {
         if (data) {
           setFilm(data);
+          const posterPath = data.posterUrl || data.posterPath || null;
+          addRecentlyViewed(id, data.title ?? '', posterPath);
         } else {
           setError(true);
         }
@@ -688,7 +690,6 @@ export default function FilmDetailScreen() {
 
   useEffect(() => {
     load();
-    if (id) addRecentlyViewed(id);
     fetchUserLists().then(setLists).catch(() => {});
     fetchUserWatchlist()
       .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))

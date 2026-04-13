@@ -26,7 +26,7 @@ import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockP
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuth } from '../../src/providers/AuthProvider';
-import { getRecentlyViewed } from '../../src/lib/recentlyViewed';
+import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 
@@ -345,7 +345,7 @@ export default function ProfileScreen() {
   const [films, setFilms] = useState<MockFilm[]>([]);
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
   const [lists, setLists] = useState<any[]>([]);
-  const [recentFilmIds, setRecentFilmIds] = useState<string[]>([]);
+  const [recentFilms, setRecentFilms] = useState<RecentFilm[]>([]);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileError, setProfileError] = useState(false);
 
@@ -401,7 +401,7 @@ export default function ProfileScreen() {
       .catch((e) => console.error('[Profile] fetchUserFilms error:', e));
     fetchUserWatchlist().then(setWatchlist).catch((e) => console.error('[Profile] fetchUserWatchlist error:', e));
     fetchUserLists().then(setLists).catch((e) => console.error('[Profile] fetchUserLists error:', e));
-    getRecentlyViewed().then((r) => setRecentFilmIds(r.map((x) => x.filmId)));
+    getRecentlyViewed().then(setRecentFilms);
   }, [isAuthenticated, authUser]);
 
   useFocusEffect(loadProfile);
@@ -519,10 +519,10 @@ export default function ProfileScreen() {
 
         {/* Recently viewed */}
         <Text style={styles.sectionLabel}>RECENTLY VIEWED</Text>
-        {recentFilmIds.length === 0 ? (
+        {recentFilms.length === 0 ? (
           <View style={styles.emptySection}>
             <Text style={styles.emptyText}>
-              Once you start browsing, your recently viewed films will appear here
+              No recently viewed films
             </Text>
           </View>
         ) : (
@@ -532,16 +532,17 @@ export default function ProfileScreen() {
             style={styles.recentScroll}
             contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
           >
-            {recentFilmIds.slice(0, 10).map((fid) => {
-              const f = films.find((x) => x.id === fid);
-              if (!f) return null;
+            {recentFilms.slice(0, 6).map((rf) => {
+              const uri = rf.posterUrl
+                ? rf.posterUrl.startsWith('/') ? `${TMDB_POSTER}${rf.posterUrl}` : rf.posterUrl
+                : undefined;
               return (
                 <Pressable
-                  key={fid}
-                  onPress={() => router.push(`/film/${fid}` as any)}
+                  key={rf.filmId}
+                  onPress={() => router.push(`/film/${rf.filmId}` as any)}
                 >
                   <Image
-                    source={{ uri: f.posterUrl }}
+                    source={{ uri }}
                     style={styles.recentPoster}
                     resizeMode="cover"
                   />
