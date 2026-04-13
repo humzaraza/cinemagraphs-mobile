@@ -374,7 +374,7 @@ export default function ProfileScreen() {
         } else {
           // API returned null/empty - fall back to authUser
           if (authUser) {
-            setUser({ ...authUser, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
+            setUser({ ...authUser, image: authUser?.image ?? null, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
           }
           console.error('[Profile] fetchUserProfile returned null');
         }
@@ -383,7 +383,7 @@ export default function ProfileScreen() {
         console.error('[Profile] fetchUserProfile error:', e);
         // Fall back to authUser so we don't stuck on loading
         if (authUser) {
-          setUser({ ...authUser, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
+          setUser({ ...authUser, image: authUser?.image ?? null, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
         } else {
           setProfileError(true);
         }
@@ -405,6 +405,8 @@ export default function ProfileScreen() {
   }, [isAuthenticated, authUser]);
 
   useFocusEffect(loadProfile);
+
+  console.log('[Profile] authUser?.image:', authUser?.image);
 
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(

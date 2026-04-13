@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../src/lib/api';
@@ -131,7 +132,9 @@ export default function EditProfileScreen() {
       const { url } = await uploadAvatar(asset.uri);
       setImageUrl(url);
       if (authUser) {
-        setUser({ ...authUser, image: url });
+        const updated = { ...authUser, image: url };
+        setUser(updated);
+        await SecureStore.setItemAsync('auth_user', JSON.stringify(updated));
       }
     } catch {
       setImageUrl(previousUrl);
