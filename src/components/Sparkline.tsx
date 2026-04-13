@@ -15,6 +15,9 @@ interface SparklineProps {
   peakDotRadius?: number;
   lowDotColor?: string;
   lowDotRadius?: number;
+  dynamicYAxis?: boolean;
+  hideStartLabel?: boolean;
+  fixPeakClipping?: boolean;
 }
 
 function formatRuntime(minutes: number): string {
@@ -42,14 +45,17 @@ export default function Sparkline({
   peakDotRadius,
   lowDotColor,
   lowDotRadius,
+  dynamicYAxis = false,
+  hideStartLabel = false,
+  fixPeakClipping = false,
 }: SparklineProps) {
   if (dataPoints.length < 2) return null;
 
   const scores = dataPoints.map((dp) => dp.score);
   const rawMin = Math.min(...scores);
   const rawMax = Math.max(...scores);
-  const yMin = Math.max(0, Math.floor(rawMin) - 1);
-  const yMax = Math.min(10, Math.ceil(rawMax) + 1);
+  const yMin = dynamicYAxis ? Math.max(0, Math.floor(rawMin) - 1) : 0;
+  const yMax = dynamicYAxis ? Math.min(10, Math.ceil(rawMax) + 1) : 10;
   const yRange = yMax - yMin || 1;
 
   // Simple sparkline (no axes)
@@ -103,7 +109,7 @@ export default function Sparkline({
   const yLabelW = hideLabels ? 4 : 22;
   const xLabelH = hideLabels ? 2 : 12;
   const chartLeft = yLabelW;
-  const chartTop = dotR + 2;
+  const chartTop = fixPeakClipping ? dotR + 2 : 2;
   const chartRight = width - 2;
   const chartBottom = height - xLabelH;
   const cw = chartRight - chartLeft;
@@ -170,7 +176,15 @@ export default function Sparkline({
           {yMin}
         </SvgText>
       )}
-      {/* X-axis runtime label (end only, no "0m" start label) */}
+      {/* X-axis labels */}
+      {!hideLabels && !hideStartLabel && (
+        <SvgText
+          x={chartLeft} y={height - 1}
+          textAnchor="start" fontSize={LABEL_FONT_SIZE}
+          fill={LABEL_COLOR}>
+          0m
+        </SvgText>
+      )}
       {!hideLabels && runtimeMinutes != null && (
         <SvgText
           x={chartRight} y={height - 1}

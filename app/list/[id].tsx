@@ -83,6 +83,9 @@ function PosterCell({ film }: { film: MockFilm }) {
           showAxes
           showMidline
           runtimeMinutes={film.runtime}
+          dynamicYAxis
+          hideStartLabel
+          fixPeakClipping
         />
       </View>
     </Pressable>

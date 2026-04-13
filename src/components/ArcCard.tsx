@@ -81,6 +81,9 @@ export default function ArcCard({
             showAxes
             showMidline
             runtimeMinutes={film.runtime}
+            dynamicYAxis
+            hideStartLabel
+            fixPeakClipping
             peakDotColor={colors.teal}
             peakDotRadius={3.5}
             lowDotColor="#E24B4A"
