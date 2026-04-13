@@ -109,7 +109,7 @@ export default function Sparkline({
   const yLabelW = hideLabels ? 4 : 22;
   const xLabelH = hideLabels ? 2 : 12;
   const chartLeft = yLabelW;
-  const chartTop = fixPeakClipping ? dotR + 2 : 2;
+  const chartTop = fixPeakClipping ? dotR + dotR : 2;
   const chartRight = width - 2;
   const chartBottom = height - xLabelH;
   const cw = chartRight - chartLeft;
