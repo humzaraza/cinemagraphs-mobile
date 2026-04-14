@@ -276,6 +276,7 @@ export default function ReviewScreen() {
 
   const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [film, setFilm] = useState<FilmDetail | null>(null);
+  const [effectiveBeats, setEffectiveBeats] = useState<FilmDataPoint[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -302,13 +303,31 @@ export default function ReviewScreen() {
           return;
         }
         setFilm(data);
-        const dp = data.sentimentGraph?.dataPoints;
-        if (dp && dp.length > 0) {
+
+        // Prefer NLP sentiment graph beats. Fall back to Wikipedia-derived
+        // filmBeats when no graph exists. Wiki beats have no scores, so
+        // normalize them to FilmDataPoint shape with a neutral 5.5 score
+        // (the user's slider value will replace it anyway).
+        const graphPoints = data.sentimentGraph?.dataPoints;
+        let beats: FilmDataPoint[] = [];
+        if (graphPoints && graphPoints.length > 0) {
+          beats = graphPoints;
+        } else if (data.filmBeats?.beats && data.filmBeats.beats.length > 0) {
+          beats = data.filmBeats.beats.map((b) => ({
+            label: b.label,
+            timeMidpoint: b.timeMidpoint,
+            score: 5.5,
+          }));
+        }
+
+        if (beats.length > 0) {
+          setEffectiveBeats(beats);
           const initial: Record<string, number> = {};
-          dp.forEach((p) => { initial[p.label] = 5; });
+          beats.forEach((p) => { initial[p.label] = 5; });
           setBeatRatings(initial);
           setScreenState('form-a');
         } else {
+          setEffectiveBeats([]);
           setScreenState('form-b');
         }
       })
@@ -419,7 +438,7 @@ export default function ReviewScreen() {
 
   // ----- ARC REVEAL (State A post-submit) -----
   if (screenState === 'arc-reveal') {
-    const dp = film.sentimentGraph?.dataPoints ?? [];
+    const dp = effectiveBeats;
     const scores = dp.map((p) => beatRatings[p.label] ?? 5);
     let peakIdx = 0;
     let lowIdx = 0;
@@ -561,7 +580,7 @@ export default function ReviewScreen() {
 
   // ----- FORM A (beats + text) -----
   if (screenState === 'form-a') {
-    const dp = selectBeats(film.sentimentGraph?.dataPoints ?? []);
+    const dp = selectBeats(effectiveBeats);
 
     return (
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

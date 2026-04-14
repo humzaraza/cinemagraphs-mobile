@@ -10,6 +10,18 @@ export interface SentimentGraph {
   biggestSwing: string | null;
 }
 
+export interface WikiBeat {
+  label: string;
+  timeStart?: number;
+  timeEnd?: number;
+  timeMidpoint: number;
+}
+
+export interface FilmBeats {
+  beats: WikiBeat[];
+  source: string;
+}
+
 export interface Film {
   id: string;
   title: string;
@@ -20,6 +32,7 @@ export interface Film {
   genres: string[];
   director: string | null;
   sentimentGraph: SentimentGraph | null;
+  filmBeats?: FilmBeats | null;
 }
 
 export interface PeakLowMoment {
