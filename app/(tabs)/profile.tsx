@@ -21,8 +21,10 @@ import {
   fetchUserWatchlist,
   fetchUserLists,
   createUserList,
+  fetchAllFilms,
 } from '../../src/lib/api';
 import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockProfile';
+import type { Film } from '../../src/types/film';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuth } from '../../src/providers/AuthProvider';
@@ -362,6 +364,8 @@ export default function ProfileScreen() {
   const [filmSearchInput, setFilmSearchInput] = useState('');
   const [filmSearch, setFilmSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [pickerFilms, setPickerFilms] = useState<Film[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadProfile = useCallback(() => {
@@ -432,6 +436,18 @@ export default function ProfileScreen() {
     },
     [],
   );
+
+  // Load all films from the API once per picker-modal open, so the picker
+  // searches the full database rather than just the user's own films.
+  useEffect(() => {
+    if (showFilmPicker && pickerFilms.length === 0 && !pickerLoading) {
+      setPickerLoading(true);
+      fetchAllFilms()
+        .then((all) => setPickerFilms(all))
+        .catch((e) => console.error('[Profile] fetchAllFilms error:', e))
+        .finally(() => setPickerLoading(false));
+    }
+  }, [showFilmPicker, pickerFilms.length, pickerLoading]);
 
   // Unauthenticated state
   if (!isAuthenticated) {
@@ -652,9 +668,12 @@ export default function ProfileScreen() {
     (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
   );
 
-  const filteredPickerFilms = allUniqueFilms.filter((f) =>
-    f.title.toLowerCase().includes(filmSearch.toLowerCase()),
-  );
+  const filteredPickerFilms =
+    filmSearch.trim().length < 2
+      ? []
+      : pickerFilms.filter((f) =>
+          f.title.toLowerCase().includes(filmSearch.toLowerCase()),
+        );
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
@@ -672,6 +691,7 @@ export default function ProfileScreen() {
       setNewListFilmIds([]);
       setFilmSearchInput('');
       setFilmSearch('');
+      setPickerFilms([]);
     } catch (e) {
       console.error('[Profile] createList error:', e);
     }
@@ -898,7 +918,7 @@ export default function ProfileScreen() {
       {/* ---- Film Picker Bottom Sheet ---- */}
       <BottomSheet
         visible={showFilmPicker}
-        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
+        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); setPickerFilms([]); }}
         title="Add films"
       >
         <View
@@ -919,39 +939,54 @@ export default function ProfileScreen() {
           />
         </View>
         <ScrollView style={{ maxHeight: 320, marginTop: 10 }}>
-          {filteredPickerFilms.map((f) => {
-            const selected = newListFilmIds.includes(f.id);
-            return (
-              <Pressable
-                key={f.id}
-                onPress={() => toggleFilmInNewList(f.id)}
-                style={styles.pickerRow}
-              >
-                <Image
-                  source={{ uri: f.posterUrl }}
-                  style={styles.pickerPoster}
-                  resizeMode="cover"
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pickerTitle} numberOfLines={1}>
-                    {f.title}
-                  </Text>
-                  <Text style={styles.pickerYear}>{f.year}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.pickerCheck,
-                    selected && styles.pickerCheckActive,
-                  ]}
+          {filmSearch.trim().length < 2 ? (
+            <View style={styles.listEmptyWrap}>
+              <Text style={styles.listEmptyText}>
+                {pickerLoading ? 'Loading films...' : 'Type to search films'}
+              </Text>
+            </View>
+          ) : filteredPickerFilms.length === 0 ? (
+            <View style={styles.listEmptyWrap}>
+              <Text style={styles.listEmptyText}>
+                {pickerLoading ? 'Loading films...' : 'No films found'}
+              </Text>
+            </View>
+          ) : (
+            filteredPickerFilms.map((f) => {
+              const selected = newListFilmIds.includes(f.id);
+              const posterUri = getPosterUri(f);
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => toggleFilmInNewList(f.id)}
+                  style={styles.pickerRow}
                 >
-                  {selected && <Text style={styles.pickerCheckMark}>{'\u2713'}</Text>}
-                </View>
-              </Pressable>
-            );
-          })}
+                  <Image
+                    source={{ uri: posterUri ?? undefined }}
+                    style={styles.pickerPoster}
+                    resizeMode="cover"
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pickerTitle} numberOfLines={1}>
+                      {f.title}
+                    </Text>
+                    <Text style={styles.pickerYear}>{f.year}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.pickerCheck,
+                      selected && styles.pickerCheckActive,
+                    ]}
+                  >
+                    {selected && <Text style={styles.pickerCheckMark}>{'\u2713'}</Text>}
+                  </View>
+                </Pressable>
+              );
+            })
+          )}
         </ScrollView>
         <Pressable
-          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
+          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); setPickerFilms([]); }}
           style={styles.sheetCreateBtn}
         >
           <Text style={styles.sheetCreateText}>
