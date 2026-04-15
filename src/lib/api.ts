@@ -275,7 +275,9 @@ export async function fetchUserFilms(type?: string): Promise<any[]> {
   const res = await apiFetch(`/user/films${q}`);
   if (!res.ok) return [];
   const data = await res.json();
-  return Array.isArray(data) ? data : data.films ?? [];
+  const films = Array.isArray(data) ? data : data.films ?? [];
+  console.log(`[API] fetchUserFilms(${type}) returned ${films.length} films, sample keys:`, films[0] ? Object.keys(films[0]) : 'empty');
+  return films;
 }
 
 export async function fetchUserWatchlist(): Promise<any[]> {

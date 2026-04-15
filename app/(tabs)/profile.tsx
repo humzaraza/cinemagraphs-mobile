@@ -405,7 +405,30 @@ export default function ProfileScreen() {
       fetchUserFilms('watched'),
     ])
       .then(([reviewed, watched]) => {
-        const all = [...reviewed, ...watched];
+        console.log('[Profile] reviewed films raw:', JSON.stringify(reviewed?.slice(0, 2))?.slice(0, 500));
+        // Normalize API fields to match MockFilm shape and tag with status
+        const normalize = (raw: any, status: string) => {
+          const film = raw.film ?? {};
+          return {
+            ...film,
+            ...raw,
+            id: film.id ?? raw.filmId ?? raw.id,
+            title: film.title ?? raw.title ?? '',
+            posterUrl: film.posterUrl ?? film.posterPath ?? raw.posterUrl ?? raw.posterPath ?? '',
+            personalScore: raw.personalScore ?? raw.overallRating ?? raw.rating ?? film.overallScore ?? 0,
+            score: raw.score ?? raw.overallScore ?? film.overallScore ?? 0,
+            sparklineData: raw.sparklineData ?? raw.sentimentArc ?? raw.sentimentData ?? [],
+            dateWatched: raw.dateWatched ?? raw.reviewedAt ?? raw.createdAt ?? '',
+            status,
+            year: film.year ?? raw.year ?? (film.releaseDate ? parseInt(film.releaseDate) : 0),
+            runtime: film.runtime ?? raw.runtime ?? 0,
+            genres: film.genres ?? raw.genres ?? [],
+            dominantColor: film.dominantColor ?? raw.dominantColor ?? '#2E4057',
+          };
+        };
+        const taggedReviewed = reviewed.map((f: any) => normalize(f, 'reviewed'));
+        const taggedWatched = watched.map((f: any) => normalize(f, 'watched'));
+        const all = [...taggedReviewed, ...taggedWatched];
         const unique = all.filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
         setFilms(unique);
       })
@@ -506,7 +529,8 @@ export default function ProfileScreen() {
   const renderProfileHub = () => {
     const sectionRows: { label: string; count: number }[] = [
       { label: 'Reviewed', count: user?.counts?.reviewed ?? user?.stats?.reviewCount ?? user?.reviewCount ?? 0 },
-      { label: 'Watched', count: user?.counts?.watched ?? user?.stats?.watchedCount ?? user?.watchedCount ?? 0 },
+      // TODO: Unhide when watched/ticket stub feature is enabled
+      // { label: 'Watched', count: user?.counts?.watched ?? user?.stats?.watchedCount ?? user?.watchedCount ?? 0 },
       { label: 'Watchlist', count: user?.counts?.watchlist ?? user?.stats?.watchlistCount ?? user?.watchlistCount ?? 0 },
       { label: 'Lists', count: user?.counts?.lists ?? user?.stats?.listCount ?? user?.listCount ?? 0 },
       { label: 'Following', count: user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0 },
@@ -603,19 +627,9 @@ export default function ProfileScreen() {
     <>
       {/* Filter + view toggle row */}
       <View style={styles.filterRow}>
-        <PillToggle
-          // TODO: Unhide when live reactions are ready
-          // { key: 'reactions' as FilmFilter, label: 'Reactions' },
-          options={[
-            { key: 'reviewed' as FilmFilter, label: 'Reviewed' },
-            { key: 'watched' as FilmFilter, label: 'Watched' },
-          ]}
-          active={filmFilter}
-          onSelect={setFilmFilter}
-        />
-        {filmFilter === 'reviewed' && (
-          <ViewToggle mode={viewMode} onSelect={setViewMode} />
-        )}
+        {/* TODO: Unhide Watched/Reviewed toggle when watched feature is enabled */}
+        <View />
+        <ViewToggle mode={viewMode} onSelect={setViewMode} />
       </View>
 
       {/* Content */}
