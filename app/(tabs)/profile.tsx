@@ -882,12 +882,13 @@ export default function ProfileScreen() {
         <Text style={[styles.sheetLabel, { marginTop: 14 }]}>ADD FILMS</Text>
         <View style={styles.filmChipRow}>
           {newListFilmIds.map((id) => {
-            const f = allUniqueFilms.find((x) => x.id === id);
+            const f = allUniqueFilms.find((x) => x.id === id) ?? pickerFilms.find((x) => x.id === id);
             if (!f) return null;
+            const posterUri = getPosterUri(f);
             return (
               <Pressable key={id} onPress={() => toggleFilmInNewList(id)}>
                 <Image
-                  source={{ uri: f.posterUrl }}
+                  source={{ uri: posterUri ?? undefined }}
                   style={styles.filmChipPoster}
                   resizeMode="cover"
                 />
