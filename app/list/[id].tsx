@@ -9,6 +9,7 @@ import {
   Dimensions,
   TextInput,
   Alert,
+  Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,8 +17,9 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserList, fetchAllFilms, addFilmToListAPI, deleteUserList, removeFilmFromListAPI } from '../../src/lib/api';
+import { fetchUserList, fetchPublicList, fetchAllFilms, addFilmToListAPI, deleteUserList, removeFilmFromListAPI, updateListVisibility } from '../../src/lib/api';
 import BottomSheet from '../../src/components/BottomSheet';
+import { useAuth } from '../../src/providers/AuthProvider';
 import type { MockFilm } from '../../src/data/mockProfile';
 import type { Film } from '../../src/types/film';
 
@@ -110,6 +112,7 @@ export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user: authUser } = useAuth();
 
   const [list, setList] = useState<any | null>(null);
   const [allFilms, setAllFilms] = useState<MockFilm[]>([]);
@@ -126,12 +129,28 @@ export default function ListDetailScreen() {
   // Menu state
   const [showMenu, setShowMenu] = useState(false);
 
-  const loadList = useCallback(() => {
+  const isOwner = !!(authUser?.id && list?.userId && authUser.id === list.userId);
+
+  const loadList = useCallback(async () => {
     setLoaded(false);
-    fetchUserList(id!)
-      .then((found) => { setList(found ?? null); })
-      .catch((e) => console.error('[ListDetail] fetchUserList error:', e))
-      .finally(() => setLoaded(true));
+    try {
+      // Try the owner endpoint first
+      const found = await fetchUserList(id!);
+      if (found) {
+        setList(found);
+        setLoaded(true);
+        return;
+      }
+    } catch {
+      // Owner endpoint failed, try public
+    }
+    try {
+      const pub = await fetchPublicList(id!);
+      setList(pub ?? null);
+    } catch {
+      setList(null);
+    }
+    setLoaded(true);
   }, [id]);
 
   useEffect(() => {
@@ -219,6 +238,17 @@ export default function ListDetailScreen() {
     );
   };
 
+  const handleToggleVisibility = async (newValue: boolean) => {
+    if (!id) return;
+    const prev = list.isPublic;
+    setList((l: any) => ({ ...l, isPublic: newValue }));
+    try {
+      await updateListVisibility(id, newValue);
+    } catch {
+      setList((l: any) => ({ ...l, isPublic: prev }));
+    }
+  };
+
   if (!loaded) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -282,6 +312,18 @@ export default function ListDetailScreen() {
           {list.genreTag} {'\u00B7'} {filmIds.length} film{filmIds.length !== 1 ? 's' : ''}
         </Text>
 
+        {isOwner && (
+          <View style={styles.visibilityRow}>
+            <Text style={styles.visibilityLabel}>Public</Text>
+            <Switch
+              value={list.isPublic !== false}
+              onValueChange={handleToggleVisibility}
+              trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(200,169,81,0.4)' }}
+              thumbColor={list.isPublic !== false ? colors.gold : 'rgba(255,255,255,0.4)'}
+            />
+          </View>
+        )}
+
         {viewMode === 'graph' ? (
           <View style={styles.arcList}>
             {listFilms.map((f: MockFilm) => (
@@ -311,13 +353,15 @@ export default function ListDetailScreen() {
           </View>
         )}
 
-        {/* Add films button */}
-        <Pressable
-          onPress={() => setShowAddFilm(true)}
-          style={styles.addFilmBtn}
-        >
-          <Text style={styles.addFilmBtnText}>+ Add films</Text>
-        </Pressable>
+        {/* Add films button (owner only) */}
+        {isOwner && (
+          <Pressable
+            onPress={() => setShowAddFilm(true)}
+            style={styles.addFilmBtn}
+          >
+            <Text style={styles.addFilmBtnText}>+ Add films</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Add film bottom sheet */}
@@ -411,8 +455,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(245,240,225,0.4)',
     paddingHorizontal: PAD,
-    marginBottom: 14,
+    marginBottom: 10,
     marginLeft: 36,
+  },
+  visibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: PAD,
+    marginLeft: 36,
+    marginBottom: 14,
+  },
+  visibilityLabel: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.ivory,
   },
 
   // Arc cards (graph view)

@@ -326,11 +326,11 @@ export async function fetchUserList(listId: string): Promise<any> {
   return data.list ?? data;
 }
 
-export async function createUserList(name: string, genreTag: string, filmIds: string[]): Promise<any> {
-  console.log('[API] createUserList called with:', { name, genreTag, filmIds });
+export async function createUserList(name: string, genreTag: string, filmIds: string[], isPublic?: boolean): Promise<any> {
+  console.log('[API] createUserList called with:', { name, genreTag, filmIds, isPublic });
   const res = await apiFetch('/user/lists', {
     method: 'POST',
-    body: JSON.stringify({ name, genreTag, filmIds }),
+    body: JSON.stringify({ name, genreTag, filmIds, ...(isPublic !== undefined && { isPublic }) }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -363,6 +363,24 @@ export async function removeFilmFromListAPI(listId: string, filmId: string): Pro
 
 export async function deleteUserList(listId: string): Promise<void> {
   await apiFetch(`/user/lists/${listId}`, { method: 'DELETE' });
+}
+
+export async function fetchPublicList(listId: string): Promise<any> {
+  const res = await apiFetch(`/lists/${listId}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.list ?? data;
+}
+
+export async function updateListVisibility(listId: string, isPublic: boolean): Promise<void> {
+  const res = await apiFetch(`/user/lists/${listId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isPublic }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update list visibility');
+  }
 }
 
 export async function fetchUserSettings(): Promise<any> {

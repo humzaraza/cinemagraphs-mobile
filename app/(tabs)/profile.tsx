@@ -8,6 +8,7 @@ import {
   Pressable,
   Dimensions,
   TextInput,
+  Switch,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -360,6 +361,7 @@ export default function ProfileScreen() {
   const [showCreateList, setShowCreateList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [newListGenre, setNewListGenre] = useState('Drama');
+  const [newListPublic, setNewListPublic] = useState(true);
   const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
   const [showFilmPicker, setShowFilmPicker] = useState(false);
   const [filmSearchInput, setFilmSearchInput] = useState('');
@@ -683,8 +685,8 @@ export default function ProfileScreen() {
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
-      console.log('[Profile] Creating list:', newListName.trim(), newListGenre, newListFilmIds);
-      const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
+      console.log('[Profile] Creating list:', newListName.trim(), newListGenre, newListFilmIds, newListPublic);
+      const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds, newListPublic);
       console.log('[Profile] createUserList returned:', JSON.stringify(apiList).slice(0, 300));
       // API may return { list: {...} } or {...} directly
       const listObj = apiList.list ?? apiList;
@@ -693,6 +695,7 @@ export default function ProfileScreen() {
       setShowCreateList(false);
       setNewListName('');
       setNewListGenre('Drama');
+      setNewListPublic(true);
       setNewListFilmIds([]);
       setFilmSearchInput('');
       setFilmSearch('');
@@ -882,6 +885,18 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Public toggle */}
+        <View style={styles.publicToggleRow}>
+          <Text style={styles.publicToggleLabel}>Public</Text>
+          <Switch
+            value={newListPublic}
+            onValueChange={setNewListPublic}
+            trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(200,169,81,0.4)' }}
+            thumbColor={newListPublic ? colors.gold : 'rgba(255,255,255,0.4)'}
+          />
+        </View>
+        <Text style={styles.publicToggleHint}>Public lists appear on your profile</Text>
 
         {/* Films */}
         <Text style={[styles.sheetLabel, { marginTop: 14 }]}>ADD FILMS</Text>
@@ -1431,6 +1446,23 @@ const styles = StyleSheet.create({
   },
   genreTagTextActive: {
     color: colors.background,
+  },
+  publicToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  publicToggleLabel: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.ivory,
+  },
+  publicToggleHint: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: 'rgba(245,240,225,0.3)',
+    marginTop: 4,
   },
   filmChipRow: {
     flexDirection: 'row',
