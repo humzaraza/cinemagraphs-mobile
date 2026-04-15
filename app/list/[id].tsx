@@ -129,7 +129,8 @@ export default function ListDetailScreen() {
   // Menu state
   const [showMenu, setShowMenu] = useState(false);
 
-  const isOwner = !!(authUser?.id && list?.userId && authUser.id === list.userId);
+  // Track ownership by which endpoint succeeded
+  const [isOwnerList, setIsOwnerList] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoaded(false);
@@ -137,6 +138,7 @@ export default function ListDetailScreen() {
       // Try the owner endpoint first
       const found = await fetchUserList(id!);
       if (found) {
+        setIsOwnerList(true);
         setList(found);
         setLoaded(true);
         return;
@@ -145,9 +147,11 @@ export default function ListDetailScreen() {
       // Owner endpoint failed, try public
     }
     try {
+      setIsOwnerList(false);
       const pub = await fetchPublicList(id!);
       setList(pub ?? null);
     } catch {
+      setIsOwnerList(false);
       setList(null);
     }
     setLoaded(true);
@@ -312,7 +316,7 @@ export default function ListDetailScreen() {
           {list.genreTag} {'\u00B7'} {filmIds.length} film{filmIds.length !== 1 ? 's' : ''}
         </Text>
 
-        {isOwner && (
+        {isOwnerList && (
           <View style={styles.visibilityRow}>
             <Text style={styles.visibilityLabel}>Public</Text>
             <Switch
@@ -354,7 +358,7 @@ export default function ListDetailScreen() {
         )}
 
         {/* Add films button (owner only) */}
-        {isOwner && (
+        {isOwnerList && (
           <Pressable
             onPress={() => setShowAddFilm(true)}
             style={styles.addFilmBtn}
