@@ -41,6 +41,12 @@ function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | n
   return `${TMDB_POSTER}${path}`;
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 8) return '#2DD4A8';
+  if (score >= 6) return '#C8A951';
+  return '#E24B4A';
+}
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
 const POSTER_COLS = 3;
@@ -295,7 +301,7 @@ function PosterCell({
               dataPoints={film.sparklineData.map((s) => ({ score: s }))}
               width={POSTER_W - 4}
               height={44}
-              strokeColor="#F5F0E1"
+              strokeColor={getScoreColor(film.personalScore)}
               strokeWidth={1.2}
               showAxes
               showMidline
@@ -303,7 +309,7 @@ function PosterCell({
               dynamicYAxis
             />
           </View>
-          <Text style={styles.posterScore}>{film.personalScore.toFixed(1)}</Text>
+          <Text style={[styles.posterScore, { color: getScoreColor(film.personalScore) }]}>{film.personalScore.toFixed(1)}</Text>
         </>
       )}
     </Pressable>
@@ -663,7 +669,7 @@ export default function ProfileScreen() {
               elements.push(
                 <View key={f.id} style={{ position: 'relative' }}>
                   <ArcCard film={f} cardWidth={SCREEN_WIDTH - POSTER_PAD * 2} />
-                  <Text style={styles.arcScore}>{f.personalScore.toFixed(1)}</Text>
+                  <Text style={[styles.arcScore, { color: getScoreColor(f.personalScore) }]}>{f.personalScore.toFixed(1)}</Text>
                 </View>
               );
             });

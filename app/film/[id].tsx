@@ -257,7 +257,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
   return (
     <View style={styles.ctaRow}>
       <Pressable
-        onPress={() => router.push({ pathname: '/(tabs)/review', params: { filmId } } as any)}
+        onPress={() => router.push({ pathname: '/review', params: { filmId } } as any)}
         style={styles.ctaPrimary}
       >
         <Text style={styles.ctaPrimaryText}>Write review</Text>
