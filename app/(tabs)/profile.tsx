@@ -294,9 +294,13 @@ function PosterCell({
             <Sparkline
               dataPoints={film.sparklineData.map((s) => ({ score: s }))}
               width={POSTER_W - 4}
-              height={16}
-              strokeColor={colors.teal}
+              height={44}
+              strokeColor="#F5F0E1"
               strokeWidth={1.2}
+              showAxes
+              showMidline
+              hideLabels
+              dynamicYAxis
             />
           </View>
           <Text style={styles.posterScore}>{film.personalScore.toFixed(1)}</Text>
@@ -417,7 +421,7 @@ export default function ProfileScreen() {
           dateWatched: raw.reviewDate ?? '',
           status,
           year: raw.year ?? 0,
-          runtime: raw.runtime ?? 0,
+          runtime: raw.runtime ?? (Array.isArray(raw.sparkline) && raw.sparkline.length > 0 ? raw.sparkline[raw.sparkline.length - 1]?.timeEnd ?? 0 : 0),
           genres: raw.genres ?? [],
           dominantColor: raw.dominantColor ?? '#2E4057',
         });
@@ -544,7 +548,7 @@ export default function ProfileScreen() {
         {/* Stats card */}
         <View style={styles.statsCard}>
           <Pressable style={styles.statCol}>
-            <Text style={styles.statNumber}>{(user?.stats?.reviewCount ?? 0) + (user?.stats?.watchedCount ?? 0)}</Text>
+            <Text style={styles.statNumber}>{user?.stats?.reviewCount ?? 0}</Text>
             <Text style={styles.statLabel}>Films</Text>
           </Pressable>
           <View style={styles.statDivider} />
@@ -656,7 +660,12 @@ export default function ProfileScreen() {
                   </Text>
                 );
               }
-              elements.push(<ArcCard key={f.id} film={f} cardWidth={SCREEN_WIDTH - POSTER_PAD * 2} />);
+              elements.push(
+                <View key={f.id} style={{ position: 'relative' }}>
+                  <ArcCard film={f} cardWidth={SCREEN_WIDTH - POSTER_PAD * 2} />
+                  <Text style={styles.arcScore}>{f.personalScore.toFixed(1)}</Text>
+                </View>
+              );
             });
             return elements;
           })()}
@@ -1306,7 +1315,7 @@ const styles = StyleSheet.create({
   posterScore: {
     fontFamily: fonts.body,
     fontSize: 11,
-    color: colors.teal,
+    color: '#F5F0E1',
     textAlign: 'center',
     marginTop: 2,
   },
@@ -1320,6 +1329,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.gold,
     marginBottom: 8,
+  },
+  arcScore: {
+    position: 'absolute',
+    top: 6,
+    right: 10,
+    fontFamily: fonts.headingBold,
+    fontSize: 20,
+    color: colors.gold,
   },
   // ---- Lists empty ----
   listEmptyWrap: {

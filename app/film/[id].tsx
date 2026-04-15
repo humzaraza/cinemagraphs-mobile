@@ -20,13 +20,13 @@ import Svg, {
   Text as SvgText,
   Path,
 } from 'react-native-svg';
-import { colors, fonts, spacing, borderRadius } from '../../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList } from '../../../src/lib/api';
+import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList } from '../../src/lib/api';
 // lists.ts local helpers no longer needed - using API directly
-import BottomSheet from '../../../src/components/BottomSheet';
-import { useAuthGate } from '../../../src/components/AuthGate';
-import { addRecentlyViewed } from '../../../src/lib/recentlyViewed';
-import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../../src/types/film';
+import BottomSheet from '../../src/components/BottomSheet';
+import { useAuthGate } from '../../src/components/AuthGate';
+import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
+import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';

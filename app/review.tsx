@@ -21,9 +21,9 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import Slider from '@react-native-community/slider';
-import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import { fetchFilmDetail, submitReview } from '../../src/lib/api';
-import type { FilmDetail, FilmDataPoint } from '../../src/types/film';
+import { colors, fonts, borderRadius } from '../src/constants/theme';
+import { fetchFilmDetail, submitReview } from '../src/lib/api';
+import type { FilmDetail, FilmDataPoint } from '../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
