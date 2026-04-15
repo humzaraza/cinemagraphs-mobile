@@ -919,7 +919,7 @@ export default function ProfileScreen() {
       {/* ---- Film Picker Bottom Sheet ---- */}
       <BottomSheet
         visible={showFilmPicker}
-        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); setPickerFilms([]); }}
+        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
         title="Add films"
       >
         <View
@@ -987,7 +987,7 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
         <Pressable
-          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); setPickerFilms([]); }}
+          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
           style={styles.sheetCreateBtn}
         >
           <Text style={styles.sheetCreateText}>
