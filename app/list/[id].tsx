@@ -8,6 +8,7 @@ import {
   Pressable,
   Dimensions,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserList, fetchAllFilms, addFilmToListAPI } from '../../src/lib/api';
+import { fetchUserList, fetchAllFilms, addFilmToListAPI, deleteUserList } from '../../src/lib/api';
 import BottomSheet from '../../src/components/BottomSheet';
 import type { MockFilm } from '../../src/data/mockProfile';
 import type { Film } from '../../src/types/film';
@@ -44,6 +45,17 @@ function ListViewIcon({ active }: { active: boolean }) {
       <Line x1={1} y1={3} x2={15} y2={3} stroke={c} strokeWidth={1.5} />
       <Line x1={1} y1={8} x2={15} y2={8} stroke={c} strokeWidth={1.5} />
       <Line x1={1} y1={13} x2={15} y2={13} stroke={c} strokeWidth={1.5} />
+    </Svg>
+  );
+}
+
+function MenuIcon() {
+  const c = 'rgba(255,255,255,0.6)';
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+      <Line x1={3} y1={5} x2={17} y2={5} stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+      <Line x1={3} y1={10} x2={17} y2={10} stroke={c} strokeWidth={1.5} strokeLinecap="round" />
+      <Line x1={3} y1={15} x2={17} y2={15} stroke={c} strokeWidth={1.5} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -110,6 +122,9 @@ export default function ListDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Menu state
+  const [showMenu, setShowMenu] = useState(false);
+
   const loadList = useCallback(() => {
     setLoaded(false);
     fetchUserList(id!)
@@ -151,6 +166,31 @@ export default function ListDetailScreen() {
     } catch (e) {
       console.error('[ListDetail] addFilmToListAPI error:', e);
     }
+  };
+
+  const handleDeleteList = () => {
+    setShowMenu(false);
+    Alert.alert(
+      'Delete list',
+      'Are you sure? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!id) return;
+            try {
+              await deleteUserList(id);
+              router.back();
+            } catch (e) {
+              console.error('[ListDetail] deleteUserList error:', e);
+              Alert.alert('Error', 'Could not delete list. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (!loaded) {
@@ -205,6 +245,9 @@ export default function ListDetailScreen() {
             </Pressable>
             <Pressable onPress={() => setViewMode('graph')} style={styles.toggleBtn}>
               <ListViewIcon active={viewMode === 'graph'} />
+            </Pressable>
+            <Pressable onPress={() => setShowMenu(true)} style={styles.toggleBtn} hitSlop={8}>
+              <MenuIcon />
             </Pressable>
           </View>
         </View>
@@ -284,6 +327,17 @@ export default function ListDetailScreen() {
             );
           })}
         </ScrollView>
+      </BottomSheet>
+
+      {/* Menu bottom sheet */}
+      <BottomSheet
+        visible={showMenu}
+        onClose={() => setShowMenu(false)}
+        title="List options"
+      >
+        <Pressable onPress={handleDeleteList} style={styles.menuRow}>
+          <Text style={styles.menuRowDanger}>Delete list</Text>
+        </Pressable>
       </BottomSheet>
     </View>
   );
@@ -439,5 +493,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     color: colors.gold,
+  },
+
+  // Menu
+  menuRow: {
+    paddingVertical: 14,
+  },
+  menuRowDanger: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.negativeRed,
   },
 });
