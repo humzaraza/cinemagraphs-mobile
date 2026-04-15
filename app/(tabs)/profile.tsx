@@ -405,27 +405,22 @@ export default function ProfileScreen() {
       fetchUserFilms('watched'),
     ])
       .then(([reviewed, watched]) => {
-        console.log('[Profile] reviewed films raw:', JSON.stringify(reviewed?.slice(0, 2))?.slice(0, 500));
-        // Normalize API fields to match MockFilm shape and tag with status
-        const normalize = (raw: any, status: string) => {
-          const film = raw.film ?? {};
-          return {
-            ...film,
-            ...raw,
-            id: film.id ?? raw.filmId ?? raw.id,
-            title: film.title ?? raw.title ?? '',
-            posterUrl: film.posterUrl ?? film.posterPath ?? raw.posterUrl ?? raw.posterPath ?? '',
-            personalScore: raw.personalScore ?? raw.overallRating ?? raw.rating ?? film.overallScore ?? 0,
-            score: raw.score ?? raw.overallScore ?? film.overallScore ?? 0,
-            sparklineData: raw.sparklineData ?? raw.sentimentArc ?? raw.sentimentData ?? [],
-            dateWatched: raw.dateWatched ?? raw.reviewedAt ?? raw.createdAt ?? '',
-            status,
-            year: film.year ?? raw.year ?? (film.releaseDate ? parseInt(film.releaseDate) : 0),
-            runtime: film.runtime ?? raw.runtime ?? 0,
-            genres: film.genres ?? raw.genres ?? [],
-            dominantColor: film.dominantColor ?? raw.dominantColor ?? '#2E4057',
-          };
-        };
+        // Normalize API fields to match MockFilm shape
+        const normalize = (raw: any, status: string) => ({
+          ...raw,
+          id: raw.id,
+          title: raw.title ?? '',
+          posterUrl: raw.posterUrl ?? '',
+          personalScore: raw.reviewScore ?? 0,
+          score: raw.reviewScore ?? 0,
+          sparklineData: Array.isArray(raw.sparkline) ? raw.sparkline.map((dp: any) => dp.score) : [],
+          dateWatched: raw.reviewDate ?? '',
+          status,
+          year: raw.year ?? 0,
+          runtime: raw.runtime ?? 0,
+          genres: raw.genres ?? [],
+          dominantColor: raw.dominantColor ?? '#2E4057',
+        });
         const taggedReviewed = reviewed.map((f: any) => normalize(f, 'reviewed'));
         const taggedWatched = watched.map((f: any) => normalize(f, 'watched'));
         const all = [...taggedReviewed, ...taggedWatched];
