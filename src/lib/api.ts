@@ -431,3 +431,54 @@ export async function changePassword(currentPassword: string, newPassword: strin
     throw error;
   }
 }
+
+// ---------------------------------------------------------------------------
+// User search & social
+// ---------------------------------------------------------------------------
+
+export async function searchUsers(query: string, page?: number): Promise<any> {
+  const params = new URLSearchParams({ q: query });
+  if (page) params.set('page', String(page));
+  const res = await apiFetch(`/users/search?${params}`);
+  if (!res.ok) return { users: [], total: 0, page: 1, totalPages: 0 };
+  return res.json();
+}
+
+export async function fetchPublicProfile(userId: string): Promise<any> {
+  const res = await apiFetch(`/users/${userId}`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error('Failed to load profile');
+  }
+  return res.json();
+}
+
+export async function followUser(userId: string): Promise<void> {
+  const res = await apiFetch(`/users/${userId}/follow`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to follow user');
+  }
+}
+
+export async function unfollowUser(userId: string): Promise<void> {
+  const res = await apiFetch(`/users/${userId}/follow`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to unfollow user');
+  }
+}
+
+export async function fetchFollowers(userId: string, page?: number): Promise<any> {
+  const params = page ? `?page=${page}` : '';
+  const res = await apiFetch(`/users/${userId}/followers${params}`);
+  if (!res.ok) return { users: [], total: 0, page: 1, totalPages: 0 };
+  return res.json();
+}
+
+export async function fetchFollowing(userId: string, page?: number): Promise<any> {
+  const params = page ? `?page=${page}` : '';
+  const res = await apiFetch(`/users/${userId}/following${params}`);
+  if (!res.ok) return { users: [], total: 0, page: 1, totalPages: 0 };
+  return res.json();
+}

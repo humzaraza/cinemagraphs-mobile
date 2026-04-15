@@ -10,14 +10,18 @@ import {
   Keyboard,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import { fetchAllFilms } from '../../src/lib/api';
+import { fetchAllFilms, searchUsers } from '../../src/lib/api';
 import Sparkline from '../../src/components/Sparkline';
+import UserCard from '../../src/components/UserCard';
 import type { Film } from '../../src/types/film';
+
+type SearchMode = 'films' | 'people';
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 
@@ -254,6 +258,13 @@ export default function SearchScreen() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // People search state
+  const [searchMode, setSearchMode] = useState<SearchMode>('films');
+  const [peopleResults, setPeopleResults] = useState<any[]>([]);
+  const [peopleSearching, setPeopleSearching] = useState(false);
+  const [hasPeopleSearched, setHasPeopleSearched] = useState(false);
+  const peopleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isSearching = focused || query.length > 0 || activeCategory !== null;
 
   // Fetch all films once on mount
@@ -285,13 +296,38 @@ export default function SearchScreen() {
     [allFilms]
   );
 
+  const doPeopleSearch = useCallback(async (term: string) => {
+    if (!term.trim()) {
+      setPeopleResults([]);
+      setHasPeopleSearched(false);
+      setPeopleSearching(false);
+      return;
+    }
+    setPeopleSearching(true);
+    try {
+      const data = await searchUsers(term.trim());
+      setPeopleResults(data.users ?? []);
+      setHasPeopleSearched(true);
+    } catch {
+      setPeopleResults([]);
+      setHasPeopleSearched(true);
+    } finally {
+      setPeopleSearching(false);
+    }
+  }, []);
+
   const onChangeText = useCallback(
     (text: string) => {
       setQuery(text);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => doSearch(text), 400);
+      if (searchMode === 'films') {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => doSearch(text), 400);
+      } else {
+        if (peopleDebounceRef.current) clearTimeout(peopleDebounceRef.current);
+        peopleDebounceRef.current = setTimeout(() => doPeopleSearch(text), 300);
+      }
     },
-    [doSearch]
+    [doSearch, doPeopleSearch, searchMode]
   );
 
   const onCancel = useCallback(() => {
@@ -301,7 +337,22 @@ export default function SearchScreen() {
     setSearching(false);
     setFocused(false);
     setActiveCategory(null);
+    setPeopleResults([]);
+    setHasPeopleSearched(false);
+    setPeopleSearching(false);
     Keyboard.dismiss();
+  }, []);
+
+  const onSwitchMode = useCallback((mode: SearchMode) => {
+    setSearchMode(mode);
+    setQuery('');
+    setResults([]);
+    setHasSearched(false);
+    setSearching(false);
+    setPeopleResults([]);
+    setHasPeopleSearched(false);
+    setPeopleSearching(false);
+    setActiveCategory(null);
   }, []);
 
   const onCategorySelect = useCallback(
@@ -339,7 +390,7 @@ export default function SearchScreen() {
           </Svg>
           <TextInput
             style={styles.searchInput}
-            placeholder="Films, people, members..."
+            placeholder={searchMode === 'films' ? 'Films, people, members...' : 'Search members...'}
             placeholderTextColor="rgba(255,255,255,0.3)"
             value={query}
             onChangeText={onChangeText}
@@ -356,8 +407,58 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {/* Films / People toggle */}
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleContainer}>
+          <Pressable
+            onPress={() => onSwitchMode('films')}
+            style={[styles.toggleBtn, searchMode === 'films' && styles.toggleBtnActive]}
+          >
+            <Text style={[styles.toggleText, searchMode === 'films' && styles.toggleTextActive]}>
+              Films
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onSwitchMode('people')}
+            style={[styles.toggleBtn, searchMode === 'people' && styles.toggleBtnActive]}
+          >
+            <Text style={[styles.toggleText, searchMode === 'people' && styles.toggleTextActive]}>
+              People
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
       {/* Content */}
-      {!isSearching ? (
+      {searchMode === 'people' ? (
+        peopleSearching ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color={colors.gold} />
+          </View>
+        ) : hasPeopleSearched && peopleResults.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No users found</Text>
+          </View>
+        ) : !hasPeopleSearched ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Search for members by name or username</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={peopleResults}
+            renderItem={({ item }) => (
+              <UserCard
+                user={item}
+                onPress={() => router.push(`/user/${item.id}` as any)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+        )
+      ) : !isSearching ? (
         <FlatList
           data={[]}
           renderItem={null}
@@ -561,6 +662,36 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 14,
     color: colors.gold,
+  },
+
+  // Toggle
+  toggleRow: {
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 8,
+    overflow: 'hidden',
+    height: 34,
+  },
+  toggleBtn: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toggleBtnActive: {
+    backgroundColor: colors.gold,
+  },
+  toggleText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: 'rgba(245,240,225,0.4)',
+  },
+  toggleTextActive: {
+    color: colors.background,
   },
 
   // Empty state

@@ -27,6 +27,7 @@ import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockP
 import type { Film } from '../../src/types/film';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
+import FollowersModal from '../../src/components/FollowersModal';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
 
@@ -368,6 +369,10 @@ export default function ProfileScreen() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Followers modal state
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersInitialTab, setFollowersInitialTab] = useState<'followers' | 'following'>('followers');
+
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
     setProfileError(false);
@@ -522,12 +527,12 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Films</Text>
           </Pressable>
           <View style={styles.statDivider} />
-          <Pressable style={styles.statCol}>
+          <Pressable style={styles.statCol} onPress={() => { setFollowersInitialTab('following'); setShowFollowersModal(true); }}>
             <Text style={styles.statNumber}>{user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0}</Text>
             <Text style={styles.statLabel}>Following</Text>
           </Pressable>
           <View style={styles.statDivider} />
-          <Pressable style={styles.statCol}>
+          <Pressable style={styles.statCol} onPress={() => { setFollowersInitialTab('followers'); setShowFollowersModal(true); }}>
             <Text style={styles.statNumber}>{user?.stats?.followerCount ?? user?.stats?.followers ?? user?.followerCount ?? 0}</Text>
             <Text style={styles.statLabel}>Followers</Text>
           </Pressable>
@@ -915,6 +920,16 @@ export default function ProfileScreen() {
           <Text style={styles.sheetCreateText}>Create list</Text>
         </Pressable>
       </BottomSheet>
+
+      {/* ---- Followers Modal ---- */}
+      {authUser?.id && (
+        <FollowersModal
+          visible={showFollowersModal}
+          onClose={() => setShowFollowersModal(false)}
+          userId={authUser.id}
+          initialTab={followersInitialTab}
+        />
+      )}
 
       {/* ---- Film Picker Bottom Sheet ---- */}
       <BottomSheet
