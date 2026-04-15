@@ -28,9 +28,11 @@ export function hexToRgba(hex: string, alpha: number): string {
 export default function ArcCard({
   film,
   cardWidth,
+  onLongPress,
 }: {
   film: MockFilm;
   cardWidth?: number;
+  onLongPress?: () => void;
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
@@ -46,6 +48,7 @@ export default function ArcCard({
   return (
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
+      onLongPress={onLongPress}
       style={styles.arcCard}
     >
       <LinearGradient

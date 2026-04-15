@@ -16,7 +16,7 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserList, fetchAllFilms, addFilmToListAPI, deleteUserList } from '../../src/lib/api';
+import { fetchUserList, fetchAllFilms, addFilmToListAPI, deleteUserList, removeFilmFromListAPI } from '../../src/lib/api';
 import BottomSheet from '../../src/components/BottomSheet';
 import type { MockFilm } from '../../src/data/mockProfile';
 import type { Film } from '../../src/types/film';
@@ -60,13 +60,14 @@ function MenuIcon() {
   );
 }
 
-function PosterCell({ film }: { film: MockFilm }) {
+function PosterCell({ film, onLongPress }: { film: MockFilm; onLongPress?: () => void }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
 
   return (
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
+      onLongPress={onLongPress}
       style={styles.posterCell}
     >
       <View style={styles.posterImageContainer}>
@@ -168,6 +169,31 @@ export default function ListDetailScreen() {
     }
   };
 
+  const handleRemoveFilm = (filmId: string, filmTitle: string) => {
+    Alert.alert(
+      'Remove from list',
+      `Remove "${filmTitle}" from this list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            if (!id) return;
+            try {
+              await removeFilmFromListAPI(id, filmId);
+              const updated = await fetchUserList(id);
+              setList(updated ?? null);
+            } catch (e) {
+              console.error('[ListDetail] removeFilmFromListAPI error:', e);
+              Alert.alert('Error', 'Could not remove film. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleDeleteList = () => {
     setShowMenu(false);
     Alert.alert(
@@ -258,14 +284,23 @@ export default function ListDetailScreen() {
 
         {viewMode === 'graph' ? (
           <View style={styles.arcList}>
-            {listFilms.map((f) => (
-              <ArcCard key={f.id} film={f} cardWidth={cardWidth} />
+            {listFilms.map((f: MockFilm) => (
+              <ArcCard
+                key={f.id}
+                film={f}
+                cardWidth={cardWidth}
+                onLongPress={() => handleRemoveFilm(f.id, f.title)}
+              />
             ))}
           </View>
         ) : (
           <View style={styles.posterGrid}>
-            {listFilms.map((f) => (
-              <PosterCell key={f.id} film={f} />
+            {listFilms.map((f: MockFilm) => (
+              <PosterCell
+                key={f.id}
+                film={f}
+                onLongPress={() => handleRemoveFilm(f.id, f.title)}
+              />
             ))}
           </View>
         )}
