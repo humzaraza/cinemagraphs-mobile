@@ -42,7 +42,6 @@ The root layout (`app/_layout.tsx`) loads fonts, holds the splash screen until f
 - **onboarding.tsx** — Three-slide swipeable carousel (arc explanation, beat rating, lists). Skip/Next. On finish, calls `clearOnboarding` and routes to Explore.
 - **+not-found.tsx** — Redirects to `/(tabs)` on mount.
 - **index.tsx** — Auth-aware router described above.
-- **index 2.tsx** — Appears to be an accidental duplicate file in the repo root (not referenced by routing intent). Worth cleaning up.
 
 ### Settings (`app/settings/`)
 - **index.tsx** — Hub with user card, Account section (change password, notifications), Privacy toggles (public profile, allow followers, private graphs). Toggles call `updateUserSettings`.
@@ -127,7 +126,6 @@ Settings toggles (public profile, allow followers, private graphs, notification 
 - **Hidden / disabled UI.**
   - `app/(tabs)/explore.tsx` renders a ticket-stub feature inside `{false && ...}` — **built but disabled.**
   - `app/(tabs)/profile.tsx` has partially hidden Watchlist UI — **built but disabled.**
-- **Stray file.** `app/index 2.tsx` exists alongside `app/index.tsx` and looks like a Finder-duplicate rather than an intentional route.
 - **Uncommitted dumps.** `mock-dump.txt` and `profile-dump.txt` sit untracked at the repo root; they appear to be scratch captures.
 - **iOS predictive back gesture** is enabled by default in Expo Router stacks; Android explicitly disables it in `app.json` (`predictiveBackGestureEnabled: false`).
 - **Avatar upload path bypasses `apiFetch`.** If `API_BASE` or the auth header shape ever changes, this call has to be updated in both places.
