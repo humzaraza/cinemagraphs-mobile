@@ -1107,12 +1107,6 @@ export default function FilmDetailScreen() {
     fetchUserWatchlist()
       .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))
       .catch(() => {});
-    fetchAllFilms().then((films) => {
-      const unique = films.filter(
-        (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
-      );
-      setPickerFilms(unique);
-    });
   }, [load]);
 
   const GENRE_TAGS = ['Drama', 'Action', 'Horror', 'Sci-Fi', 'Comedy', 'Thriller'];
@@ -1314,7 +1308,17 @@ export default function FilmDetailScreen() {
           })}
           <Pressable
             style={styles.filmChipAdd}
-            onPress={() => setShowFilmPicker(true)}
+            onPress={() => {
+              setShowFilmPicker(true);
+              if (pickerFilms.length === 0) {
+                fetchAllFilms().then((films) => {
+                  const unique = films.filter(
+                    (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
+                  );
+                  setPickerFilms(unique);
+                });
+              }
+            }}
           >
             <Text style={styles.filmChipPlus}>+</Text>
           </Pressable>
