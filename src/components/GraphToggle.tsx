@@ -43,13 +43,14 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
   };
 
   const collapse = (newMode?: GraphMode) => {
-    if (newMode && newMode !== active) {
+    const modeChanged = newMode && newMode !== active;
+    if (modeChanged) {
       try { Haptics.selectionAsync(); } catch (e) {}
-      onChange(newMode);
     }
     Animated.timing(optionsOpacity, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
       Animated.spring(widthAnim, { toValue: 0, friction: 10, tension: 120, useNativeDriver: false }).start(() => {
         setExpanded(false);
+        if (modeChanged) onChange(newMode);
       });
     });
   };

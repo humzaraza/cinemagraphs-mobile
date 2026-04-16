@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -373,80 +373,96 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   const plotH = GRAPH_HEIGHT - GRAPH_PAD_TOP - GRAPH_PAD_BOTTOM;
   const n = sg.dataPoints.length;
 
-  // Audience beat scores (aligned to critics beats, may contain nulls)
-  const rawAudBeats = audienceData?.beatAverages ?? [];
-  // Fill nulls with the critics score so lines stay continuous
-  const audBeats = sg.dataPoints.map((dp, i) => rawAudBeats[i] ?? dp.score);
-  const hasAudience = audienceData !== null && rawAudBeats.some((v) => v !== null);
+  // Memoize expensive graph computations
+  const graphData = useMemo(() => {
+    const rawAudBeats = audienceData?.beatAverages ?? [];
+    const audBeats = sg.dataPoints.map((dp, i) => rawAudBeats[i] ?? dp.score);
+    const hasAud = audienceData !== null && rawAudBeats.some((v) => v !== null);
 
-  // Merged per-beat values: average of critics + audience
-  const mergedBeats = hasAudience
-    ? sg.dataPoints.map((dp, i) => (dp.score + audBeats[i]) / 2)
-    : [];
+    const mergedB = hasAud
+      ? sg.dataPoints.map((dp, i) => (dp.score + audBeats[i]) / 2)
+      : [];
 
-  // Computed overall scores (only average non-null audience beats)
-  const criticsOverall = sg.overallSentiment ?? sg.overallScore ?? null;
-  const validAudScores = rawAudBeats.filter((v): v is number => v !== null);
-  const audienceOverall = validAudScores.length
-    ? Math.round((validAudScores.reduce((a, b) => a + b, 0) / validAudScores.length) * 10) / 10
-    : null;
-  const mergedOverall = mergedBeats.length
-    ? Math.round((mergedBeats.reduce((a, b) => a + b, 0) / mergedBeats.length) * 10) / 10
-    : null;
+    const critOv = sg.overallSentiment ?? sg.overallScore ?? null;
+    const validAud = rawAudBeats.filter((v): v is number => v !== null);
+    const audOv = validAud.length
+      ? Math.round((validAud.reduce((a, b) => a + b, 0) / validAud.length) * 10) / 10
+      : null;
+    const mergedOv = mergedB.length
+      ? Math.round((mergedB.reduce((a, b) => a + b, 0) / mergedB.length) * 10) / 10
+      : null;
 
-  // Y-axis anchoring: floor = lowest whole number - 1 (min 0, max 4), ceiling = 10
-  const allScores = sg.dataPoints.map((dp) => dp.score);
-  // Include audience/merged scores in y-axis range when visible
-  const extraScores: number[] = [];
-  if ((graphMode === 'audience' || graphMode === 'both') && hasAudience) {
-    extraScores.push(...audBeats.slice(0, n));
-  }
-  if (graphMode === 'merged' && mergedBeats.length) {
-    extraScores.push(...mergedBeats);
-  }
-  const combinedMin = Math.min(...allScores, ...extraScores);
-  const yFloor = Math.min(4, Math.max(0, Math.floor(combinedMin) - 1));
-  const yCeil = 10;
-  const yRange = yCeil - yFloor || 1;
-  const score5Y = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
+    const allScores = sg.dataPoints.map((dp) => dp.score);
+    const extraScores: number[] = [];
+    if ((graphMode === 'audience' || graphMode === 'both') && hasAud) {
+      extraScores.push(...audBeats.slice(0, n));
+    }
+    if (graphMode === 'merged' && mergedB.length) {
+      extraScores.push(...mergedB);
+    }
+    const combinedMin = Math.min(...allScores, ...extraScores);
+    const yFl = Math.min(4, Math.max(0, Math.floor(combinedMin) - 1));
+    const yCe = 10;
+    const yRa = yCe - yFl || 1;
+    const s5Y = GRAPH_PAD_TOP + (1 - (5 - yFl) / yRa) * plotH;
 
-  // Helper: score to y position
-  function toY(score: number): number {
-    const clamped = Math.max(yFloor, Math.min(yCeil, score));
-    return GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
-  }
+    function toY(score: number): number {
+      const clamped = Math.max(yFl, Math.min(yCe, score));
+      return GRAPH_PAD_TOP + (1 - (clamped - yFl) / yRa) * plotH;
+    }
 
-  // Pre-calculate all point positions for critics
-  const pointPositions = sg.dataPoints.map((dp, i) => ({
-    x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
-    y: toY(dp.score),
-  }));
+    const critPos = sg.dataPoints.map((dp, i) => ({
+      x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+      y: toY(dp.score),
+    }));
 
-  // Audience point positions
-  const audPositions = hasAudience
-    ? audBeats.slice(0, n).map((score, i) => ({
-        x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
-        y: toY(score),
-      }))
-    : [];
+    const audPos = hasAud
+      ? audBeats.slice(0, n).map((score, i) => ({
+          x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+          y: toY(score),
+        }))
+      : [];
 
-  // Merged point positions
-  const mergedPositions = mergedBeats.length
-    ? mergedBeats.map((score, i) => ({
-        x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
-        y: toY(score),
-      }))
-    : [];
+    const mergedPos = mergedB.length
+      ? mergedB.map((score, i) => ({
+          x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+          y: toY(score),
+        }))
+      : [];
+
+    function buildPath(positions: { x: number; y: number }[]): string {
+      if (!positions.length) return '';
+      const first = positions[0];
+      const cx = first.x * 0.5;
+      return `M ${GRAPH_PAD_LEFT.toFixed(1)},${s5Y.toFixed(1)} Q ${cx.toFixed(1)},${s5Y.toFixed(1)} ${first.x.toFixed(1)},${first.y.toFixed(1)}` + positions.slice(1).map((p) => ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+    }
+
+    return {
+      hasAudience: hasAud,
+      audBeats,
+      mergedBeats: mergedB,
+      criticsOverall: critOv,
+      audienceOverall: audOv,
+      mergedOverall: mergedOv,
+      yFloor: yFl,
+      yCeil: yCe,
+      yRange: yRa,
+      score5Y: s5Y,
+      pointPositions: critPos,
+      audPositions: audPos,
+      mergedPositions: mergedPos,
+      buildPath,
+    };
+  }, [sg, graphMode, audienceData, n, plotW, plotH]);
+
+  const {
+    hasAudience, audBeats, mergedBeats,
+    criticsOverall, audienceOverall, mergedOverall,
+    yFloor, yCeil, yRange, score5Y,
+    pointPositions, audPositions, mergedPositions, buildPath,
+  } = graphData;
 
   dataRef.current = { plotW, n };
-
-  // Build SVG path with bezier start from neutral 5
-  function buildPath(positions: { x: number; y: number }[]): string {
-    if (!positions.length) return '';
-    const first = positions[0];
-    const cx = first.x * 0.5;
-    return `M ${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} Q ${cx.toFixed(1)},${score5Y.toFixed(1)} ${first.x.toFixed(1)},${first.y.toFixed(1)}` + positions.slice(1).map((p) => ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
-  }
 
   function scoreColor(score: number): string {
     if (score >= 8) return '#2DD4A8';
@@ -486,11 +502,15 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
 
   // Score header display per mode
   function renderScoreHeader() {
+    const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const };
+    const numStyle = { fontFamily: fonts.bodyMedium, fontWeight: '500' as const };
+
     if (graphMode === 'critics') {
       return (
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[styles.sentimentScore, { color: colors.gold }]}>
-            Critics {criticsOverall?.toFixed(1) ?? '--'}
+            <Text style={labelStyle}>Critics </Text>
+            <Text style={numStyle}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
           </Text>
         </View>
       );
@@ -499,7 +519,8 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
       return (
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[styles.sentimentScore, { color: colors.teal }]}>
-            Audience {audienceOverall?.toFixed(1) ?? '--'}
+            <Text style={labelStyle}>Audience </Text>
+            <Text style={numStyle}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
           </Text>
         </View>
       );
@@ -508,10 +529,12 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
       return (
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[styles.sentimentScore, { color: colors.gold, fontSize: 16 }]}>
-            Critics {criticsOverall?.toFixed(1) ?? '--'}
+            <Text style={labelStyle}>Critics </Text>
+            <Text style={numStyle}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
           </Text>
           <Text style={[styles.sentimentScore, { color: colors.teal, fontSize: 16, marginTop: -2 }]}>
-            Audience {audienceOverall?.toFixed(1) ?? '--'}
+            <Text style={labelStyle}>Audience </Text>
+            <Text style={numStyle}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
           </Text>
         </View>
       );
@@ -520,7 +543,8 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
     return (
       <View style={{ alignItems: 'flex-end' }}>
         <Text style={[styles.sentimentScore, { color: colors.ivory }]}>
-          Merged {mergedOverall?.toFixed(1) ?? '--'}
+          <Text style={labelStyle}>Merged </Text>
+          <Text style={numStyle}>{mergedOverall?.toFixed(1) ?? '--'}</Text>
         </Text>
       </View>
     );
@@ -1544,7 +1568,7 @@ const styles = StyleSheet.create({
     color: colors.ivory,
   },
   sentimentScore: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyMedium,
     fontSize: 18,
     color: colors.gold,
   },
