@@ -373,19 +373,22 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   const plotH = GRAPH_HEIGHT - GRAPH_PAD_TOP - GRAPH_PAD_BOTTOM;
   const n = sg.dataPoints.length;
 
-  // Audience beat scores (matched to critics beat count)
-  const audBeats = audienceData?.beatAverages ?? [];
-  const hasAudience = audBeats.length >= n;
+  // Audience beat scores (aligned to critics beats, may contain nulls)
+  const rawAudBeats = audienceData?.beatAverages ?? [];
+  // Fill nulls with the critics score so lines stay continuous
+  const audBeats = sg.dataPoints.map((dp, i) => rawAudBeats[i] ?? dp.score);
+  const hasAudience = audienceData !== null && rawAudBeats.some((v) => v !== null);
 
   // Merged per-beat values: average of critics + audience
   const mergedBeats = hasAudience
     ? sg.dataPoints.map((dp, i) => (dp.score + audBeats[i]) / 2)
     : [];
 
-  // Computed overall scores
+  // Computed overall scores (only average non-null audience beats)
   const criticsOverall = sg.overallSentiment ?? sg.overallScore ?? null;
-  const audienceOverall = hasAudience
-    ? Math.round((audBeats.slice(0, n).reduce((a, b) => a + b, 0) / n) * 10) / 10
+  const validAudScores = rawAudBeats.filter((v): v is number => v !== null);
+  const audienceOverall = validAudScores.length
+    ? Math.round((validAudScores.reduce((a, b) => a + b, 0) / validAudScores.length) * 10) / 10
     : null;
   const mergedOverall = mergedBeats.length
     ? Math.round((mergedBeats.reduce((a, b) => a + b, 0) / mergedBeats.length) * 10) / 10
@@ -1083,6 +1086,13 @@ export default function FilmDetailScreen() {
           setFilm(data);
           const posterPath = data.posterUrl || data.posterPath || null;
           addRecentlyViewed(id, data.title ?? '', posterPath);
+          // Fetch audience data after film loads (needs sparkline beats)
+          const beats = data.sentimentGraph?.dataPoints;
+          if (beats?.length) {
+            fetchAudienceData(id, beats)
+              .then(setAudienceData)
+              .catch(() => setAudienceData(null));
+          }
         } else {
           setError(true);
         }
@@ -1093,7 +1103,6 @@ export default function FilmDetailScreen() {
 
   useEffect(() => {
     load();
-    if (id) fetchAudienceData(id).then(setAudienceData).catch(() => setAudienceData(null));
     fetchUserLists().then(setLists).catch(() => {});
     fetchUserWatchlist()
       .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))

@@ -94,16 +94,29 @@ export async function submitReview(filmId: string, data: ReviewSubmission): Prom
 }
 
 export interface AudienceData {
-  beatAverages: number[];
+  userReviewCount: number;
+  beatAverages: (number | null)[];
 }
 
-export async function fetchAudienceData(filmId: string): Promise<AudienceData | null> {
+export async function fetchAudienceData(
+  filmId: string,
+  beats: { label: string }[],
+): Promise<AudienceData | null> {
   try {
     const res = await apiFetch(`/films/${filmId}/audience-data`);
     if (!res.ok) return null;
     const data = await res.json();
-    if (!data?.beatAverages?.length) return null;
-    return data as AudienceData;
+    if (!data?.beatAverages || typeof data.beatAverages !== 'object') return null;
+    const map: Record<string, number> = data.beatAverages;
+    const orderedAverages = beats.map((b) => {
+      const val = map[b.label];
+      return val !== undefined && val !== null ? val : null;
+    });
+    if (orderedAverages.every((v) => v === null)) return null;
+    return {
+      userReviewCount: data.userReviewCount ?? 0,
+      beatAverages: orderedAverages,
+    };
   } catch {
     return null;
   }
