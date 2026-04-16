@@ -10,16 +10,20 @@ import {
   Animated,
   Dimensions,
   TextInput,
+  PanResponder,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
+  Circle,
   Line,
   Polyline,
   Text as SvgText,
   Path,
 } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
 import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList } from '../../src/lib/api';
 // lists.ts local helpers no longer needed - using API directly
@@ -279,8 +283,74 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-function SentimentArc({ film }: { film: FilmDetail }) {
+function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void }) {
   const router = useRouter();
+
+  // Touch interaction hooks (must be before early return)
+  const graphContainerRef = useRef<View>(null);
+  const graphPageXRef = useRef(0);
+  const tooltipOpacity = useRef(new Animated.Value(0)).current;
+  const dotScale = useRef(new Animated.Value(1)).current;
+  const lastSnapIndexRef = useRef<number | null>(null);
+  const dataRef = useRef<{ plotW: number; n: number }>({ plotW: 0, n: 0 });
+  const setActiveRef = useRef(setActiveBeatIndex);
+  setActiveRef.current = setActiveBeatIndex;
+  const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const touchX = evt.nativeEvent.pageX;
+        graphContainerRef.current?.measure((_x, _y, _w, _h, pageX) => {
+          graphPageXRef.current = pageX;
+          const { plotW: pw, n: count } = dataRef.current;
+          if (!count) return;
+          const relX = touchX - pageX;
+          const norm = (relX - GRAPH_PAD_LEFT) / pw;
+          const idx = Math.max(0, Math.min(count - 1, Math.round(norm * (count - 1))));
+          lastSnapIndexRef.current = idx;
+          setActiveRef.current(idx);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          dotScale.setValue(0.714);
+          Animated.spring(dotScale, { toValue: 1, friction: 6, tension: 100, useNativeDriver: true }).start();
+          Animated.timing(tooltipOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+        });
+      },
+      onPanResponderMove: (evt) => {
+        const { plotW: pw, n: count } = dataRef.current;
+        if (!count) return;
+        const relX = evt.nativeEvent.pageX - graphPageXRef.current;
+        const norm = (relX - GRAPH_PAD_LEFT) / pw;
+        const idx = Math.max(0, Math.min(count - 1, Math.round(norm * (count - 1))));
+        if (idx !== lastSnapIndexRef.current) {
+          lastSnapIndexRef.current = idx;
+          setActiveRef.current(idx);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      },
+      onPanResponderRelease: () => {
+        lastSnapIndexRef.current = null;
+        Animated.parallel([
+          Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+          Animated.timing(dotScale, { toValue: 0.714, duration: 150, useNativeDriver: true }),
+        ]).start(() => {
+          setActiveRef.current(null);
+        });
+      },
+      onPanResponderTerminate: () => {
+        lastSnapIndexRef.current = null;
+        Animated.parallel([
+          Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+          Animated.timing(dotScale, { toValue: 0.714, duration: 150, useNativeDriver: true }),
+        ]).start(() => {
+          setActiveRef.current(null);
+        });
+      },
+    })
+  ).current;
+
   const sg = film.sentimentGraph;
   if (!sg?.dataPoints?.length) return null;
 
@@ -292,25 +362,47 @@ function SentimentArc({ film }: { film: FilmDetail }) {
   // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
   const allScores = sg.dataPoints.map((dp) => dp.score);
   const yFloor = Math.max(0, Math.floor(Math.min(...allScores)) - 1);
-  const yRange = 10 - yFloor || 1;
+  const yCeil = 10;
+  const yRange = yCeil - yFloor || 1;
   const midY = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
+  const dynamicMidY = GRAPH_PAD_TOP + plotH / 2;
 
-  function toPoint(index: number, score: number): string {
-    const clamped = Math.max(yFloor, Math.min(10, score));
-    const x = GRAPH_PAD_LEFT + (index / Math.max(1, n - 1)) * plotW;
+  // Pre-calculate all point positions for touch interaction
+  const pointPositions = sg.dataPoints.map((dp, i) => {
+    const clamped = Math.max(yFloor, Math.min(yCeil, dp.score));
+    const x = GRAPH_PAD_LEFT + (i / Math.max(1, n - 1)) * plotW;
     const y = GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }
+    return { x, y };
+  });
 
-  // Single polyline from dataPoints
-  const points = sg.dataPoints
-    .map((dp, i) => toPoint(i, dp.score))
-    .join(' ');
+  dataRef.current = { plotW, n };
+
+  const points = pointPositions.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+  function scoreColor(score: number): string {
+    if (score >= 8) return '#2DD4A8';
+    if (score >= 6) return '#C8A951';
+    return '#E24B4A';
+  }
 
   // X-axis timestamps
   const runtime = film.runtime;
   const midTime = formatTimestamp(Math.floor(runtime / 2));
   const endTime = formatTimestamp(runtime);
+
+  // Tooltip positioning
+  const activeDp = activeBeatIndex !== null ? sg.dataPoints[activeBeatIndex] : null;
+  const activePos = activeBeatIndex !== null ? pointPositions[activeBeatIndex] : null;
+  let tooltipLeft = 0;
+  let tooltipTop = 0;
+  if (activePos) {
+    tooltipLeft = activePos.x - tooltipSize.width / 2;
+    tooltipTop = activePos.y - tooltipSize.height - 12;
+    tooltipLeft = Math.max(0, Math.min(graphWidth - tooltipSize.width, tooltipLeft));
+    if (tooltipTop < 0) {
+      tooltipTop = activePos.y + 12;
+    }
+  }
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -323,12 +415,13 @@ function SentimentArc({ film }: { film: FilmDetail }) {
       </View>
 
       {/* Graph card */}
-      <Pressable
-        onPress={() => router.push(`/graph/${film.id}` as any)}
-        style={styles.graphCard}
-      >
-        {/* SVG Graph */}
-        <Svg width={graphWidth} height={GRAPH_HEIGHT}>
+      <View style={styles.graphCard}>
+        <View
+          ref={graphContainerRef}
+          {...panResponder.panHandlers}
+          style={{ position: 'relative' }}
+        >
+          <Svg width={graphWidth} height={GRAPH_HEIGHT}>
           {/* 1. Y-axis line */}
           <Line
             x1={GRAPH_PAD_LEFT}
@@ -409,16 +502,29 @@ function SentimentArc({ film }: { film: FilmDetail }) {
             {endTime}
           </SvgText>
 
-          {/* 5. Dashed midline at score 5 */}
+          {/* 5. Dashed midline at dynamic center */}
           <Line
             x1={GRAPH_PAD_LEFT}
-            y1={midY}
+            y1={dynamicMidY}
             x2={GRAPH_PAD_LEFT + plotW}
-            y2={midY}
-            stroke="rgba(245,240,225,0.12)"
+            y2={dynamicMidY}
+            stroke="rgba(255,255,255,0.12)"
             strokeWidth={0.5}
-            strokeDasharray="3,3"
+            strokeDasharray="4,4"
           />
+
+          {/* Vertical indicator line (when touching) */}
+          {activeBeatIndex !== null && activePos && (
+            <Line
+              x1={activePos.x}
+              y1={GRAPH_PAD_TOP}
+              x2={activePos.x}
+              y2={GRAPH_PAD_TOP + plotH}
+              stroke="rgba(245,240,225,0.25)"
+              strokeWidth={1}
+              strokeDasharray="3,3"
+            />
+          )}
 
           {/* Sentiment polyline (gold) */}
           <Polyline
@@ -427,16 +533,93 @@ function SentimentArc({ film }: { film: FilmDetail }) {
             stroke={colors.gold}
             strokeWidth={1.5}
           />
+
+          {/* Score-colored dots on all data points */}
+          {sg.dataPoints.map((dp, i) => (
+            <Circle
+              key={i}
+              cx={pointPositions[i].x}
+              cy={pointPositions[i].y}
+              r={5}
+              fill={scoreColor(dp.score)}
+            />
+          ))}
         </Svg>
 
+          {/* Active dot overlay (animated scale) */}
+          {activeBeatIndex !== null && activePos && activeDp && (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: activePos.x - 7,
+                top: activePos.y - 7,
+                width: 14,
+                height: 14,
+                borderRadius: 7,
+                backgroundColor: scoreColor(activeDp.score),
+                borderWidth: 3,
+                borderColor: scoreColor(activeDp.score) + '4D',
+                transform: [{ scale: dotScale }],
+              }}
+            />
+          )}
+
+          {/* Floating tooltip */}
+          {activeBeatIndex !== null && activeDp && (
+            <Animated.View
+              pointerEvents="none"
+              onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                if (width !== tooltipSize.width || height !== tooltipSize.height) {
+                  setTooltipSize({ width, height });
+                }
+              }}
+              style={{
+                position: 'absolute',
+                left: tooltipLeft,
+                top: tooltipTop,
+                opacity: tooltipOpacity,
+                borderRadius: 10,
+                overflow: 'hidden',
+                borderWidth: 0.5,
+                borderColor: 'rgba(200,169,81,0.2)',
+              }}
+            >
+              <BlurView intensity={20} tint="dark" style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: '#F5F0E1',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    fontFamily: fonts.body,
+                    maxWidth: 200,
+                  }}
+                >
+                  {activeDp.label}
+                </Text>
+                <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 2 }}>
+                  <Text style={{ color: 'rgba(245,240,225,0.45)' }}>
+                    {formatTimestamp(activeDp.timeMidpoint)} {'\u00B7'}{' '}
+                  </Text>
+                  <Text style={{ color: scoreColor(activeDp.score), fontWeight: '600', fontFamily: fonts.bodyMedium }}>
+                    {activeDp.score.toFixed(1)}
+                  </Text>
+                </Text>
+              </BlurView>
+            </Animated.View>
+          )}
+        </View>
+
         {/* Expand icon bottom-right */}
-        <View style={styles.expandRow}>
+        <Pressable onPress={() => router.push(`/graph/${film.id}` as any)} style={styles.expandRow}>
           <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
             <Path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="rgba(200,169,81,0.4)" strokeWidth={2} />
           </Svg>
           <Text style={styles.expandText}>Expand</Text>
-        </View>
-      </Pressable>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -445,14 +628,34 @@ function SentimentArc({ film }: { film: FilmDetail }) {
 // Story beat pills
 // ---------------------------------------------------------------------------
 
-function StoryBeatPills({ film }: { film: FilmDetail }) {
+function StoryBeatPills({ film, activeBeatIndex }: { film: FilmDetail; activeBeatIndex: number | null }) {
+  const pillScrollRef = useRef<ScrollView>(null);
+  const pillLayoutsRef = useRef<{ x: number; width: number }[]>([]);
+  const scrollViewWidthRef = useRef(0);
+
   const sg = film.sentimentGraph;
+
+  useEffect(() => {
+    if (activeBeatIndex !== null && pillScrollRef.current && pillLayoutsRef.current[activeBeatIndex]) {
+      const pill = pillLayoutsRef.current[activeBeatIndex];
+      const scrollX = pill.x - scrollViewWidthRef.current / 2 + pill.width / 2;
+      pillScrollRef.current.scrollTo({ x: Math.max(0, scrollX), animated: true });
+    }
+  }, [activeBeatIndex]);
+
   if (!sg?.dataPoints?.length) return null;
 
   const peakLabel = sg.peakMoment?.label;
   const lowLabel = sg.lowestMoment?.label;
 
-  function pillStyle(dp: FilmDataPoint) {
+  function pillStyle(dp: FilmDataPoint, isActive: boolean) {
+    if (isActive) {
+      return {
+        bg: 'rgba(200,169,81,0.15)',
+        border: 'rgba(200,169,81,0.4)',
+        text: 'rgba(245,240,225,1.0)',
+      };
+    }
     if (dp.label === peakLabel) {
       return {
         bg: 'rgba(45,212,168,0.1)',
@@ -475,16 +678,25 @@ function StoryBeatPills({ film }: { film: FilmDetail }) {
   }
 
   return (
-    <FlatList
-      data={sg.dataPoints}
-      keyExtractor={(item, i) => `${item.label}-${i}`}
+    <ScrollView
+      ref={pillScrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
+      onLayout={(e) => { scrollViewWidthRef.current = e.nativeEvent.layout.width; }}
       contentContainerStyle={{ gap: 4, marginBottom: 14 }}
-      renderItem={({ item }) => {
-        const s = pillStyle(item);
+    >
+      {sg.dataPoints.map((item, index) => {
+        const isActive = index === activeBeatIndex;
+        const s = pillStyle(item, isActive);
         return (
           <View
+            key={`${item.label}-${index}`}
+            onLayout={(e) => {
+              pillLayoutsRef.current[index] = {
+                x: e.nativeEvent.layout.x,
+                width: e.nativeEvent.layout.width,
+              };
+            }}
             style={{
               backgroundColor: s.bg,
               borderWidth: 0.5,
@@ -499,8 +711,8 @@ function StoryBeatPills({ film }: { film: FilmDetail }) {
             </Text>
           </View>
         );
-      }}
-    />
+      })}
+    </ScrollView>
   );
 }
 
@@ -657,6 +869,7 @@ export default function FilmDetailScreen() {
   const [lists, setLists] = useState<any[]>([]);
   const [showListSheet, setShowListSheet] = useState(false);
   const { gate: authGate, sheet: authSheet } = useAuthGate();
+  const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -784,8 +997,8 @@ export default function FilmDetailScreen() {
         <View style={styles.content}>
           <MetadataRow film={film} />
           <CTAButtons filmId={film.id} />
-          <SentimentArc film={film} />
-          <StoryBeatPills film={film} />
+          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} />
+          <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
           <PeakLowCards film={film} />
           <AISummary summary={film.sentimentGraph?.summary} />
           <UserReviews reviews={film.reviews} />
