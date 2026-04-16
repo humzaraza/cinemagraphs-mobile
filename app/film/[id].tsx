@@ -504,7 +504,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   function renderScoreHeader() {
     const rowStyle = { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 6 };
     const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 14 };
-    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontSize: 22, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
+    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontSize: 18, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
 
     if (graphMode === 'critics') {
       return (
@@ -531,11 +531,11 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
         <View style={{ alignItems: 'flex-end' }}>
           <View style={rowStyle}>
             <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
-            <Text style={[numStyle, { color: colors.gold, fontSize: 18 }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
+            <Text style={[numStyle, { color: colors.gold, fontSize: 15 }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
           </View>
           <View style={[rowStyle, { marginTop: -2 }]}>
             <Text style={[labelStyle, { color: colors.teal }]}>Audience</Text>
-            <Text style={[numStyle, { color: colors.teal, fontSize: 18 }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
+            <Text style={[numStyle, { color: colors.teal, fontSize: 15 }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
           </View>
         </View>
       );
