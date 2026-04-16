@@ -4,9 +4,7 @@ import {
   Text,
   Pressable,
   Animated,
-  TouchableWithoutFeedback,
   StyleSheet,
-  Modal,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts } from '../constants/theme';
@@ -73,17 +71,20 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
   }
 
   return (
-    <>
+    <View style={{ position: 'relative' }}>
+      {/* Dismiss overlay: large area behind the pill to catch outside taps */}
       {expanded && (
-        <Modal transparent visible statusBarTranslucent animationType="none">
-          <TouchableWithoutFeedback onPress={() => collapse()}>
-            <View style={StyleSheet.absoluteFill} />
-          </TouchableWithoutFeedback>
-        </Modal>
+        <Pressable
+          onPress={() => collapse()}
+          style={{ position: 'absolute', zIndex: 1, top: -500, left: -500, right: -500, bottom: -500 }}
+        />
       )}
+
+      {/* Pill: sits above the overlay */}
       <Pressable
         onPress={expanded ? undefined : expand}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ zIndex: 2 }}
       >
         <Animated.View
           style={[
@@ -104,7 +105,10 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
                 return (
                   <Pressable
                     key={mode}
-                    onPress={() => collapse(mode)}
+                    onPress={() => {
+                      console.log('[GraphToggle] option tapped:', mode);
+                      collapse(mode);
+                    }}
                     style={[
                       st.option,
                       isActive && { backgroundColor: mc.color + '1A' },
@@ -125,7 +129,7 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
           )}
         </Animated.View>
       </Pressable>
-    </>
+    </View>
   );
 }
 
