@@ -502,50 +502,51 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
 
   // Score header display per mode
   function renderScoreHeader() {
+    const rowStyle = { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 6 };
     const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 14 };
-    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
+    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontSize: 22, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
 
     if (graphMode === 'critics') {
       return (
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[styles.sentimentScore, { color: colors.gold }]}>
-            <Text style={labelStyle}>Critics </Text>
-            <Text style={numStyle}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
-          </Text>
+          <View style={rowStyle}>
+            <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
+            <Text style={[numStyle, { color: colors.gold }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
+          </View>
         </View>
       );
     }
     if (graphMode === 'audience') {
       return (
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[styles.sentimentScore, { color: colors.teal }]}>
-            <Text style={labelStyle}>Audience </Text>
-            <Text style={numStyle}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
-          </Text>
+          <View style={rowStyle}>
+            <Text style={[labelStyle, { color: colors.teal }]}>Audience</Text>
+            <Text style={[numStyle, { color: colors.teal }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
+          </View>
         </View>
       );
     }
     if (graphMode === 'both') {
       return (
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[styles.sentimentScore, { color: colors.gold, fontSize: 16 }]}>
-            <Text style={labelStyle}>Critics </Text>
-            <Text style={numStyle}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
-          </Text>
-          <Text style={[styles.sentimentScore, { color: colors.teal, fontSize: 16, marginTop: -2 }]}>
-            <Text style={labelStyle}>Audience </Text>
-            <Text style={numStyle}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
-          </Text>
+          <View style={rowStyle}>
+            <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
+            <Text style={[numStyle, { color: colors.gold, fontSize: 18 }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
+          </View>
+          <View style={[rowStyle, { marginTop: -2 }]}>
+            <Text style={[labelStyle, { color: colors.teal }]}>Audience</Text>
+            <Text style={[numStyle, { color: colors.teal, fontSize: 18 }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
+          </View>
         </View>
       );
     }
     // merged
     return (
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={[styles.sentimentScore, { color: colors.ivory }]}>
-          <Text style={labelStyle}>Merged </Text>
-          <Text style={numStyle}>{mergedOverall?.toFixed(1) ?? '--'}</Text>
-        </Text>
+        <View style={rowStyle}>
+          <Text style={[labelStyle, { color: colors.ivory }]}>Merged</Text>
+          <Text style={[numStyle, { color: colors.ivory }]}>{mergedOverall?.toFixed(1) ?? '--'}</Text>
+        </View>
       </View>
     );
   }
