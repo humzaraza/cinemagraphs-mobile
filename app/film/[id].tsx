@@ -503,7 +503,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   // Score header display per mode
   function renderScoreHeader() {
     const rowStyle = { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 6 };
-    const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 14 };
+    const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 15 };
     const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontSize: 18, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
 
     if (graphMode === 'critics') {
