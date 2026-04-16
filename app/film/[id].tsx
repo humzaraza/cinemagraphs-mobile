@@ -18,7 +18,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
   Circle,
   Line,
-  Polyline,
   Text as SvgText,
   Path,
 } from 'react-native-svg';
@@ -298,6 +297,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
   const setGraphTouchedRef = useRef(setIsGraphTouched);
   setGraphTouchedRef.current = setIsGraphTouched;
+  const scrollFlagRef = useRef(false);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -305,7 +305,9 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
       onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
+        scrollFlagRef.current = true;
         setGraphTouchedRef.current(true);
         const touchX = evt.nativeEvent.pageX;
         graphContainerRef.current?.measure((_x, _y, _w, _h, pageX) => {
@@ -336,6 +338,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
         }
       },
       onPanResponderRelease: () => {
+        scrollFlagRef.current = false;
         setGraphTouchedRef.current(false);
         lastSnapIndexRef.current = null;
         Animated.parallel([
@@ -346,6 +349,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
         });
       },
       onPanResponderTerminate: () => {
+        scrollFlagRef.current = false;
         setGraphTouchedRef.current(false);
         lastSnapIndexRef.current = null;
         Animated.parallel([
@@ -383,7 +387,10 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
 
   dataRef.current = { plotW, n };
 
-  const points = `${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} ` + pointPositions.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  // SVG path: bezier from neutral 5 to first point, then straight segments
+  const firstPt = pointPositions[0];
+  const controlX = firstPt.x * 0.5;
+  const pathD = `M ${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} Q ${controlX.toFixed(1)},${score5Y.toFixed(1)} ${firstPt.x.toFixed(1)},${firstPt.y.toFixed(1)}` + pointPositions.slice(1).map((p) => ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
 
   function scoreColor(score: number): string {
     if (score >= 8) return '#2DD4A8';
@@ -518,9 +525,9 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
             />
           )}
 
-          {/* Sentiment polyline (gold) */}
-          <Polyline
-            points={points}
+          {/* Sentiment arc (gold, bezier start) */}
+          <Path
+            d={pathD}
             fill="none"
             stroke={colors.gold}
             strokeWidth={1.5}
