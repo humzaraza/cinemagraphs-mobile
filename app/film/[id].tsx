@@ -502,8 +502,8 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
 
   // Score header display per mode
   function renderScoreHeader() {
-    const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const };
-    const numStyle = { fontFamily: fonts.bodyMedium, fontWeight: '500' as const };
+    const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 14 };
+    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const };
 
     if (graphMode === 'critics') {
       return (
@@ -1568,7 +1568,7 @@ const styles = StyleSheet.create({
     color: colors.ivory,
   },
   sentimentScore: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.heading,
     fontSize: 18,
     color: colors.gold,
   },

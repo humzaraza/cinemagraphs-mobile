@@ -1,13 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   Animated,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts } from '../constants/theme';
+import { colors } from '../constants/theme';
 
 export type GraphMode = 'critics' | 'audience' | 'both' | 'merged';
 
@@ -19,6 +20,7 @@ const MODE_CONFIG: Record<GraphMode, { label: string; color: string; borderColor
 };
 
 const ALL_MODES: GraphMode[] = ['critics', 'audience', 'both', 'merged'];
+const POPOVER_WIDTH = 140;
 
 interface Props {
   active: GraphMode;
@@ -27,38 +29,53 @@ interface Props {
 }
 
 export default function GraphToggle({ active, onChange, locked }: Props) {
-  const [expanded, setExpanded] = useState(false);
-  const widthAnim = useRef(new Animated.Value(0)).current;
-  const optionsOpacity = useRef(new Animated.Value(0)).current;
+  const [open, setOpen] = useState(false);
+  const [pillLayout, setPillLayout] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const pillRef = useRef<View>(null);
+  const popoverOpacity = useRef(new Animated.Value(0)).current;
+  const popoverTranslateY = useRef(new Animated.Value(6)).current;
+  const popoverScale = useRef(new Animated.Value(0.96)).current;
 
   const cfg = MODE_CONFIG[active];
 
-  const expand = () => {
-    console.log('[GraphToggle] pill tapped, expanded:', expanded);
-    if (locked) return;
-    setExpanded(true);
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (e) {}
-    Animated.spring(widthAnim, { toValue: 1, friction: 10, tension: 120, useNativeDriver: false }).start();
-    Animated.timing(optionsOpacity, { toValue: 1, duration: 150, delay: 50, useNativeDriver: true }).start();
-  };
+  const measure = useCallback((cb: (layout: { x: number; y: number; w: number; h: number }) => void) => {
+    pillRef.current?.measureInWindow((x, y, w, h) => {
+      cb({ x, y, w, h });
+    });
+  }, []);
 
-  const collapse = (newMode?: GraphMode) => {
-    const modeChanged = newMode && newMode !== active;
-    if (modeChanged) {
-      try { Haptics.selectionAsync(); } catch (e) {}
-    }
-    Animated.timing(optionsOpacity, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
-      Animated.spring(widthAnim, { toValue: 0, friction: 10, tension: 120, useNativeDriver: false }).start(() => {
-        setExpanded(false);
-        if (modeChanged) onChange(newMode);
-      });
+  const openPopover = () => {
+    console.log('[GraphToggle] pill tapped, open:', open);
+    if (locked || open) return;
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (e) {}
+    measure((layout) => {
+      setPillLayout(layout);
+      setOpen(true);
+      popoverOpacity.setValue(0);
+      popoverTranslateY.setValue(6);
+      popoverScale.setValue(0.96);
+      Animated.parallel([
+        Animated.timing(popoverOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(popoverTranslateY, { toValue: 0, duration: 150, useNativeDriver: true }),
+        Animated.timing(popoverScale, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]).start();
     });
   };
 
-  const pillWidth = widthAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [90, 280],
-  });
+  const closePopover = (newMode?: GraphMode) => {
+    if (newMode && newMode !== active) {
+      console.log('[GraphToggle] option tapped:', newMode);
+      try { Haptics.selectionAsync(); } catch (e) {}
+      onChange(newMode);
+    }
+    Animated.parallel([
+      Animated.timing(popoverOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(popoverTranslateY, { toValue: 6, duration: 100, useNativeDriver: true }),
+      Animated.timing(popoverScale, { toValue: 0.96, duration: 100, useNativeDriver: true }),
+    ]).start(() => {
+      setOpen(false);
+    });
+  };
 
   if (locked) {
     return (
@@ -71,65 +88,87 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
     );
   }
 
-  return (
-    <View style={{ position: 'relative' }}>
-      {/* Dismiss overlay: large area behind the pill to catch outside taps */}
-      {expanded && (
-        <Pressable
-          onPress={() => collapse()}
-          style={{ position: 'absolute', zIndex: 1, top: -500, left: -500, right: -500, bottom: -500 }}
-        />
-      )}
+  // Position popover above the pill by default
+  let popoverTop = 0;
+  if (pillLayout) {
+    const abovePill = pillLayout.y - 8;
+    // If too close to top of screen, place below instead
+    if (abovePill < 120) {
+      popoverTop = pillLayout.h + 8;
+    } else {
+      // popoverTop is negative (above the pill), measured from pill top
+      // Estimate popover height: 4 rows * ~34px each + 8px padding = ~144px
+      popoverTop = -(144 + 8);
+    }
+  }
 
-      {/* Pill: sits above the overlay */}
+  return (
+    <View style={{ position: 'relative', zIndex: 10 }}>
+      {/* Pill (fixed size, always visible) */}
       <Pressable
-        onPress={expanded ? undefined : expand}
+        ref={pillRef as any}
+        onPress={openPopover}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={{ zIndex: 2 }}
       >
-        <Animated.View
-          style={[
-            st.pill,
-            { borderColor: cfg.borderColor, width: expanded ? pillWidth : undefined },
-          ]}
-        >
-          {!expanded ? (
-            <View style={st.collapsedRow}>
-              <Text style={[st.pillText, { color: cfg.color }]}>{cfg.label}</Text>
-              <Text style={[st.chevron, { color: cfg.color }]}>{'\u25BE'}</Text>
-            </View>
-          ) : (
-            <Animated.View style={[st.expandedRow, { opacity: optionsOpacity }]}>
-              {ALL_MODES.map((mode) => {
-                const mc = MODE_CONFIG[mode];
-                const isActive = mode === active;
-                return (
-                  <Pressable
-                    key={mode}
-                    onPress={() => {
-                      console.log('[GraphToggle] option tapped:', mode);
-                      collapse(mode);
-                    }}
+        <View style={[st.pill, { borderColor: cfg.borderColor }]}>
+          <View style={st.pillRow}>
+            <Text style={[st.pillText, { color: cfg.color }]}>{cfg.label}</Text>
+            <Text style={[st.chevron, { color: cfg.color }]}>{'\u25BE'}</Text>
+          </View>
+        </View>
+      </Pressable>
+
+      {/* Popover + dismiss overlay */}
+      {open && (
+        <>
+          {/* Full-screen dismiss overlay */}
+          <Pressable
+            onPress={() => closePopover()}
+            style={{ position: 'absolute', zIndex: 11, top: -500, left: -500, right: -500, bottom: -500 }}
+          />
+
+          {/* Popover */}
+          <Animated.View
+            style={[
+              st.popover,
+              {
+                zIndex: 12,
+                top: popoverTop,
+                left: 0,
+                opacity: popoverOpacity,
+                transform: [
+                  { translateY: popoverTranslateY },
+                  { scale: popoverScale },
+                ],
+              },
+            ]}
+          >
+            {ALL_MODES.map((mode) => {
+              const mc = MODE_CONFIG[mode];
+              const isActive = mode === active;
+              return (
+                <Pressable
+                  key={mode}
+                  onPress={() => closePopover(mode)}
+                  style={[
+                    st.popoverRow,
+                    isActive && { backgroundColor: mc.color + '1A' },
+                  ]}
+                >
+                  <Text
                     style={[
-                      st.option,
-                      isActive && { backgroundColor: mc.color + '1A' },
+                      st.popoverLabel,
+                      { color: isActive ? mc.color : 'rgba(245,240,225,0.45)' },
                     ]}
                   >
-                    <Text
-                      style={[
-                        st.optionText,
-                        { color: isActive ? mc.color : 'rgba(245,240,225,0.45)' },
-                      ]}
-                    >
-                      {mc.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </Animated.View>
-          )}
-        </Animated.View>
-      </Pressable>
+                    {mc.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 }
@@ -143,7 +182,7 @@ const st = StyleSheet.create({
     paddingVertical: 6,
     alignSelf: 'flex-start',
   },
-  collapsedRow: {
+  pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -157,19 +196,33 @@ const st = StyleSheet.create({
     fontSize: 10,
     marginTop: 1,
   },
-  expandedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: 1,
+  popover: {
+    position: 'absolute',
+    width: POPOVER_WIDTH,
+    backgroundColor: 'rgba(20,20,40,0.98)',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.2)',
+    padding: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
-  option: {
+  popoverRow: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  optionText: {
-    fontSize: 12,
+  popoverLabel: {
+    fontSize: 13,
     fontWeight: '500',
     fontFamily: 'DMSans_500Medium',
   },
