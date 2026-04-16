@@ -375,16 +375,16 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
 
   // Memoize expensive graph computations
   const graphData = useMemo(() => {
-    const rawAudBeats = audienceData?.beatAverages ?? [];
-    const audBeats = sg.dataPoints.map((dp, i) => rawAudBeats[i] ?? dp.score);
-    const hasAud = audienceData !== null && rawAudBeats.some((v) => v !== null);
+    const audMap = audienceData?.beatAverages ?? {};
+    const audBeats = sg.dataPoints.map((dp) => audMap[dp.label] ?? dp.score);
+    const hasAud = audienceData !== null && Object.keys(audMap).length > 0;
 
     const mergedB = hasAud
       ? sg.dataPoints.map((dp, i) => (dp.score + audBeats[i]) / 2)
       : [];
 
     const critOv = sg.overallSentiment ?? sg.overallScore ?? null;
-    const validAud = rawAudBeats.filter((v): v is number => v !== null);
+    const validAud = Object.values(audMap).filter((v): v is number => typeof v === 'number');
     const audOv = validAud.length
       ? Math.round((validAud.reduce((a, b) => a + b, 0) / validAud.length) * 10) / 10
       : null;
@@ -1111,10 +1111,10 @@ export default function FilmDetailScreen() {
           setFilm(data);
           const posterPath = data.posterUrl || data.posterPath || null;
           addRecentlyViewed(id, data.title ?? '', posterPath);
-          // Fetch audience data after film loads (needs sparkline beats)
+          // Fetch audience data after film loads (only if the film has beats to render against)
           const beats = data.sentimentGraph?.dataPoints;
           if (beats?.length) {
-            fetchAudienceData(id, beats)
+            fetchAudienceData(id)
               .then(setAudienceData)
               .catch(() => setAudienceData(null));
           }
