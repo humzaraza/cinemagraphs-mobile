@@ -291,7 +291,7 @@ function SentimentArc({ film }: { film: FilmDetail }) {
 
   // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
   const allScores = sg.dataPoints.map((dp) => dp.score);
-  const yFloor = Math.min(4, Math.max(0, Math.floor(Math.min(...allScores)) - 1));
+  const yFloor = Math.max(0, Math.floor(Math.min(...allScores)) - 1);
   const yRange = 10 - yFloor || 1;
   const midY = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
 

@@ -185,7 +185,7 @@ export default function ExpandedGraphScreen() {
 
   // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
   const allScores = dataPoints.map((dp) => dp.score);
-  const yFloor = allScores.length > 0 ? Math.min(4, Math.max(0, Math.floor(Math.min(...allScores)) - 1)) : 0;
+  const yFloor = allScores.length > 0 ? Math.max(0, Math.floor(Math.min(...allScores)) - 1) : 0;
   const yRange = 10 - yFloor || 1;
 
   // Map data point index to x,y
