@@ -93,6 +93,22 @@ export async function submitReview(filmId: string, data: ReviewSubmission): Prom
   return res.json();
 }
 
+export interface AudienceData {
+  beatAverages: number[];
+}
+
+export async function fetchAudienceData(filmId: string): Promise<AudienceData | null> {
+  try {
+    const res = await apiFetch(`/films/${filmId}/audience-data`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.beatAverages?.length) return null;
+    return data as AudienceData;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
   // TODO: If the API doesn't support genre filtering, fall back to /films?limit=6
   return extractFilms(

@@ -24,7 +24,10 @@ import Svg, {
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList } from '../../src/lib/api';
+import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchAllFilms, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList, fetchAudienceData } from '../../src/lib/api';
+import type { AudienceData } from '../../src/lib/api';
+import GraphToggle from '../../src/components/GraphToggle';
+import type { GraphMode } from '../../src/components/GraphToggle';
 // lists.ts local helpers no longer needed - using API directly
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuthGate } from '../../src/components/AuthGate';
@@ -282,7 +285,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void }) {
+function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched, audienceData, graphMode, setGraphMode }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void; audienceData: AudienceData | null; graphMode: GraphMode; setGraphMode: (m: GraphMode) => void }) {
   const router = useRouter();
 
   // Touch interaction hooks (must be before early return)
@@ -370,27 +373,77 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   const plotH = GRAPH_HEIGHT - GRAPH_PAD_TOP - GRAPH_PAD_BOTTOM;
   const n = sg.dataPoints.length;
 
-  // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
+  // Audience beat scores (matched to critics beat count)
+  const audBeats = audienceData?.beatAverages ?? [];
+  const hasAudience = audBeats.length >= n;
+
+  // Merged per-beat values: average of critics + audience
+  const mergedBeats = hasAudience
+    ? sg.dataPoints.map((dp, i) => (dp.score + audBeats[i]) / 2)
+    : [];
+
+  // Computed overall scores
+  const criticsOverall = sg.overallSentiment ?? sg.overallScore ?? null;
+  const audienceOverall = hasAudience
+    ? Math.round((audBeats.slice(0, n).reduce((a, b) => a + b, 0) / n) * 10) / 10
+    : null;
+  const mergedOverall = mergedBeats.length
+    ? Math.round((mergedBeats.reduce((a, b) => a + b, 0) / mergedBeats.length) * 10) / 10
+    : null;
+
+  // Y-axis anchoring: floor = lowest whole number - 1 (min 0, max 4), ceiling = 10
   const allScores = sg.dataPoints.map((dp) => dp.score);
-  const yFloor = Math.min(4, Math.max(0, Math.floor(Math.min(...allScores)) - 1));
+  // Include audience/merged scores in y-axis range when visible
+  const extraScores: number[] = [];
+  if ((graphMode === 'audience' || graphMode === 'both') && hasAudience) {
+    extraScores.push(...audBeats.slice(0, n));
+  }
+  if (graphMode === 'merged' && mergedBeats.length) {
+    extraScores.push(...mergedBeats);
+  }
+  const combinedMin = Math.min(...allScores, ...extraScores);
+  const yFloor = Math.min(4, Math.max(0, Math.floor(combinedMin) - 1));
   const yCeil = 10;
   const yRange = yCeil - yFloor || 1;
   const score5Y = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
 
-  // Pre-calculate all point positions for touch interaction
-  const pointPositions = sg.dataPoints.map((dp, i) => {
-    const clamped = Math.max(yFloor, Math.min(yCeil, dp.score));
-    const x = GRAPH_PAD_LEFT + ((i + 1) / n) * plotW;
-    const y = GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
-    return { x, y };
-  });
+  // Helper: score to y position
+  function toY(score: number): number {
+    const clamped = Math.max(yFloor, Math.min(yCeil, score));
+    return GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
+  }
+
+  // Pre-calculate all point positions for critics
+  const pointPositions = sg.dataPoints.map((dp, i) => ({
+    x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+    y: toY(dp.score),
+  }));
+
+  // Audience point positions
+  const audPositions = hasAudience
+    ? audBeats.slice(0, n).map((score, i) => ({
+        x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+        y: toY(score),
+      }))
+    : [];
+
+  // Merged point positions
+  const mergedPositions = mergedBeats.length
+    ? mergedBeats.map((score, i) => ({
+        x: GRAPH_PAD_LEFT + ((i + 1) / n) * plotW,
+        y: toY(score),
+      }))
+    : [];
 
   dataRef.current = { plotW, n };
 
-  // SVG path: bezier from neutral 5 to first point, then straight segments
-  const firstPt = pointPositions[0];
-  const controlX = firstPt.x * 0.5;
-  const pathD = `M ${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} Q ${controlX.toFixed(1)},${score5Y.toFixed(1)} ${firstPt.x.toFixed(1)},${firstPt.y.toFixed(1)}` + pointPositions.slice(1).map((p) => ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+  // Build SVG path with bezier start from neutral 5
+  function buildPath(positions: { x: number; y: number }[]): string {
+    if (!positions.length) return '';
+    const first = positions[0];
+    const cx = first.x * 0.5;
+    return `M ${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} Q ${cx.toFixed(1)},${score5Y.toFixed(1)} ${first.x.toFixed(1)},${first.y.toFixed(1)}` + positions.slice(1).map((p) => ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+  }
 
   function scoreColor(score: number): string {
     if (score >= 8) return '#2DD4A8';
@@ -398,14 +451,25 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
     return '#E24B4A';
   }
 
+  // Determine which line color to use for active dot
+  function activeDotColor(): string {
+    if (!activeDp) return colors.gold;
+    if (graphMode === 'audience') return colors.teal;
+    if (graphMode === 'merged') return colors.ivory;
+    // critics + both: score-colored
+    return scoreColor(activeDp.score);
+  }
+
   // X-axis timestamps
   const runtime = film.runtime;
   const midTime = formatTimestamp(Math.floor(runtime / 2));
   const endTime = formatTimestamp(runtime);
 
-  // Tooltip positioning
+  // Tooltip positioning (snap to critics line in both mode)
   const activeDp = activeBeatIndex !== null ? sg.dataPoints[activeBeatIndex] : null;
   const activePos = activeBeatIndex !== null ? pointPositions[activeBeatIndex] : null;
+  const activeAudScore = activeBeatIndex !== null && hasAudience ? audBeats[activeBeatIndex] : null;
+  const activeMergedScore = activeBeatIndex !== null && mergedBeats.length ? mergedBeats[activeBeatIndex] : null;
   let tooltipLeft = 0;
   let tooltipTop = 0;
   if (activePos) {
@@ -417,14 +481,172 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
     }
   }
 
+  // Score header display per mode
+  function renderScoreHeader() {
+    if (graphMode === 'critics') {
+      return (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.sentimentScore, { color: colors.gold }]}>
+            Critics {criticsOverall?.toFixed(1) ?? '--'}
+          </Text>
+        </View>
+      );
+    }
+    if (graphMode === 'audience') {
+      return (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.sentimentScore, { color: colors.teal }]}>
+            Audience {audienceOverall?.toFixed(1) ?? '--'}
+          </Text>
+        </View>
+      );
+    }
+    if (graphMode === 'both') {
+      return (
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.sentimentScore, { color: colors.gold, fontSize: 16 }]}>
+            Critics {criticsOverall?.toFixed(1) ?? '--'}
+          </Text>
+          <Text style={[styles.sentimentScore, { color: colors.teal, fontSize: 16, marginTop: -2 }]}>
+            Audience {audienceOverall?.toFixed(1) ?? '--'}
+          </Text>
+        </View>
+      );
+    }
+    // merged
+    return (
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={[styles.sentimentScore, { color: colors.ivory }]}>
+          Merged {mergedOverall?.toFixed(1) ?? '--'}
+        </Text>
+      </View>
+    );
+  }
+
+  // Render lines per mode
+  function renderLines() {
+    const elements: React.ReactNode[] = [];
+
+    if (graphMode === 'critics' || graphMode === 'both') {
+      elements.push(
+        <Path key="critics-line" d={buildPath(pointPositions)} fill="none" stroke={colors.gold} strokeWidth={1.5} />
+      );
+    }
+    if ((graphMode === 'audience' || graphMode === 'both') && audPositions.length) {
+      elements.push(
+        <Path key="audience-line" d={buildPath(audPositions)} fill="none" stroke={colors.teal} strokeWidth={1.5} />
+      );
+    }
+    if (graphMode === 'merged' && mergedPositions.length) {
+      elements.push(
+        <Path key="merged-line" d={buildPath(mergedPositions)} fill="none" stroke={colors.ivory} strokeWidth={1.5} />
+      );
+    }
+
+    return elements;
+  }
+
+  // Render dots per mode
+  function renderDots() {
+    const elements: React.ReactNode[] = [];
+
+    if (graphMode === 'critics' || graphMode === 'both') {
+      sg.dataPoints.forEach((dp, i) => {
+        elements.push(
+          <Circle key={`c-${i}`} cx={pointPositions[i].x} cy={pointPositions[i].y} r={3.5} fill={scoreColor(dp.score)} />
+        );
+      });
+    }
+    if ((graphMode === 'audience' || graphMode === 'both') && audPositions.length) {
+      const dotR = graphMode === 'both' ? 2.5 : 3.5;
+      audPositions.forEach((pos, i) => {
+        elements.push(
+          <Circle key={`a-${i}`} cx={pos.x} cy={pos.y} r={dotR} fill={colors.teal} />
+        );
+      });
+    }
+    if (graphMode === 'merged' && mergedPositions.length) {
+      mergedPositions.forEach((pos, i) => {
+        elements.push(
+          <Circle key={`m-${i}`} cx={pos.x} cy={pos.y} r={3.5} fill={colors.ivory} />
+        );
+      });
+    }
+
+    return elements;
+  }
+
+  // Tooltip content per mode
+  function renderTooltipContent() {
+    if (!activeDp) return null;
+
+    if (graphMode === 'both') {
+      return (
+        <BlurView intensity={20} tint="dark" style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
+          <Text numberOfLines={1} style={{ color: '#F5F0E1', fontSize: 12, fontWeight: '500', fontFamily: fonts.body, maxWidth: 200 }}>
+            {activeDp.label}
+          </Text>
+          <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 2 }}>
+            <Text style={{ color: 'rgba(245,240,225,0.45)' }}>
+              {formatTimestamp(activeDp.timeMidpoint)}
+            </Text>
+          </Text>
+          <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 1 }}>
+            <Text style={{ color: colors.gold, fontWeight: '600', fontFamily: fonts.bodyMedium }}>
+              Critics: {activeDp.score.toFixed(1)}
+            </Text>
+          </Text>
+          {activeAudScore !== null && (
+            <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 1 }}>
+              <Text style={{ color: colors.teal, fontWeight: '600', fontFamily: fonts.bodyMedium }}>
+                Audience: {activeAudScore.toFixed(1)}
+              </Text>
+            </Text>
+          )}
+        </BlurView>
+      );
+    }
+
+    // Single-line modes
+    const displayScore = graphMode === 'audience' && activeAudScore !== null
+      ? activeAudScore
+      : graphMode === 'merged' && activeMergedScore !== null
+        ? activeMergedScore
+        : activeDp.score;
+    const displayColor = graphMode === 'audience'
+      ? colors.teal
+      : graphMode === 'merged'
+        ? colors.ivory
+        : scoreColor(activeDp.score);
+
+    return (
+      <BlurView intensity={20} tint="dark" style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
+        <Text numberOfLines={1} style={{ color: '#F5F0E1', fontSize: 12, fontWeight: '500', fontFamily: fonts.body, maxWidth: 200 }}>
+          {activeDp.label}
+        </Text>
+        <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 2 }}>
+          <Text style={{ color: 'rgba(245,240,225,0.45)' }}>
+            {formatTimestamp(activeDp.timeMidpoint)} {'\u00B7'}{' '}
+          </Text>
+          <Text style={{ color: displayColor, fontWeight: '600', fontFamily: fonts.bodyMedium }}>
+            {displayScore.toFixed(1)}
+          </Text>
+        </Text>
+      </BlurView>
+    );
+  }
+
   return (
     <View style={{ marginBottom: 14 }}>
       {/* Header */}
       <View style={styles.sentimentHeader}>
         <Text style={styles.sentimentLabel}>Sentiment arc</Text>
-        <Text style={styles.sentimentScore}>
-          {sg.overallSentiment?.toFixed(1) ?? sg.overallScore?.toFixed(1) ?? '--'}
-        </Text>
+        {renderScoreHeader()}
+      </View>
+
+      {/* Toggle pill */}
+      <View style={{ marginBottom: 8 }}>
+        <GraphToggle active={graphMode} onChange={setGraphMode} locked={!hasAudience} />
       </View>
 
       {/* Graph card */}
@@ -525,24 +747,11 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
             />
           )}
 
-          {/* Sentiment arc (gold, bezier start) */}
-          <Path
-            d={pathD}
-            fill="none"
-            stroke={colors.gold}
-            strokeWidth={1.5}
-          />
+          {/* Lines per mode */}
+          {renderLines()}
 
-          {/* Score-colored dots on all data points */}
-          {sg.dataPoints.map((dp, i) => (
-            <Circle
-              key={i}
-              cx={pointPositions[i].x}
-              cy={pointPositions[i].y}
-              r={3.5}
-              fill={scoreColor(dp.score)}
-            />
-          ))}
+          {/* Dots per mode */}
+          {renderDots()}
         </Svg>
 
           {/* Active dot overlay (animated scale) */}
@@ -556,9 +765,9 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
                 width: 11,
                 height: 11,
                 borderRadius: 5.5,
-                backgroundColor: scoreColor(activeDp.score),
+                backgroundColor: activeDotColor(),
                 borderWidth: 3,
-                borderColor: scoreColor(activeDp.score) + '4D',
+                borderColor: activeDotColor() + '4D',
                 transform: [{ scale: dotScale }],
               }}
             />
@@ -585,28 +794,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
                 borderColor: 'rgba(200,169,81,0.2)',
               }}
             >
-              <BlurView intensity={20} tint="dark" style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    color: '#F5F0E1',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    fontFamily: fonts.body,
-                    maxWidth: 200,
-                  }}
-                >
-                  {activeDp.label}
-                </Text>
-                <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 2 }}>
-                  <Text style={{ color: 'rgba(245,240,225,0.45)' }}>
-                    {formatTimestamp(activeDp.timeMidpoint)} {'\u00B7'}{' '}
-                  </Text>
-                  <Text style={{ color: scoreColor(activeDp.score), fontWeight: '600', fontFamily: fonts.bodyMedium }}>
-                    {activeDp.score.toFixed(1)}
-                  </Text>
-                </Text>
-              </BlurView>
+              {renderTooltipContent()}
             </Animated.View>
           )}
         </View>
@@ -870,6 +1058,8 @@ export default function FilmDetailScreen() {
   const { gate: authGate, sheet: authSheet } = useAuthGate();
   const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
   const [isGraphTouched, setIsGraphTouched] = useState(false);
+  const [audienceData, setAudienceData] = useState<AudienceData | null>(null);
+  const [graphMode, setGraphMode] = useState<GraphMode>('critics');
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -903,6 +1093,7 @@ export default function FilmDetailScreen() {
 
   useEffect(() => {
     load();
+    if (id) fetchAudienceData(id).then(setAudienceData).catch(() => setAudienceData(null));
     fetchUserLists().then(setLists).catch(() => {});
     fetchUserWatchlist()
       .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))
@@ -998,7 +1189,7 @@ export default function FilmDetailScreen() {
         <View style={styles.content}>
           <MetadataRow film={film} />
           <CTAButtons filmId={film.id} />
-          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} />
+          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} audienceData={audienceData} graphMode={graphMode} setGraphMode={setGraphMode} />
           <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
           <PeakLowCards film={film} />
           <AISummary summary={film.sentimentGraph?.summary} />
