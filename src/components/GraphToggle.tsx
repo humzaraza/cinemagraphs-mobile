@@ -36,16 +36,17 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
   const cfg = MODE_CONFIG[active];
 
   const expand = () => {
+    console.log('[GraphToggle] pill tapped, expanded:', expanded);
     if (locked) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setExpanded(true);
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (e) {}
     Animated.spring(widthAnim, { toValue: 1, friction: 10, tension: 120, useNativeDriver: false }).start();
     Animated.timing(optionsOpacity, { toValue: 1, duration: 150, delay: 50, useNativeDriver: true }).start();
   };
 
   const collapse = (newMode?: GraphMode) => {
     if (newMode && newMode !== active) {
-      Haptics.selectionAsync();
+      try { Haptics.selectionAsync(); } catch (e) {}
       onChange(newMode);
     }
     Animated.timing(optionsOpacity, { toValue: 0, duration: 100, useNativeDriver: true }).start(() => {
@@ -80,7 +81,10 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
           </TouchableWithoutFeedback>
         </Modal>
       )}
-      <Pressable onPress={expanded ? undefined : expand}>
+      <Pressable
+        onPress={expanded ? undefined : expand}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <Animated.View
           style={[
             st.pill,
