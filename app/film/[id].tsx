@@ -283,7 +283,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; pageScrollRef: { current: ScrollView | null } }) {
+function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void }) {
   const router = useRouter();
 
   // Touch interaction hooks (must be before early return)
@@ -296,15 +296,17 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
   const setActiveRef = useRef(setActiveBeatIndex);
   setActiveRef.current = setActiveBeatIndex;
   const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
-  const scrollRefProp = useRef(pageScrollRef);
-  scrollRefProp.current = pageScrollRef;
+  const setGraphTouchedRef = useRef(setIsGraphTouched);
+  setGraphTouchedRef.current = setIsGraphTouched;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: (evt) => {
-        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: false });
+        setGraphTouchedRef.current(true);
         const touchX = evt.nativeEvent.pageX;
         graphContainerRef.current?.measure((_x, _y, _w, _h, pageX) => {
           graphPageXRef.current = pageX;
@@ -312,7 +314,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
           if (!count) return;
           const relX = touchX - pageX;
           const norm = (relX - GRAPH_PAD_LEFT) / pw;
-          const idx = Math.max(0, Math.min(count - 1, Math.round(norm * (count - 1))));
+          const idx = Math.max(0, Math.min(count - 1, Math.round(norm * count - 1)));
           lastSnapIndexRef.current = idx;
           setActiveRef.current(idx);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -326,7 +328,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
         if (!count) return;
         const relX = evt.nativeEvent.pageX - graphPageXRef.current;
         const norm = (relX - GRAPH_PAD_LEFT) / pw;
-        const idx = Math.max(0, Math.min(count - 1, Math.round(norm * (count - 1))));
+        const idx = Math.max(0, Math.min(count - 1, Math.round(norm * count - 1)));
         if (idx !== lastSnapIndexRef.current) {
           lastSnapIndexRef.current = idx;
           setActiveRef.current(idx);
@@ -334,7 +336,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
         }
       },
       onPanResponderRelease: () => {
-        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: true });
+        setGraphTouchedRef.current(false);
         lastSnapIndexRef.current = null;
         Animated.parallel([
           Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
@@ -344,7 +346,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
         });
       },
       onPanResponderTerminate: () => {
-        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: true });
+        setGraphTouchedRef.current(false);
         lastSnapIndexRef.current = null;
         Animated.parallel([
           Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
@@ -366,22 +368,22 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
 
   // Y-axis anchoring: floor = lowest whole number - 1 (min 0), ceiling = 10
   const allScores = sg.dataPoints.map((dp) => dp.score);
-  const yFloor = Math.max(0, Math.floor(Math.min(...allScores)) - 1);
+  const yFloor = Math.min(4, Math.max(0, Math.floor(Math.min(...allScores)) - 1));
   const yCeil = 10;
   const yRange = yCeil - yFloor || 1;
-  const dynamicMidY = GRAPH_PAD_TOP + plotH / 2;
+  const score5Y = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
 
   // Pre-calculate all point positions for touch interaction
   const pointPositions = sg.dataPoints.map((dp, i) => {
     const clamped = Math.max(yFloor, Math.min(yCeil, dp.score));
-    const x = GRAPH_PAD_LEFT + (i / Math.max(1, n - 1)) * plotW;
+    const x = GRAPH_PAD_LEFT + ((i + 1) / n) * plotW;
     const y = GRAPH_PAD_TOP + (1 - (clamped - yFloor) / yRange) * plotH;
     return { x, y };
   });
 
   dataRef.current = { plotW, n };
 
-  const points = pointPositions.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const points = `${GRAPH_PAD_LEFT.toFixed(1)},${score5Y.toFixed(1)} ` + pointPositions.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
   function scoreColor(score: number): string {
     if (score >= 8) return '#2DD4A8';
@@ -492,12 +494,12 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef
             {endTime}
           </SvgText>
 
-          {/* 5. Dashed midline at dynamic center */}
+          {/* 5. Dashed midline at score 5 */}
           <Line
             x1={GRAPH_PAD_LEFT}
-            y1={dynamicMidY}
+            y1={score5Y}
             x2={GRAPH_PAD_LEFT + plotW}
-            y2={dynamicMidY}
+            y2={score5Y}
             stroke="rgba(255,255,255,0.12)"
             strokeWidth={0.5}
             strokeDasharray="4,4"
@@ -860,7 +862,7 @@ export default function FilmDetailScreen() {
   const [showListSheet, setShowListSheet] = useState(false);
   const { gate: authGate, sheet: authSheet } = useAuthGate();
   const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
-  const pageScrollRef = useRef<ScrollView>(null);
+  const [isGraphTouched, setIsGraphTouched] = useState(false);
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -979,7 +981,7 @@ export default function FilmDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
-        ref={pageScrollRef}
+        scrollEnabled={!isGraphTouched}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
@@ -989,7 +991,7 @@ export default function FilmDetailScreen() {
         <View style={styles.content}>
           <MetadataRow film={film} />
           <CTAButtons filmId={film.id} />
-          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} pageScrollRef={pageScrollRef} />
+          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} />
           <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
           <PeakLowCards film={film} />
           <AISummary summary={film.sentimentGraph?.summary} />
