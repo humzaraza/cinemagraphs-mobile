@@ -283,7 +283,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void }) {
+function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, pageScrollRef }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; pageScrollRef: { current: ScrollView | null } }) {
   const router = useRouter();
 
   // Touch interaction hooks (must be before early return)
@@ -296,12 +296,15 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
   const setActiveRef = useRef(setActiveBeatIndex);
   setActiveRef.current = setActiveBeatIndex;
   const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
+  const scrollRefProp = useRef(pageScrollRef);
+  scrollRefProp.current = pageScrollRef;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (evt) => {
+        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: false });
         const touchX = evt.nativeEvent.pageX;
         graphContainerRef.current?.measure((_x, _y, _w, _h, pageX) => {
           graphPageXRef.current = pageX;
@@ -313,7 +316,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
           lastSnapIndexRef.current = idx;
           setActiveRef.current(idx);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          dotScale.setValue(0.714);
+          dotScale.setValue(0.636);
           Animated.spring(dotScale, { toValue: 1, friction: 6, tension: 100, useNativeDriver: true }).start();
           Animated.timing(tooltipOpacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
         });
@@ -331,19 +334,21 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
         }
       },
       onPanResponderRelease: () => {
+        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: true });
         lastSnapIndexRef.current = null;
         Animated.parallel([
           Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
-          Animated.timing(dotScale, { toValue: 0.714, duration: 150, useNativeDriver: true }),
+          Animated.timing(dotScale, { toValue: 0.636, duration: 150, useNativeDriver: true }),
         ]).start(() => {
           setActiveRef.current(null);
         });
       },
       onPanResponderTerminate: () => {
+        scrollRefProp.current.current?.setNativeProps({ scrollEnabled: true });
         lastSnapIndexRef.current = null;
         Animated.parallel([
           Animated.timing(tooltipOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
-          Animated.timing(dotScale, { toValue: 0.714, duration: 150, useNativeDriver: true }),
+          Animated.timing(dotScale, { toValue: 0.636, duration: 150, useNativeDriver: true }),
         ]).start(() => {
           setActiveRef.current(null);
         });
@@ -364,7 +369,6 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
   const yFloor = Math.max(0, Math.floor(Math.min(...allScores)) - 1);
   const yCeil = 10;
   const yRange = yCeil - yFloor || 1;
-  const midY = GRAPH_PAD_TOP + (1 - (5 - yFloor) / yRange) * plotH;
   const dynamicMidY = GRAPH_PAD_TOP + plotH / 2;
 
   // Pre-calculate all point positions for touch interaction
@@ -432,36 +436,22 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
             strokeWidth={0.5}
           />
 
-          {/* 2. Y-axis labels */}
-          <SvgText
-            x={GRAPH_PAD_LEFT - 4}
-            y={GRAPH_PAD_TOP + 4}
-            textAnchor="end"
-            fontSize={9}
-            fill="rgba(245,240,225,0.25)"
-          >
-            10
-          </SvgText>
-          {5 > yFloor && (
-          <SvgText
-            x={GRAPH_PAD_LEFT - 4}
-            y={midY + 3}
-            textAnchor="end"
-            fontSize={9}
-            fill="rgba(245,240,225,0.25)"
-          >
-            5
-          </SvgText>
-          )}
-          <SvgText
-            x={GRAPH_PAD_LEFT - 4}
-            y={GRAPH_PAD_TOP + plotH}
-            textAnchor="end"
-            fontSize={9}
-            fill="rgba(245,240,225,0.25)"
-          >
-            {yFloor}
-          </SvgText>
+          {/* 2. Y-axis labels (all integers from yFloor to yCeil) */}
+          {Array.from({ length: yCeil - yFloor + 1 }, (_, i) => yFloor + i).map((val) => {
+            const labelY = GRAPH_PAD_TOP + (1 - (val - yFloor) / yRange) * plotH;
+            return (
+              <SvgText
+                key={val}
+                x={GRAPH_PAD_LEFT - 4}
+                y={labelY + 3}
+                textAnchor="end"
+                fontSize={9}
+                fill="rgba(255,255,255,0.3)"
+              >
+                {val}
+              </SvgText>
+            );
+          })}
 
           {/* 3. X-axis line */}
           <Line
@@ -540,7 +530,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
               key={i}
               cx={pointPositions[i].x}
               cy={pointPositions[i].y}
-              r={5}
+              r={3.5}
               fill={scoreColor(dp.score)}
             />
           ))}
@@ -552,11 +542,11 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex }: { film: Fil
               pointerEvents="none"
               style={{
                 position: 'absolute',
-                left: activePos.x - 7,
-                top: activePos.y - 7,
-                width: 14,
-                height: 14,
-                borderRadius: 7,
+                left: activePos.x - 5.5,
+                top: activePos.y - 5.5,
+                width: 11,
+                height: 11,
+                borderRadius: 5.5,
                 backgroundColor: scoreColor(activeDp.score),
                 borderWidth: 3,
                 borderColor: scoreColor(activeDp.score) + '4D',
@@ -870,6 +860,7 @@ export default function FilmDetailScreen() {
   const [showListSheet, setShowListSheet] = useState(false);
   const { gate: authGate, sheet: authSheet } = useAuthGate();
   const [activeBeatIndex, setActiveBeatIndex] = useState<number | null>(null);
+  const pageScrollRef = useRef<ScrollView>(null);
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -988,6 +979,7 @@ export default function FilmDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={pageScrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
@@ -997,7 +989,7 @@ export default function FilmDetailScreen() {
         <View style={styles.content}>
           <MetadataRow film={film} />
           <CTAButtons filmId={film.id} />
-          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} />
+          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} pageScrollRef={pageScrollRef} />
           <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
           <PeakLowCards film={film} />
           <AISummary summary={film.sentimentGraph?.summary} />
