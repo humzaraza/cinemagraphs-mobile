@@ -130,3 +130,15 @@ Settings toggles (public profile, allow followers, private graphs, notification 
 - **iOS predictive back gesture** is enabled by default in Expo Router stacks; Android explicitly disables it in `app.json` (`predictiveBackGestureEnabled: false`).
 - **Avatar upload path bypasses `apiFetch`.** If `API_BASE` or the auth header shape ever changes, this call has to be updated in both places.
 - **Runtime fonts.** `RootLayout` returns `null` until Playfair and DM Sans are loaded; the splash screen is held via `SplashScreen.preventAutoHideAsync()`.
+
+## Security Follow-ups
+
+### npm audit (snapshot 2026-04-27)
+
+`npm audit` reports 22 vulnerabilities (21 moderate, 1 high). All are confirmed dev / build-time only and do not ship in the iOS or Android bundle. No action required now.
+
+- **High: `@xmldom/xmldom@0.8.12`** under `@expo/cli` plist tooling. Four advisories: DoS via uncontrolled XML recursion, plus three XML-injection class issues. Reachable only during `expo prebuild` and EAS Build, never on user devices. Fixed by upgrading to Expo SDK 55+, which pulls the patched `0.8.13`.
+- **Moderate (15): Expo SDK chain.** `expo`, `expo-asset`, `expo-auth-session`, `expo-constants`, `expo-linking`, `expo-router`, `expo-splash-screen`, plus the build-time tooling (`@expo/cli`, `@expo/config`, `@expo/config-plugins`, `@expo/metro-config`, `@expo/prebuild-config`, `xcode`, `uuid`, `postcss`). The vulnerable code in every case lives in build-time CLI / config tooling, not in the JS that ships to users. Cleared by the same Expo SDK 55+ upgrade.
+- **Moderate (6): `react-native-image-colors` chain.** Vulns in `node-vibrant`, `@vibrant/image-node`, `@jimp/custom`, `@jimp/core`, `file-type`. These sit on the Node-only web fallback path; the package uses native iOS / Android implementations on device, so the vulnerable JS does not bundle into the app. Fixed by `react-native-image-colors@2.4.0` (semver-major). The codebase currently uses the hash-derived color fallback in `ArcCard` rather than calling `react-native-image-colors`, so this upgrade can wait until the image-colors path is re-enabled for EAS production builds.
+
+All 22 should be re-evaluated after the next Expo SDK upgrade. No action needed in the meantime.
