@@ -5,7 +5,16 @@ export interface MockUser {
   name: string;
   bio: string;
   avatarInitial: string;
-  stats: { films: number; following: number; followers: number };
+  stats: {
+    films: number;
+    following: number;
+    followers: number;
+    reviewCount?: number;
+    watchlistCount?: number;
+    listCount?: number;
+    followingCount?: number;
+    followerCount?: number;
+  };
   counts: { reviewed: number; watched: number; watchlist: number; lists: number; liveReacted: number };
 }
 
@@ -22,6 +31,7 @@ export interface MockFilm {
   sparklineData: number[];
   dominantColor: string;
   dateWatched: string;
+  sentimentGraph?: { dataPoints?: { score: number }[] };
 }
 
 export interface MockWatchlistFilm {

@@ -20,7 +20,7 @@ vi.mock('expo-secure-store', () => ({
 // We import the helpers under test AFTER the mock is registered so they
 // pick up the mocked SecureStore.
 import { getToken, setToken, removeToken } from './api';
-import { getRecentlyViewed, addRecentlyViewed } from './recentlyViewed';
+import { getRecentlyViewed, addRecentlyViewed, MAX_RECENTLY_VIEWED } from './recentlyViewed';
 
 const asyncStore: Record<string, string> = {};
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -117,28 +117,29 @@ describe('Recently viewed', () => {
   });
 
   it('adds a film and retrieves it', async () => {
-    await addRecentlyViewed('film-1');
+    await addRecentlyViewed('film-1', 'Film 1', null);
     const list = await getRecentlyViewed();
     expect(list.length).toBe(1);
     expect(list[0].filmId).toBe('film-1');
   });
 
   it('deduplicates and moves recent film to front', async () => {
-    await addRecentlyViewed('film-1');
-    await addRecentlyViewed('film-2');
-    await addRecentlyViewed('film-1');
+    await addRecentlyViewed('film-1', 'Film 1', null);
+    await addRecentlyViewed('film-2', 'Film 2', null);
+    await addRecentlyViewed('film-1', 'Film 1', null);
     const list = await getRecentlyViewed();
     expect(list.length).toBe(2);
     expect(list[0].filmId).toBe('film-1');
     expect(list[1].filmId).toBe('film-2');
   });
 
-  it('caps at 20 entries', async () => {
-    for (let i = 1; i <= 25; i++) {
-      await addRecentlyViewed(`film-${i}`);
+  it('caps at MAX_RECENTLY_VIEWED entries', async () => {
+    const total = MAX_RECENTLY_VIEWED + 5;
+    for (let i = 1; i <= total; i++) {
+      await addRecentlyViewed(`film-${i}`, `Film ${i}`, null);
     }
     const list = await getRecentlyViewed();
-    expect(list.length).toBe(20);
-    expect(list[0].filmId).toBe('film-25');
+    expect(list.length).toBe(MAX_RECENTLY_VIEWED);
+    expect(list[0].filmId).toBe(`film-${total}`);
   });
 });
