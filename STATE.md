@@ -12,7 +12,7 @@ This is the Cinemagraphs mobile app: a standalone React Native / Expo project (S
 - Animations: `react-native-reanimated`
 - Third-party auth: `expo-auth-session` (Google) and `expo-apple-authentication` (Apple)
 - Image picker: `expo-image-picker` (avatar uploads)
-- Bundle id: `com.cinemagraphs.mobile`, URL scheme: `cinemagraphsmobile`
+- Bundle id: `ca.cinemagraphs.app`, URL scheme: `cinemagraphsmobile`
 - New Architecture: enabled
 
 The root layout (`app/_layout.tsx`) loads fonts, holds the splash screen until fonts are ready, wraps everything in `AuthProvider`, and registers all stack routes. `app/index.tsx` is a router: it redirects to `/onboarding` for first-time authenticated users, `/(tabs)/explore` for returning authenticated users, and `/(auth)/landing` otherwise.
