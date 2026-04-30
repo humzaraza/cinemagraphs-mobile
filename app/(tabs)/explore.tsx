@@ -127,6 +127,7 @@ function TicketStub() {
 function PosterCard({ film }: { film: Film }) {
   const router = useRouter();
   const posterUri = getPosterUri(film);
+  const dataPoints = film.sentimentGraph?.dataPoints;
 
   return (
     <Pressable
@@ -142,6 +143,18 @@ function PosterCard({ film }: { film: Film }) {
       )}
       {/* TODO: unhide ticket stub when watched feature is ready */}
       {false && <TicketStub />}
+      {dataPoints && dataPoints.length >= 2 ? (
+        <View style={styles.posterCardSparklineWrap}>
+          <Sparkline
+            dataPoints={dataPoints}
+            width={POSTER_WIDTH}
+            height={24}
+            strokeColor={colors.gold}
+            strokeWidth={1.2}
+            showMidline
+          />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -559,8 +572,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   posterCard: {
-    width: 90,
-    height: 130,
+    width: POSTER_WIDTH,
     borderRadius: borderRadius.md,
     borderWidth: 0.5,
     borderColor: colors.cardBorder,
@@ -568,15 +580,20 @@ const styles = StyleSheet.create({
   },
   posterImage: {
     width: '100%',
-    height: '100%',
+    height: POSTER_HEIGHT,
     borderRadius: 8,
   },
   posterPlaceholder: {
-    flex: 1,
+    width: '100%',
+    height: POSTER_HEIGHT,
     backgroundColor: '#1a1a2e',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 4,
+  },
+  posterCardSparklineWrap: {
+    marginTop: 6,
+    width: POSTER_WIDTH,
   },
   posterPlaceholderText: {
     fontFamily: fonts.body,

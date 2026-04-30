@@ -25,6 +25,10 @@ type SearchMode = 'films' | 'people';
 
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 
+// window width minus listContent paddingHorizontal (14*2=28) minus resultCard
+// padding (12*2=24) minus resultPoster width (60) minus resultCard gap (12)
+const SEARCH_SPARKLINE_WIDTH = Dimensions.get('window').width - 28 - 24 - 60 - 12;
+
 function getPosterUri(film: Film): string | null {
   const path = film.posterUrl || film.posterPath;
   if (!path) return null;
@@ -200,7 +204,6 @@ function BrowseCategories({ onSelect }: { onSelect: (cat: string) => void }) {
 function ResultCard({ film }: { film: Film }) {
   const router = useRouter();
   const posterUri = getPosterUri(film);
-  const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 
   return (
@@ -214,23 +217,21 @@ function ResultCard({ film }: { film: Film }) {
         <View style={[styles.resultPoster, { backgroundColor: '#1a1a2e' }]} />
       )}
       <View style={styles.resultInfo}>
-        <Text style={styles.resultTitle} numberOfLines={2}>{film.title}</Text>
-        <Text style={styles.resultMeta} numberOfLines={1}>
-          {film.year}{film.genres?.length ? ` \u00B7 ${film.genres.join(', ')}` : ''}
+        <Text style={styles.resultTitle} numberOfLines={2}>
+          {film.title}
+          {film.year ? <Text style={styles.resultYear}> {film.year}</Text> : null}
         </Text>
-        {score != null && dataPoints && dataPoints.length >= 2 ? (
-          <View style={styles.resultScoreRow}>
-            <Text style={styles.resultScore}>{score.toFixed(1)}</Text>
+        {dataPoints && dataPoints.length >= 2 ? (
+          <View style={styles.resultSparklineWrap}>
             <Sparkline
               dataPoints={dataPoints}
-              width={40}
-              height={16}
+              width={SEARCH_SPARKLINE_WIDTH}
+              height={40}
               strokeColor={colors.gold}
-              strokeWidth={1}
+              strokeWidth={1.5}
+              showMidline
             />
           </View>
-        ) : score != null ? (
-          <Text style={styles.resultScore}>{score.toFixed(1)}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -647,21 +648,13 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     marginBottom: 4,
   },
-  resultMeta: {
-    fontFamily: fonts.body,
+  resultYear: {
     fontSize: 13,
-    color: '#888',
-    marginBottom: 6,
+    fontWeight: '400',
+    color: 'rgba(245, 240, 225, 0.5)',
   },
-  resultScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  resultScore: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.gold,
+  resultSparklineWrap: {
+    marginTop: 6,
   },
 
   // Toggle
