@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { fetchAllFilms, searchUsers } from '../../src/lib/api';
-import Sparkline from '../../src/components/Sparkline';
 import UserCard from '../../src/components/UserCard';
 import type { Film } from '../../src/types/film';
 
@@ -200,8 +199,7 @@ function BrowseCategories({ onSelect }: { onSelect: (cat: string) => void }) {
 function ResultCard({ film }: { film: Film }) {
   const router = useRouter();
   const posterUri = getPosterUri(film);
-  const score = film.sentimentGraph?.overallScore;
-  const dataPoints = film.sentimentGraph?.dataPoints;
+  const director = film.director || null;
 
   return (
     <Pressable
@@ -215,22 +213,11 @@ function ResultCard({ film }: { film: Film }) {
       )}
       <View style={styles.resultInfo}>
         <Text style={styles.resultTitle} numberOfLines={2}>{film.title}</Text>
-        <Text style={styles.resultMeta} numberOfLines={1}>
-          {film.year}{film.genres?.length ? ` \u00B7 ${film.genres.join(', ')}` : ''}
-        </Text>
-        {score != null && dataPoints && dataPoints.length >= 2 ? (
-          <View style={styles.resultScoreRow}>
-            <Text style={styles.resultScore}>{score.toFixed(1)}</Text>
-            <Sparkline
-              dataPoints={dataPoints}
-              width={40}
-              height={16}
-              strokeColor={colors.gold}
-              strokeWidth={1}
-            />
-          </View>
-        ) : score != null ? (
-          <Text style={styles.resultScore}>{score.toFixed(1)}</Text>
+        {film.year ? (
+          <Text style={styles.resultYear}>{film.year}</Text>
+        ) : null}
+        {director ? (
+          <Text style={styles.resultDirector} numberOfLines={1}>Dir. {director}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -274,6 +261,15 @@ export default function SearchScreen() {
       .catch(() => {})
       .finally(() => setLoadingFilms(false));
   }, []);
+
+  // Re-derive category results when the catalog finishes loading,
+  // or when the user switches categories.
+  useEffect(() => {
+    if (activeCategory === null) return;
+    const filter = CATEGORY_FILTERS[activeCategory];
+    if (!filter) return;
+    setResults(filter(allFilms));
+  }, [activeCategory, allFilms]);
 
   // Client-side filter
   const doSearch = useCallback(
@@ -360,7 +356,6 @@ export default function SearchScreen() {
       const filter = CATEGORY_FILTERS[cat];
       if (!filter) return;
       setActiveCategory(cat);
-      setResults(filter(allFilms));
       setHasSearched(true);
       setQuery('');
       setFocused(false);
@@ -472,9 +467,15 @@ export default function SearchScreen() {
           <ResultSkeleton />
         </View>
       ) : hasSearched && results.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No results found</Text>
-        </View>
+        activeCategory && loadingFilms ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color={colors.gold} />
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No results found</Text>
+          </View>
+        )
       ) : (
         <FlatList
           data={results}
@@ -647,21 +648,18 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     marginBottom: 4,
   },
-  resultMeta: {
+  resultYear: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: 'rgba(245, 240, 225, 0.5)',
+    marginTop: 2,
+  },
+  resultDirector: {
     fontFamily: fonts.body,
     fontSize: 13,
-    color: '#888',
-    marginBottom: 6,
-  },
-  resultScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  resultScore: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
-    color: colors.gold,
+    fontWeight: '400',
+    color: 'rgba(245, 240, 225, 0.5)',
+    marginTop: 2,
   },
 
   // Toggle
