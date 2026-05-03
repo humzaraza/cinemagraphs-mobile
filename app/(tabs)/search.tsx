@@ -16,7 +16,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import { fetchAllFilms, searchUsers } from '../../src/lib/api';
+import { searchFilms, searchUsers } from '../../src/lib/api';
+import { CATEGORY_LABELS, type CategoryKey } from '../../src/lib/categories';
 import UserCard from '../../src/components/UserCard';
 import type { Film } from '../../src/types/film';
 
@@ -99,13 +100,6 @@ function CategoryIcon({ name }: { name: string }) {
           <Path d="M3 20L7 10l4 6 4-10 6 14" stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
         </Svg>
       );
-    case 'Recently added':
-      return (
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Circle cx={12} cy={12} r={9} stroke={stroke} strokeWidth={sw} />
-          <Path d="M12 7v5l3 3" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
-        </Svg>
-      );
     default:
       // Genre categories
       return (
@@ -121,73 +115,43 @@ function CategoryIcon({ name }: { name: string }) {
 // Browse categories
 // ---------------------------------------------------------------------------
 
-const CATEGORIES = [
-  'Drama',
-  'Action',
-  'Horror',
-  'Sci-Fi',
-  'Comedy',
-  'Thriller',
-  'Highest rated',
-  'Most dramatic arcs',
-  'Release date',
-  'Recently added',
+// Display order for the browse list. "Recently added" is intentionally
+// dropped: the API has no sort that corresponds to it. Revisit later.
+const CATEGORIES_IN_ORDER: CategoryKey[] = [
+  'drama',
+  'action',
+  'horror',
+  'sci-fi',
+  'comedy',
+  'thriller',
+  'highest-rated',
+  'most-dramatic',
+  'release-date',
 ];
 
-// Genre filter: matches against the film's genres array (case-insensitive)
-function genreFilter(genre: string) {
-  const lower = genre.toLowerCase();
-  return (films: Film[]) => films.filter((f) =>
-    f.genres?.some((g) => {
-      const gl = g.toLowerCase();
-      if (lower === 'sci-fi') return gl === 'sci-fi' || gl === 'science fiction';
-      return gl === lower;
-    }),
-  );
-}
-
-const CATEGORY_FILTERS: Record<string, (films: Film[]) => Film[]> = {
-  'Drama': genreFilter('Drama'),
-  'Action': genreFilter('Action'),
-  'Horror': genreFilter('Horror'),
-  'Sci-Fi': genreFilter('Sci-Fi'),
-  'Comedy': genreFilter('Comedy'),
-  'Thriller': genreFilter('Thriller'),
-  'Highest rated': (films) => [...films].sort((a, b) =>
-    (b.sentimentGraph?.overallScore ?? 0) - (a.sentimentGraph?.overallScore ?? 0)),
-  'Most dramatic arcs': (films) => {
-    const range = (f: Film) => {
-      const pts = f.sentimentGraph?.dataPoints;
-      if (!pts || pts.length < 2) return 0;
-      const scores = pts.map((p) => p.score);
-      return Math.max(...scores) - Math.min(...scores);
-    };
-    return [...films].sort((a, b) => range(b) - range(a));
-  },
-  'Release date': (films) => [...films].sort((a, b) => (b.year ?? 0) - (a.year ?? 0)),
-  'Recently added': (films) => [...films].reverse(),
-};
-
-function BrowseCategories({ onSelect }: { onSelect: (cat: string) => void }) {
+function BrowseCategories({ onSelect }: { onSelect: (key: CategoryKey) => void }) {
   return (
     <View>
       <Text style={styles.browseLabel}>BROWSE</Text>
-      {CATEGORIES.map((cat, i) => (
-        <Pressable
-          key={cat}
-          onPress={() => onSelect(cat)}
-          style={[
-            styles.categoryRow,
-            i < CATEGORIES.length - 1 && styles.categoryDivider,
-          ]}
-        >
-          <View style={styles.categoryIcon}>
-            <CategoryIcon name={cat} />
-          </View>
-          <Text style={styles.categoryLabel}>{cat}</Text>
-          <Text style={styles.chevron}>{'\u203A'}</Text>
-        </Pressable>
-      ))}
+      {CATEGORIES_IN_ORDER.map((key, i) => {
+        const label = CATEGORY_LABELS[key];
+        return (
+          <Pressable
+            key={key}
+            onPress={() => onSelect(key)}
+            style={[
+              styles.categoryRow,
+              i < CATEGORIES_IN_ORDER.length - 1 && styles.categoryDivider,
+            ]}
+          >
+            <View style={styles.categoryIcon}>
+              <CategoryIcon name={label} />
+            </View>
+            <Text style={styles.categoryLabel}>{label}</Text>
+            <Text style={styles.chevron}>{'\u203A'}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -228,22 +192,16 @@ function ResultCard({ film }: { film: Film }) {
 // Main screen
 // ---------------------------------------------------------------------------
 
-function normalizeTitle(title: string): string {
-  return title.replace(/\\"/g, '').replace(/"/g, '').toLowerCase();
-}
-
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
-  const [allFilms, setAllFilms] = useState<Film[]>([]);
   const [results, setResults] = useState<Film[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [loadingFilms, setLoadingFilms] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // People search state
   const [searchMode, setSearchMode] = useState<SearchMode>('films');
@@ -252,45 +210,46 @@ export default function SearchScreen() {
   const [hasPeopleSearched, setHasPeopleSearched] = useState(false);
   const peopleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isSearching = focused || query.length > 0 || activeCategory !== null;
+  const isSearching = focused || query.length > 0;
 
-  // Fetch all films once on mount
+  // Cancel any in-flight search on unmount.
   useEffect(() => {
-    fetchAllFilms()
-      .then(setAllFilms)
-      .catch(() => {})
-      .finally(() => setLoadingFilms(false));
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, []);
 
-  // Re-derive category results when the catalog finishes loading,
-  // or when the user switches categories.
-  useEffect(() => {
-    if (activeCategory === null) return;
-    const filter = CATEGORY_FILTERS[activeCategory];
-    if (!filter) return;
-    setResults(filter(allFilms));
-  }, [activeCategory, allFilms]);
-
-  // Client-side filter
-  const doSearch = useCallback(
-    (term: string) => {
-      if (!term.trim()) {
-        setResults([]);
-        setHasSearched(false);
-        setSearching(false);
-        return;
-      }
-      setSearching(true);
-      const lower = term.trim().toLowerCase();
-      const matched = allFilms.filter((f) =>
-        normalizeTitle(f.title).includes(lower)
-      );
-      setResults(matched);
-      setHasSearched(true);
+  // Server-side text search. Cancels the previous request when the
+  // user keeps typing so we never apply stale results.
+  const doSearch = useCallback(async (term: string) => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const trimmed = term.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setHasSearched(false);
       setSearching(false);
-    },
-    [allFilms]
-  );
+      return;
+    }
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setSearching(true);
+    try {
+      const films = await searchFilms(trimmed, ctrl.signal);
+      if (!ctrl.signal.aborted) {
+        setResults(films);
+        setHasSearched(true);
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        setResults([]);
+        setHasSearched(true);
+      }
+    } finally {
+      if (!ctrl.signal.aborted) setSearching(false);
+    }
+  }, []);
 
   const doPeopleSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
@@ -327,12 +286,12 @@ export default function SearchScreen() {
   );
 
   const onCancel = useCallback(() => {
+    if (abortRef.current) abortRef.current.abort();
     setQuery('');
     setResults([]);
     setHasSearched(false);
     setSearching(false);
     setFocused(false);
-    setActiveCategory(null);
     setPeopleResults([]);
     setHasPeopleSearched(false);
     setPeopleSearching(false);
@@ -340,6 +299,7 @@ export default function SearchScreen() {
   }, []);
 
   const onSwitchMode = useCallback((mode: SearchMode) => {
+    if (abortRef.current) abortRef.current.abort();
     setSearchMode(mode);
     setQuery('');
     setResults([]);
@@ -348,21 +308,11 @@ export default function SearchScreen() {
     setPeopleResults([]);
     setHasPeopleSearched(false);
     setPeopleSearching(false);
-    setActiveCategory(null);
   }, []);
 
-  const onCategorySelect = useCallback(
-    (cat: string) => {
-      const filter = CATEGORY_FILTERS[cat];
-      if (!filter) return;
-      setActiveCategory(cat);
-      setHasSearched(true);
-      setQuery('');
-      setFocused(false);
-      Keyboard.dismiss();
-    },
-    [allFilms]
-  );
+  const onCategoryTap = useCallback((key: CategoryKey) => {
+    router.push(`/category/${key}` as any);
+  }, [router]);
 
   const renderResult = useCallback(
     ({ item }: { item: Film }) => <ResultCard film={item} />,
@@ -457,7 +407,7 @@ export default function SearchScreen() {
         <FlatList
           data={[]}
           renderItem={null}
-          ListHeaderComponent={<BrowseCategories onSelect={onCategorySelect} />}
+          ListHeaderComponent={<BrowseCategories onSelect={onCategoryTap} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -467,15 +417,9 @@ export default function SearchScreen() {
           <ResultSkeleton />
         </View>
       ) : hasSearched && results.length === 0 ? (
-        activeCategory && loadingFilms ? (
-          <View style={styles.emptyState}>
-            <ActivityIndicator color={colors.gold} />
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No results found</Text>
-          </View>
-        )
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No results found</Text>
+        </View>
       ) : (
         <FlatList
           data={results}
@@ -487,7 +431,7 @@ export default function SearchScreen() {
           ListHeaderComponent={
             hasSearched ? (
               <Text style={styles.resultCount}>
-                {activeCategory ? `${activeCategory} \u00B7 ` : ''}{results.length} result{results.length !== 1 ? 's' : ''}
+                {results.length} result{results.length !== 1 ? 's' : ''}
               </Text>
             ) : null
           }
