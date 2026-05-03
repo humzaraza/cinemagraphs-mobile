@@ -69,18 +69,6 @@ export async function fetchFilmDetail(id: string): Promise<FilmDetail | null> {
   return res.json();
 }
 
-export async function fetchAllFilms(): Promise<Film[]> {
-  const all: Film[] = [];
-  let page = 1;
-  while (true) {
-    const batch = await extractFilms(await apiFetch(`/films?limit=50&page=${page}`));
-    all.push(...batch);
-    if (batch.length < 50) break;
-    page++;
-  }
-  return all;
-}
-
 // Search films by text query. Hits the FTS endpoint shipped in web
 // PR #26. Supports AbortSignal for cancellation when the user keeps
 // typing. Returns at most 20 films, ranked by relevance.

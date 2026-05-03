@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  TextInput,
   Alert,
   Switch,
 } from 'react-native';
@@ -17,11 +16,11 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
-import { fetchUserList, fetchPublicList, fetchAllFilms, addFilmToListAPI, deleteUserList, removeFilmFromListAPI, updateListVisibility } from '../../src/lib/api';
+import { fetchUserList, fetchPublicList, addFilmToListAPI, deleteUserList, removeFilmFromListAPI, updateListVisibility } from '../../src/lib/api';
 import BottomSheet from '../../src/components/BottomSheet';
+import FilmPicker from '../../src/components/FilmPicker';
 import { useAuth } from '../../src/providers/AuthProvider';
 import type { MockFilm } from '../../src/data/mockProfile';
-import type { Film } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PAD = 16;
@@ -115,16 +114,11 @@ export default function ListDetailScreen() {
   const { user: authUser } = useAuth();
 
   const [list, setList] = useState<any | null>(null);
-  const [allFilms, setAllFilms] = useState<MockFilm[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('poster');
   const [loaded, setLoaded] = useState(false);
 
-  // Add film modal state
+  // Add film picker visibility (FilmPicker manages its own search state).
   const [showAddFilm, setShowAddFilm] = useState(false);
-  const [searchFilms, setSearchFilms] = useState<Film[]>([]);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Menu state
   const [showMenu, setShowMenu] = useState(false);
@@ -161,25 +155,7 @@ export default function ListDetailScreen() {
     loadList();
   }, [loadList]);
 
-  useEffect(() => {
-    if (showAddFilm && searchFilms.length === 0) {
-      fetchAllFilms()
-        .then((films) => { setSearchFilms(films); setAllFilms(films as any); })
-        .catch((e) => console.error('[ListDetail] fetchAllFilms error:', e));
-    }
-  }, [showAddFilm]);
-
-  const handleSearchChange = (text: string) => {
-    setSearchInput(text);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setSearchQuery(text), 300);
-  };
-
   const filmIds = list ? (list.filmIds ?? (list.films ?? []).map((f: any) => f.id ?? f.filmId)) : [];
-
-  const filteredSearch = searchFilms.filter((f) =>
-    f.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
 
   const handleAddFilm = async (filmId: string) => {
     if (!id) return;
@@ -276,12 +252,7 @@ export default function ListDetailScreen() {
     );
   }
 
-  const unique = allFilms.filter(
-    (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
-  );
-  const listFilms = (list.films && list.films.length > 0) ? list.films : filmIds
-    .map((fid: string) => unique.find((f) => f.id === fid))
-    .filter(Boolean) as MockFilm[];
+  const listFilms: MockFilm[] = list.films ?? [];
 
   const cardWidth = SCREEN_WIDTH - PAD * 2;
 
@@ -368,49 +339,17 @@ export default function ListDetailScreen() {
         )}
       </ScrollView>
 
-      {/* Add film bottom sheet */}
-      <BottomSheet
+      {/* Add film picker. Hides films already in the list. Picker
+          stays open after each tap so user can add multiple films. */}
+      <FilmPicker
         visible={showAddFilm}
-        onClose={() => { setShowAddFilm(false); setSearchInput(''); setSearchQuery(''); }}
+        onClose={() => setShowAddFilm(false)}
+        onSelect={(film) => {
+          if (!filmIds.includes(film.id)) handleAddFilm(film.id);
+        }}
+        filter={(film) => !filmIds.includes(film.id)}
         title="Add film to list"
-      >
-        <View style={styles.searchInputWrap}>
-          <TextInput
-            value={searchInput}
-            onChangeText={handleSearchChange}
-            placeholder="Search all films..."
-            placeholderTextColor="rgba(245,240,225,0.2)"
-            style={styles.searchInput}
-          />
-        </View>
-        <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
-          {filteredSearch.slice(0, 30).map((film) => {
-            const alreadyInList = filmIds.includes(film.id);
-            return (
-              <Pressable
-                key={film.id}
-                onPress={() => {
-                  if (!alreadyInList) handleAddFilm(film.id);
-                }}
-                style={styles.searchRow}
-              >
-                <Image
-                  source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? (film.posterPath ? "https://image.tmdb.org/t/p/w185" + film.posterPath : undefined) }}
-                  style={styles.searchPoster}
-                  resizeMode="cover"
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.searchTitle} numberOfLines={1}>{film.title}</Text>
-                  <Text style={styles.searchYear}>{film.year}</Text>
-                </View>
-                {alreadyInList && (
-                  <Text style={styles.alreadyAdded}>{'\u2713'}</Text>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </BottomSheet>
+      />
 
       {/* Menu bottom sheet */}
       <BottomSheet
@@ -544,50 +483,6 @@ const styles = StyleSheet.create({
   addFilmBtnText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: colors.gold,
-  },
-
-  // Search modal
-  searchInputWrap: {
-    marginBottom: 10,
-  },
-  searchInput: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.ivory,
-    backgroundColor: 'rgba(245,240,225,0.06)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.15)',
-    borderRadius: borderRadius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 10,
-  },
-  searchPoster: {
-    width: 36,
-    height: 54,
-    borderRadius: 3,
-    backgroundColor: 'rgba(30,30,60,0.6)',
-  },
-  searchTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 13,
-    color: colors.ivory,
-  },
-  searchYear: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: 'rgba(245,240,225,0.35)',
-    marginTop: 1,
-  },
-  alreadyAdded: {
-    fontFamily: fonts.body,
-    fontSize: 14,
     color: colors.gold,
   },
 

@@ -22,12 +22,12 @@ import {
   fetchUserWatchlist,
   fetchUserLists,
   createUserList,
-  fetchAllFilms,
 } from '../../src/lib/api';
 import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockProfile';
 import type { Film } from '../../src/types/film';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
+import FilmPicker from '../../src/components/FilmPicker';
 import FollowersModal from '../../src/components/FollowersModal';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
@@ -368,12 +368,10 @@ export default function ProfileScreen() {
   const [newListPublic, setNewListPublic] = useState(true);
   const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
   const [showFilmPicker, setShowFilmPicker] = useState(false);
-  const [filmSearchInput, setFilmSearchInput] = useState('');
-  const [filmSearch, setFilmSearch] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [pickerFilms, setPickerFilms] = useState<Film[]>([]);
-  const [pickerLoading, setPickerLoading] = useState(false);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cache of films picked via FilmPicker, keyed by id. Used so the
+  // chip row in the New List sheet can render posters for films
+  // outside the user's reviewed/watched set. Reset on list create.
+  const [pickedFilmsById, setPickedFilmsById] = useState<Record<string, Film>>({});
 
   // Followers modal state
   const [showFollowersModal, setShowFollowersModal] = useState(false);
@@ -465,18 +463,6 @@ export default function ProfileScreen() {
     },
     [],
   );
-
-  // Load all films from the API once per picker-modal open, so the picker
-  // searches the full database rather than just the user's own films.
-  useEffect(() => {
-    if (showFilmPicker && pickerFilms.length === 0 && !pickerLoading) {
-      setPickerLoading(true);
-      fetchAllFilms()
-        .then((all) => setPickerFilms(all))
-        .catch((e) => console.error('[Profile] fetchAllFilms error:', e))
-        .finally(() => setPickerLoading(false));
-    }
-  }, [showFilmPicker, pickerFilms.length, pickerLoading]);
 
   // Unauthenticated state
   if (!isAuthenticated) {
@@ -693,13 +679,6 @@ export default function ProfileScreen() {
     (f, i, arr) => arr.findIndex((x) => x.id === f.id) === i,
   );
 
-  const filteredPickerFilms =
-    filmSearch.trim().length < 2
-      ? []
-      : pickerFilms.filter((f) =>
-          f.title.toLowerCase().includes(filmSearch.toLowerCase()),
-        );
-
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
@@ -715,24 +694,24 @@ export default function ProfileScreen() {
       setNewListGenre('Drama');
       setNewListPublic(true);
       setNewListFilmIds([]);
-      setFilmSearchInput('');
-      setFilmSearch('');
-      setPickerFilms([]);
+      setPickedFilmsById({});
     } catch (e) {
       console.error('[Profile] createList error:', e);
     }
   };
 
-  const handlePickerSearchChange = (text: string) => {
-    setFilmSearchInput(text);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => setFilmSearch(text), 400);
+  const togglePickedFilm = (film: Film) => {
+    setNewListFilmIds((prev) =>
+      prev.includes(film.id) ? prev.filter((id) => id !== film.id) : [...prev, film.id],
+    );
+    setPickedFilmsById((prev) => {
+      if (prev[film.id]) return prev;
+      return { ...prev, [film.id]: film };
+    });
   };
 
-  const toggleFilmInNewList = (filmId: string) => {
-    setNewListFilmIds((prev) =>
-      prev.includes(filmId) ? prev.filter((id) => id !== filmId) : [...prev, filmId],
-    );
+  const removePickedFilm = (filmId: string) => {
+    setNewListFilmIds((prev) => prev.filter((id) => id !== filmId));
   };
 
   const renderLists = () => (
@@ -920,11 +899,11 @@ export default function ProfileScreen() {
         <Text style={[styles.sheetLabel, { marginTop: 14 }]}>ADD FILMS</Text>
         <View style={styles.filmChipRow}>
           {newListFilmIds.map((id) => {
-            const f = allUniqueFilms.find((x) => x.id === id) ?? pickerFilms.find((x) => x.id === id);
+            const f = allUniqueFilms.find((x) => x.id === id) ?? pickedFilmsById[id];
             if (!f) return null;
             const posterUri = getPosterUri(f);
             return (
-              <Pressable key={id} onPress={() => toggleFilmInNewList(id)}>
+              <Pressable key={id} onPress={() => removePickedFilm(id)}>
                 <Image
                   source={{ uri: posterUri ?? undefined }}
                   style={styles.filmChipPoster}
@@ -964,85 +943,14 @@ export default function ProfileScreen() {
         />
       )}
 
-      {/* ---- Film Picker Bottom Sheet ---- */}
-      <BottomSheet
+      {/* ---- Film Picker (multi-select for create-list flow) ---- */}
+      <FilmPicker
         visible={showFilmPicker}
-        onClose={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
+        onClose={() => setShowFilmPicker(false)}
+        onSelect={togglePickedFilm}
+        selectedIds={new Set(newListFilmIds)}
         title="Add films"
-      >
-        <View
-          style={[
-            styles.pickerSearchBar,
-            searchFocused && styles.pickerSearchBarFocused,
-          ]}
-        >
-          <TextInput
-            value={filmSearchInput}
-            onChangeText={handlePickerSearchChange}
-            placeholder="Search films..."
-            placeholderTextColor="rgba(245,240,225,0.2)"
-            style={styles.sheetTextInput}
-            autoFocus
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </View>
-        <ScrollView style={{ maxHeight: 320, marginTop: 10 }}>
-          {filmSearch.trim().length < 2 ? (
-            <View style={styles.listEmptyWrap}>
-              <Text style={styles.listEmptyText}>
-                {pickerLoading ? 'Loading films...' : 'Type to search films'}
-              </Text>
-            </View>
-          ) : filteredPickerFilms.length === 0 ? (
-            <View style={styles.listEmptyWrap}>
-              <Text style={styles.listEmptyText}>
-                {pickerLoading ? 'Loading films...' : 'No films found'}
-              </Text>
-            </View>
-          ) : (
-            filteredPickerFilms.map((f) => {
-              const selected = newListFilmIds.includes(f.id);
-              const posterUri = getPosterUri(f);
-              return (
-                <Pressable
-                  key={f.id}
-                  onPress={() => toggleFilmInNewList(f.id)}
-                  style={styles.pickerRow}
-                >
-                  <Image
-                    source={{ uri: posterUri ?? undefined }}
-                    style={styles.pickerPoster}
-                    resizeMode="cover"
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.pickerTitle} numberOfLines={1}>
-                      {f.title}
-                    </Text>
-                    <Text style={styles.pickerYear}>{f.year}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.pickerCheck,
-                      selected && styles.pickerCheckActive,
-                    ]}
-                  >
-                    {selected && <Text style={styles.pickerCheckMark}>{'\u2713'}</Text>}
-                  </View>
-                </Pressable>
-              );
-            })
-          )}
-        </ScrollView>
-        <Pressable
-          onPress={() => { setShowFilmPicker(false); setFilmSearchInput(''); setFilmSearch(''); }}
-          style={styles.sheetCreateBtn}
-        >
-          <Text style={styles.sheetCreateText}>
-            Done ({newListFilmIds.length} selected)
-          </Text>
-        </Pressable>
-      </BottomSheet>
+      />
     </View>
   );
 }
@@ -1526,59 +1434,6 @@ const styles = StyleSheet.create({
   sheetCreateText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: colors.background,
-  },
-
-  // ---- Film picker ----
-  pickerSearchBar: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.15)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  pickerSearchBarFocused: {
-    borderColor: colors.gold,
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(245,240,225,0.04)',
-  },
-  pickerPoster: {
-    width: 40,
-    height: 60,
-    borderRadius: 4,
-  },
-  pickerTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.ivory,
-  },
-  pickerYear: {
-    fontFamily: fonts.body,
-    fontSize: 10,
-    color: 'rgba(245,240,225,0.35)',
-  },
-  pickerCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(200,169,81,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickerCheckActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
-  },
-  pickerCheckMark: {
-    fontSize: 12,
     color: colors.background,
   },
 
