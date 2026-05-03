@@ -81,6 +81,51 @@ export async function fetchAllFilms(): Promise<Film[]> {
   return all;
 }
 
+// Search films by text query. Hits the FTS endpoint shipped in web
+// PR #26. Supports AbortSignal for cancellation when the user keeps
+// typing. Returns at most 20 films, ranked by relevance.
+export async function searchFilms(
+  query: string,
+  signal?: AbortSignal,
+): Promise<Film[]> {
+  if (!query.trim()) return [];
+  const res = await apiFetch(
+    `/films/search?q=${encodeURIComponent(query.trim())}`,
+    { signal },
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data?.films ?? []) as Film[];
+}
+
+// Fetch a paginated category. Used by the category browse screen.
+// Maps category labels to /api/films query params.
+//
+// genre filter: ?genre=Drama
+// sort filter: ?sort=highest | ?sort=swing | ?sort=recent
+//
+// hasMore is true when the page returned exactly `limit` items
+// (means there's likely another page).
+export type CategoryFetchResult = { films: Film[]; hasMore: boolean };
+
+export async function fetchCategoryFilms(
+  params: { genre?: string; sort?: 'highest' | 'swing' | 'recent' },
+  page: number,
+  signal?: AbortSignal,
+): Promise<CategoryFetchResult> {
+  const limit = 20;
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params.genre) qs.set('genre', params.genre);
+  if (params.sort) qs.set('sort', params.sort);
+  const res = await apiFetch(`/films?${qs.toString()}`, { signal });
+  if (!res.ok) {
+    throw new Error(`Failed to load category films (${res.status})`);
+  }
+  const data = await res.json();
+  const films = (data?.films ?? (Array.isArray(data) ? data : [])) as Film[];
+  return { films, hasMore: films.length === limit };
+}
+
 export async function submitReview(filmId: string, data: ReviewSubmission): Promise<any> {
   const res = await apiFetch(`/films/${filmId}/reviews`, {
     method: 'POST',
