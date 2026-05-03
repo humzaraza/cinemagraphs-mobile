@@ -283,10 +283,7 @@ export default function ReviewScreen() {
   // Form state
   const [overallRating, setOverallRating] = useState(5.5);
   const [beatRatings, setBeatRatings] = useState<Record<string, number>>({});
-  const [beginning, setBeginning] = useState('');
-  const [middle, setMiddle] = useState('');
-  const [ending, setEnding] = useState('');
-  const [otherText, setOtherText] = useState('');
+  const [thoughts, setThoughts] = useState('');
 
   // Load film
   useEffect(() => {
@@ -347,10 +344,7 @@ export default function ReviewScreen() {
     const payload = {
       overallRating,
       beatRatings,
-      beginning: beginning || undefined,
-      middle: middle || undefined,
-      ending: ending || undefined,
-      otherThoughts: otherText || undefined,
+      beginning: thoughts.trim() || undefined,
     };
     setSubmitting(true);
     setErrorMsg('');
@@ -366,7 +360,7 @@ export default function ReviewScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [film, overallRating, beatRatings, beginning, middle, ending, otherText]);
+  }, [film, overallRating, beatRatings, thoughts]);
 
   const handlePreviewB = useCallback(() => {
     setScreenState('preview-b');
@@ -376,10 +370,7 @@ export default function ReviewScreen() {
     if (!film) return;
     const payload = {
       overallRating,
-      beginning: beginning || undefined,
-      middle: middle || undefined,
-      ending: ending || undefined,
-      otherThoughts: otherText || undefined,
+      beginning: thoughts.trim() || undefined,
     };
     setSubmitting(true);
     setErrorMsg('');
@@ -395,7 +386,7 @@ export default function ReviewScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [film, overallRating, beginning, middle, ending, otherText]);
+  }, [film, overallRating, thoughts]);
 
   const handleShare = useCallback(async () => {
     if (!film) return;
@@ -409,7 +400,7 @@ export default function ReviewScreen() {
     router.replace('/(tabs)/explore' as any);
   }, [router]);
 
-  const stitchedText = [beginning, middle, ending, otherText].filter(Boolean).join(' ');
+  const stitchedText = thoughts.trim();
   const canPreviewB = stitchedText.trim().length > 0 || overallRating !== 5.5;
 
   // ----- LOADING -----
@@ -607,44 +598,15 @@ export default function ReviewScreen() {
 
           <Text style={styles.sectionLabel}>YOUR THOUGHTS</Text>
 
-          <Text style={styles.fieldLabel}>How did it start?</Text>
+          <Text style={styles.fieldLabel}>Your thoughts</Text>
           <TextInput
-            style={styles.textFieldSmall}
-            placeholder="Your thoughts on the beginning..."
+            style={styles.textField}
+            placeholder="What did you think of the film?"
             placeholderTextColor="rgba(245,240,225,0.2)"
-            value={beginning}
-            onChangeText={setBeginning}
+            value={thoughts}
+            onChangeText={setThoughts}
             multiline
-          />
-
-          <Text style={styles.fieldLabel}>How was the middle?</Text>
-          <TextInput
-            style={styles.textFieldSmall}
-            placeholder="Your thoughts on the middle..."
-            placeholderTextColor="rgba(245,240,225,0.2)"
-            value={middle}
-            onChangeText={setMiddle}
-            multiline
-          />
-
-          <Text style={styles.fieldLabel}>How did it end?</Text>
-          <TextInput
-            style={styles.textFieldSmall}
-            placeholder="Your thoughts on the ending..."
-            placeholderTextColor="rgba(245,240,225,0.2)"
-            value={ending}
-            onChangeText={setEnding}
-            multiline
-          />
-
-          <Text style={styles.fieldLabel}>Anything else?</Text>
-          <TextInput
-            style={styles.textFieldSmall}
-            placeholder="Other thoughts..."
-            placeholderTextColor="rgba(245,240,225,0.2)"
-            value={otherText}
-            onChangeText={setOtherText}
-            multiline
+            numberOfLines={6}
           />
 
           {errorMsg ? <Text style={styles.inlineError}>{errorMsg}</Text> : null}
@@ -682,44 +644,15 @@ export default function ReviewScreen() {
 
         <Text style={styles.sectionLabel}>YOUR THOUGHTS</Text>
 
-        <Text style={styles.fieldLabel}>How did it start?</Text>
+        <Text style={styles.fieldLabel}>Your thoughts</Text>
         <TextInput
-          style={styles.textFieldSmall}
-          placeholder="Your thoughts on the beginning..."
+          style={styles.textField}
+          placeholder="What did you think of the film?"
           placeholderTextColor="rgba(245,240,225,0.2)"
-          value={beginning}
-          onChangeText={setBeginning}
+          value={thoughts}
+          onChangeText={setThoughts}
           multiline
-        />
-
-        <Text style={styles.fieldLabel}>How was the middle?</Text>
-        <TextInput
-          style={styles.textFieldSmall}
-          placeholder="Your thoughts on the middle..."
-          placeholderTextColor="rgba(245,240,225,0.2)"
-          value={middle}
-          onChangeText={setMiddle}
-          multiline
-        />
-
-        <Text style={styles.fieldLabel}>How did it end?</Text>
-        <TextInput
-          style={styles.textFieldSmall}
-          placeholder="Your thoughts on the ending..."
-          placeholderTextColor="rgba(245,240,225,0.2)"
-          value={ending}
-          onChangeText={setEnding}
-          multiline
-        />
-
-        <Text style={styles.fieldLabel}>Anything else?</Text>
-        <TextInput
-          style={styles.textFieldSmall}
-          placeholder="Other thoughts..."
-          placeholderTextColor="rgba(245,240,225,0.2)"
-          value={otherText}
-          onChangeText={setOtherText}
-          multiline
+          numberOfLines={6}
         />
 
         {errorMsg ? <Text style={styles.inlineError}>{errorMsg}</Text> : null}
@@ -900,10 +833,10 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.10)',
     borderRadius: 8,
-    padding: 8,
-    minHeight: 60,
+    padding: 10,
+    minHeight: 120,
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 12,
     color: colors.ivory,
     textAlignVertical: 'top',
     marginBottom: 14,
