@@ -20,6 +20,7 @@ import { fetchUserList, fetchPublicList, addFilmToListAPI, deleteUserList, remov
 import BottomSheet from '../../src/components/BottomSheet';
 import FilmPicker from '../../src/components/FilmPicker';
 import { useAuth } from '../../src/providers/AuthProvider';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { MockFilm } from '../../src/data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -80,7 +81,7 @@ function PosterCell({ film, onLongPress }: { film: MockFilm; onLongPress?: () =>
           </View>
         ) : (
           <Image
-            source={{ uri: (film.posterUrl?.startsWith("/") ? "https://image.tmdb.org/t/p/w185" + film.posterUrl : film.posterUrl) ?? ((film as any).posterPath ? "https://image.tmdb.org/t/p/w185" + (film as any).posterPath : undefined) }}
+            source={{ uri: getPosterUrl(film, 'grid') ?? undefined }}
             style={styles.posterImageInner}
             resizeMode="cover"
             onError={() => setImgError(true)}

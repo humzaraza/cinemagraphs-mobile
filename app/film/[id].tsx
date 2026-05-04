@@ -33,10 +33,10 @@ import type { GraphMode } from '../../src/components/GraphToggle';
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuthGate } from '../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
 const BACKDROP_HEIGHT = 160;
 const CONTENT_PADDING = 14;
@@ -83,13 +83,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-}
-
-function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | null }): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
 }
 
 function getBackdropUri(backdropPath: string | null | undefined): string | null {
@@ -234,7 +227,7 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
 // ---------------------------------------------------------------------------
 
 function MetadataRow({ film }: { film: FilmDetail }) {
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'card');
 
   return (
     <View style={styles.metadataRow}>
@@ -1028,7 +1021,7 @@ function UserReviews({ reviews }: { reviews: FilmReview[] }) {
 
 function SimilarFilmCard({ film: f }: { film: Film }) {
   const router = useRouter();
-  const posterUri = getPosterUri(f);
+  const posterUri = getPosterUrl(f, 'card');
 
   return (
     <Pressable onPress={() => router.push(`/film/${f.id}` as any)} style={styles.similarCard}>
@@ -1327,7 +1320,7 @@ export default function FilmDetailScreen() {
             return (
               <Pressable key={fid} onPress={() => removePickedFilm(fid)}>
                 <Image
-                  source={{ uri: getPosterUri(f) ?? undefined }}
+                  source={{ uri: getPosterUrl(f, 'thumbnail') ?? undefined }}
                   style={styles.filmChipPoster}
                   resizeMode="cover"
                 />

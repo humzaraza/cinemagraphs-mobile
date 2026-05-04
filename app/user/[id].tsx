@@ -22,7 +22,10 @@ import {
   fetchFollowers,
 } from '../../src/lib/api';
 import FollowersModal from '../../src/components/FollowersModal';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 
+// TODO: Remove when getAvatarUrl helper ships. Avatar URL handling
+// is parked as a followup to refactor/tmdb-image-helper.
 const TMDB_POSTER = 'https://image.tmdb.org/t/p/w500';
 
 function getPosterUri(path: string | null | undefined): string | null {
@@ -238,7 +241,7 @@ export default function PublicProfileScreen() {
             </View>
           ) : (
             reviews.map((review: any) => {
-              const posterUri = getPosterUri(review.film?.posterUrl || review.film?.posterPath);
+              const posterUri = getPosterUrl(review.film, 'thumbnail');
               const snippet = review.combinedText
                 ? review.combinedText.slice(0, 100) + (review.combinedText.length > 100 ? '...' : '')
                 : null;
@@ -302,7 +305,7 @@ export default function PublicProfileScreen() {
                     {list.previewPosters.slice(0, 4).map((p: string, i: number) => (
                       <Image
                         key={i}
-                        source={{ uri: getPosterUri(p) ?? undefined }}
+                        source={{ uri: getPosterUrl({ posterPath: p }, 'thumbnail') ?? undefined }}
                         style={[styles.listThumb, i > 0 && { marginLeft: -6 }]}
                         resizeMode="cover"
                       />

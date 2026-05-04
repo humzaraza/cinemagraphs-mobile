@@ -31,15 +31,7 @@ import FilmPicker from '../../src/components/FilmPicker';
 import FollowersModal from '../../src/components/FollowersModal';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
-
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
-
-function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | null }): string | null {
-  const path = film.posterUrl || (film as any).posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
-}
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -269,7 +261,7 @@ function PosterCell({
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'grid');
 
   return (
     <Pressable
@@ -317,7 +309,7 @@ function PosterCell({
 function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'grid');
 
   return (
     <Pressable
@@ -565,9 +557,7 @@ export default function ProfileScreen() {
             contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
           >
             {recentFilms.slice(0, 6).map((rf) => {
-              const uri = rf.posterUrl
-                ? rf.posterUrl.startsWith('/') ? `${TMDB_POSTER}${rf.posterUrl}` : rf.posterUrl
-                : undefined;
+              const uri = getPosterUrl(rf, 'card') ?? undefined;
               return (
                 <Pressable
                   key={rf.filmId}
@@ -753,7 +743,7 @@ export default function ProfileScreen() {
                   {(list.previewPosters ?? []).slice(0, 4).map((p: string, i: number) => (
                     <Image
                       key={i}
-                      source={{ uri: p.startsWith('/') ? 'https://image.tmdb.org/t/p/w185' + p : p }}
+                      source={{ uri: getPosterUrl({ posterPath: p }, 'thumbnail') ?? undefined }}
                       style={styles.listThumb}
                       resizeMode="cover"
                     />
@@ -901,7 +891,7 @@ export default function ProfileScreen() {
           {newListFilmIds.map((id) => {
             const f = allUniqueFilms.find((x) => x.id === id) ?? pickedFilmsById[id];
             if (!f) return null;
-            const posterUri = getPosterUri(f);
+            const posterUri = getPosterUrl(f, 'thumbnail');
             return (
               <Pressable key={id} onPress={() => removePickedFilm(id)}>
                 <Image
