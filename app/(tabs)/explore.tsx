@@ -22,20 +22,13 @@ import {
   fetchTrendingFilms,
   fetchRecommendedFilms,
 } from '../../src/lib/api';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { Film } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_WIDTH = 90;
 const POSTER_HEIGHT = 130;
 const TICKER_SPEED = 44800;
-const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w185';
-
-function getPosterUri(film: Film): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_IMAGE_BASE}${path}`;
-}
 
 function calcDelta(dataPoints: Array<{ score: number }>): number | null {
   if (dataPoints.length < 4) return null;
@@ -126,7 +119,7 @@ function TicketStub() {
 
 function PosterCard({ film }: { film: Film }) {
   const router = useRouter();
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'card');
 
   return (
     <Pressable
@@ -309,7 +302,7 @@ function MovieTicker({ films }: { films: Film[] }) {
 
 function TrendingArcCard({ film }: { film: Film }) {
   const router = useRouter();
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'thumbnail');
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints;
 

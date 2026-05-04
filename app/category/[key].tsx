@@ -21,21 +21,14 @@ import {
   CATEGORY_PARAMS,
   isCategoryKey,
 } from '../../src/lib/categories';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { Film } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 const SCREEN_PADDING = 12;
 const GRID_GAP = 8;
 const TILE_WIDTH = (SCREEN_WIDTH - SCREEN_PADDING * 2 - GRID_GAP * 2) / 3;
 const TILE_HEIGHT = TILE_WIDTH * 1.5;
-
-function getPosterUri(film: Film): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
-}
 
 // ---------------------------------------------------------------------------
 // Skeleton tile (same opacity-pulse pattern used elsewhere)
@@ -71,7 +64,7 @@ function SkeletonTile() {
 // ---------------------------------------------------------------------------
 
 function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
-  const uri = getPosterUri(film);
+  const uri = getPosterUrl(film, 'grid');
   return (
     <Pressable onPress={onPress} style={styles.tile}>
       {uri ? (

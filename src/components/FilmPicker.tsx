@@ -11,17 +11,9 @@ import {
 } from 'react-native';
 import { colors, fonts, borderRadius } from '../constants/theme';
 import { searchFilms } from '../lib/api';
+import { getPosterUrl } from '../lib/tmdb-image';
 import BottomSheet from './BottomSheet';
 import type { Film } from '../types/film';
-
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
-
-function getPosterUri(film: Film): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
-}
 
 type FilmPickerProps = {
   // Whether the picker is open. Parent controls visibility.
@@ -155,7 +147,7 @@ export default function FilmPicker({
           >
             {visibleResults.map((film) => {
               const isSelected = selectedIds ? selectedIds.has(film.id) : false;
-              const posterUri = getPosterUri(film);
+              const posterUri = getPosterUrl(film, 'thumbnail');
               const director = film.director ?? null;
               return (
                 <Pressable

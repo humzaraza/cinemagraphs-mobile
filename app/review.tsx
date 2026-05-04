@@ -23,10 +23,10 @@ import Svg, {
 import Slider from '@react-native-community/slider';
 import { colors, fonts, borderRadius } from '../src/constants/theme';
 import { fetchFilmDetail, submitReview } from '../src/lib/api';
+import { getPosterUrl } from '../src/lib/tmdb-image';
 import type { FilmDetail, FilmDataPoint } from '../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
 const MAX_BEATS = 8;
 
 /** Select up to MAX_BEATS: peak, lowest, first, last, then evenly spaced. */
@@ -67,13 +67,6 @@ function formatTimestamp(minutes: number): string {
   return `${h}h ${m}m`;
 }
 
-function getPosterUri(film: { posterUrl?: string | null; posterPath?: string | null }): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
-}
-
 // ---------------------------------------------------------------------------
 // Back header
 // ---------------------------------------------------------------------------
@@ -99,7 +92,7 @@ function BackHeader() {
 // ---------------------------------------------------------------------------
 
 function FilmHeader({ film }: { film: FilmDetail }) {
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'thumbnail');
 
   return (
     <View style={styles.filmHeader}>

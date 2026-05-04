@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
+import { getPosterUrl } from '../lib/tmdb-image';
 import type { MockFilm } from '../data/mockProfile';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -41,9 +42,7 @@ export default function ArcCard({
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
   const sparklineWidth = cw - 94;
 
-  const posterUri = film.posterUrl?.startsWith('/')
-    ? 'https://image.tmdb.org/t/p/w185' + film.posterUrl
-    : film.posterUrl;
+  const posterUri = getPosterUrl(film, 'card');
 
   return (
     <Pressable

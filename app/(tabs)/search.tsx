@@ -19,18 +19,10 @@ import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { searchFilms, searchUsers } from '../../src/lib/api';
 import { CATEGORY_LABELS, type CategoryKey } from '../../src/lib/categories';
 import UserCard from '../../src/components/UserCard';
+import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { Film } from '../../src/types/film';
 
 type SearchMode = 'films' | 'people';
-
-const TMDB_POSTER = 'https://image.tmdb.org/t/p/w185';
-
-function getPosterUri(film: Film): string | null {
-  const path = film.posterUrl || film.posterPath;
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${TMDB_POSTER}${path}`;
-}
 
 // ---------------------------------------------------------------------------
 // Skeleton
@@ -162,7 +154,7 @@ function BrowseCategories({ onSelect }: { onSelect: (key: CategoryKey) => void }
 
 function ResultCard({ film }: { film: Film }) {
   const router = useRouter();
-  const posterUri = getPosterUri(film);
+  const posterUri = getPosterUrl(film, 'card');
   const director = film.director || null;
 
   return (
