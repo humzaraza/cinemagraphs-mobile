@@ -853,7 +853,6 @@ export default function ProfileScreen() {
           >
           <ProfileBanner
             presetKey={fixture.user.bannerValue as BannerPresetKey}
-            onEditPress={() => router.push('/header-picker' as any)}
           />
 
           <View
@@ -962,9 +961,8 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Floating Settings affordance over the new hub. Placed top-left to
-          avoid colliding with the banner pen icon at top-right. Lives outside
-          the hub wrapper because a hot-reload edge case in this SDK / Expo Go
+      {/* Floating Settings affordance over the new hub. Lives outside the
+          hub wrapper because a hot-reload edge case in this SDK / Expo Go
           let the gear scroll with the hub's ScrollView even when it was a
           sibling of ScrollView inside the wrapper. The outer container never
           scrolls, so anchoring here pins reliably. */}
