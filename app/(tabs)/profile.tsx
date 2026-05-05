@@ -68,27 +68,6 @@ type FilmFilter = 'reviewed' | 'watched' | 'reactions';
 type ViewMode = 'poster' | 'graph';
 
 // ---------------------------------------------------------------------------
-// Gear icon
-// ---------------------------------------------------------------------------
-
-function GearIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 15a3 3 0 100-6 3 3 0 000 6z"
-        stroke="rgba(245,240,225,0.35)"
-        strokeWidth={1.5}
-      />
-      <Path
-        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
-        stroke="rgba(245,240,225,0.35)"
-        strokeWidth={1.5}
-      />
-    </Svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Grid / List icons for view toggle
 // ---------------------------------------------------------------------------
 
@@ -120,6 +99,16 @@ function ChevronRight() {
   return (
     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
       <Path d="M9 6l6 6-6 6" stroke="rgba(245,240,225,0.15)" strokeWidth={2} />
+    </Svg>
+  );
+}
+
+// Slightly stronger alpha than ChevronRight; used in the banner menu sheet
+// where the chevron sits next to large 16pt labels and needs to read clearly.
+function MenuChevron() {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 6l6 6-6 6" stroke="rgba(245,240,225,0.3)" strokeWidth={2} />
     </Svg>
   );
 }
@@ -396,6 +385,9 @@ export default function ProfileScreen() {
   // Followers modal state
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followersInitialTab, setFollowersInitialTab] = useState<'followers' | 'following'>('followers');
+
+  // Banner 3-dots menu sheet
+  const [showBannerMenu, setShowBannerMenu] = useState(false);
 
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
@@ -844,22 +836,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top nav bar. Holds the global Settings gear above the banner so
-          the banner stays a pure gradient with no UI elements over it.
-          Background matches the page so the bar reads as part of the
-          page chrome rather than a translucent overlay. */}
-      <View style={[styles.topNavBar, { paddingTop: insets.top }]}>
-        <Pressable
-          onPress={() => router.push('/settings' as any)}
-          style={styles.navGear}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-          hitSlop={8}
-        >
-          <GearIcon />
-        </Pressable>
-      </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {subTab === 'profile' ? (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           <ScrollView
@@ -868,6 +845,7 @@ export default function ProfileScreen() {
           >
           <ProfileBanner
             presetKey={fixture.user.bannerValue as BannerPresetKey}
+            onMenuPress={() => setShowBannerMenu(true)}
           />
 
           <View
@@ -1087,6 +1065,54 @@ export default function ProfileScreen() {
         selectedIds={new Set(newListFilmIds)}
         title="Add films"
       />
+
+      {/* ---- Banner 3-dots menu sheet ---- */}
+      <BottomSheet
+        visible={showBannerMenu}
+        onClose={() => setShowBannerMenu(false)}
+        title="Profile"
+      >
+        <View style={styles.menuList}>
+          <Pressable
+            onPress={() => {
+              setShowBannerMenu(false);
+              router.push('/settings/edit-profile' as any);
+            }}
+            style={styles.menuRow}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile"
+          >
+            <Text style={styles.menuRowLabel}>Edit profile</Text>
+            <MenuChevron />
+          </Pressable>
+          <View style={styles.menuDivider} />
+          <Pressable
+            onPress={() => {
+              setShowBannerMenu(false);
+              router.push('/header-picker' as any);
+            }}
+            style={styles.menuRow}
+            accessibilityRole="button"
+            accessibilityLabel="Banner style"
+          >
+            <Text style={styles.menuRowLabel}>Banner style</Text>
+            <MenuChevron />
+          </Pressable>
+          <View style={styles.menuDivider} />
+          <Pressable
+            onPress={() => {
+              setShowBannerMenu(false);
+              router.push('/settings' as any);
+            }}
+            style={styles.menuRow}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Text style={styles.menuRowLabel}>Settings</Text>
+            <MenuChevron />
+          </Pressable>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -1637,22 +1663,25 @@ const styles = StyleSheet.create({
     color: colors.ivory,
   },
 
-  // ---- Top nav bar with global Settings gear (PR 1a) ----
-  topNavBar: {
-    width: '100%',
-    paddingHorizontal: 14,
-    backgroundColor: colors.background,
+  // ---- Banner 3-dots menu rows (PR 1a) ----
+  menuList: {
+    marginHorizontal: -14, // bleed past BottomSheet's 14pt padding
   },
-  navGear: {
-    alignSelf: 'flex-end',
-    marginTop: 14,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 0.5,
-    borderColor: 'rgba(245,240,225,0.2)',
-    backgroundColor: 'rgba(13,13,26,0.6)',
-    justifyContent: 'center',
+  menuRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+  },
+  menuRowLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 16,
+    color: colors.ivory,
+  },
+  menuDivider: {
+    height: 0.5,
+    backgroundColor: 'rgba(245,240,225,0.06)',
+    marginHorizontal: 20,
   },
 });

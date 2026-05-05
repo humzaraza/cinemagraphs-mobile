@@ -265,21 +265,6 @@ export default function EditProfileScreen() {
         />
         {!!errors.bio && <Text style={styles.error}>{errors.bio}</Text>}
 
-        {/* Banner style. Tapping opens the gradient picker; the picker
-            persists the choice and routes back here. */}
-        <Text style={styles.label}>BANNER STYLE</Text>
-        <Pressable
-          onPress={() => router.push('/header-picker' as any)}
-          style={[styles.input, styles.bannerRow]}
-          accessibilityRole="button"
-          accessibilityLabel="Banner style"
-        >
-          <Text style={styles.bannerRowText}>Choose a gradient</Text>
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-            <Path d="M9 6l6 6-6 6" stroke="rgba(245,240,225,0.2)" strokeWidth={2} />
-          </Svg>
-        </Pressable>
-
         {!!errors.general && <Text style={[styles.error, { marginTop: 12 }]}>{errors.general}</Text>}
 
         {success && <Text style={styles.successText}>Profile updated</Text>}
@@ -414,16 +399,6 @@ const styles = StyleSheet.create({
   bioInput: {
     minHeight: 80,
     paddingTop: 10,
-  },
-  bannerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bannerRowText: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.ivory,
   },
   inputError: {
     borderColor: '#E24B4A',
