@@ -846,13 +846,7 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {subTab === 'profile' ? (
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: colors.background,
-            position: 'relative',
-          }}
-        >
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
           <ScrollView
             contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
             showsVerticalScrollIndicator={false}
@@ -934,19 +928,6 @@ export default function ProfileScreen() {
             onCreateList={() => setShowCreateList(true)}
           />
           </ScrollView>
-          {/* Floating Settings affordance over the new hub. Placed top-left
-              to avoid colliding with the banner pen icon at top-right. As a
-              sibling of the ScrollView (not a child), it stays fixed while
-              the hub scrolls. */}
-          <Pressable
-            onPress={() => router.push('/settings' as any)}
-            style={[styles.hubGear, { top: 14 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            hitSlop={8}
-          >
-            <GearIcon />
-          </Pressable>
         </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -979,6 +960,24 @@ export default function ProfileScreen() {
             {subTab === 'watchlist' && renderWatchlist()}
           </ScrollView>
         </View>
+      )}
+
+      {/* Floating Settings affordance over the new hub. Placed top-left to
+          avoid colliding with the banner pen icon at top-right. Lives outside
+          the hub wrapper because a hot-reload edge case in this SDK / Expo Go
+          let the gear scroll with the hub's ScrollView even when it was a
+          sibling of ScrollView inside the wrapper. The outer container never
+          scrolls, so anchoring here pins reliably. */}
+      {subTab === 'profile' && (
+        <Pressable
+          onPress={() => router.push('/settings' as any)}
+          style={[styles.hubGear, { top: insets.top + 14 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={8}
+        >
+          <GearIcon />
+        </Pressable>
       )}
 
       {/* ---- Create List Bottom Sheet ---- */}
