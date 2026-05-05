@@ -1,5 +1,7 @@
 // Mock data for Profile tab. Will be replaced with real API calls after auth (Prompt 9).
 
+import type { BannerPresetKey } from '../constants/bannerPresets';
+
 // Re-export the locked banner preset tuple so PR 1a fixtures and the
 // web API contract validate against the same set.
 export { BANNER_PRESET_KEYS } from '../constants/bannerPresets';
@@ -196,6 +198,30 @@ export const mockProfilePopulated: MockProfileFixture = {
     },
   ],
 };
+
+// ---------------------------------------------------------------------------
+// Active fixture index. Profile screen and header picker share this so a
+// mutation from the picker is reflected in the profile on next render.
+// PR 1a / post-auth: drop fixture indirection when real API consumption
+// replaces these mocks.
+// ---------------------------------------------------------------------------
+
+export const PROFILE_FIXTURES = {
+  empty: mockProfileEmpty,
+  populated: mockProfilePopulated,
+};
+
+export type ProfileFixtureMode = keyof typeof PROFILE_FIXTURES;
+
+// Dev-iteration toggle. Flip to 'empty' to preview the brand-new-user state.
+export const PROFILE_FIXTURE_MODE: ProfileFixtureMode = 'populated';
+
+export function setMockBannerValue(
+  mode: ProfileFixtureMode,
+  key: BannerPresetKey,
+): void {
+  PROFILE_FIXTURES[mode].user.bannerValue = key;
+}
 
 // ---------------------------------------------------------------------------
 // Legacy mock shapes (used by ArcCard, legacy profile sub-tabs).

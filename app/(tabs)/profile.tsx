@@ -25,8 +25,8 @@ import {
   createUserList,
 } from '../../src/lib/api';
 import {
-  mockProfileEmpty,
-  mockProfilePopulated,
+  PROFILE_FIXTURES,
+  PROFILE_FIXTURE_MODE,
   type MockUser,
   type MockFilm,
   type MockWatchlistFilm,
@@ -49,17 +49,11 @@ import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 
-// Dev-iteration toggle for the Phase 5 mock fixtures. Flip to 'empty' to
-// preview the brand-new-user state.
+// Phase 5 mock fixtures live in src/data/mockProfile.ts so the picker
+// (app/header-picker.tsx) and this screen share a single source.
 // TODO PR 1a / post-auth: replace fixture consumption with real API
 // (fetchUserProfile / fetchUserFilms / fetchUserLists) when the web ships
 // the new profile contract.
-const PROFILE_FIXTURES = {
-  empty: mockProfileEmpty,
-  populated: mockProfilePopulated,
-} as const;
-type ProfileFixtureMode = keyof typeof PROFILE_FIXTURES;
-const PROFILE_FIXTURE_MODE: ProfileFixtureMode = 'populated';
 const fixture = PROFILE_FIXTURES[PROFILE_FIXTURE_MODE];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
