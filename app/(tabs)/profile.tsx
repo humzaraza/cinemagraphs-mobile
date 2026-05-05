@@ -846,11 +846,17 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {subTab === 'profile' ? (
-        <ScrollView
-          style={{ flex: 1, backgroundColor: colors.background }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
-          showsVerticalScrollIndicator={false}
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: colors.background,
+            position: 'relative',
+          }}
         >
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+            showsVerticalScrollIndicator={false}
+          >
           <ProfileBanner
             presetKey={fixture.user.bannerValue as BannerPresetKey}
             onEditPress={() => router.push('/header-picker' as any)}
@@ -927,7 +933,21 @@ export default function ProfileScreen() {
             onPressList={(listId) => router.push(`/list/${listId}` as any)}
             onCreateList={() => setShowCreateList(true)}
           />
-        </ScrollView>
+          </ScrollView>
+          {/* Floating Settings affordance over the new hub. Placed top-left
+              to avoid colliding with the banner pen icon at top-right. As a
+              sibling of the ScrollView (not a child), it stays fixed while
+              the hub scrolls. */}
+          <Pressable
+            onPress={() => router.push('/settings' as any)}
+            style={[styles.hubGear, { top: 14 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            hitSlop={8}
+          >
+            <GearIcon />
+          </Pressable>
+        </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           <View style={styles.legacyHeader}>
@@ -959,20 +979,6 @@ export default function ProfileScreen() {
             {subTab === 'watchlist' && renderWatchlist()}
           </ScrollView>
         </View>
-      )}
-
-      {/* Floating Settings affordance over the new hub. Placed top-left to
-          avoid colliding with the banner pen icon at top-right. */}
-      {subTab === 'profile' && (
-        <Pressable
-          onPress={() => router.push('/settings' as any)}
-          style={[styles.hubGear, { top: insets.top + 14 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-          hitSlop={8}
-        >
-          <GearIcon />
-        </Pressable>
       )}
 
       {/* ---- Create List Bottom Sheet ---- */}
