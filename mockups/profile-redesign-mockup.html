@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Cinemagraphs — Profile redesign mockup (PR 1a)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  body {
+    background: #060610;
+    color: #F5F0E1;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    padding-bottom: 80px;
+  }
+
+  /* ============= CONTAINER ============= */
+  .device {
+    max-width: 393px;
+    margin: 0 auto;
+    background: #0D0D1A;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Mockup frame separator */
+  .mockup-banner {
+    background: rgba(200,169,81,0.08);
+    border: 0.5px solid rgba(200,169,81,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 16px;
+    font-size: 11px;
+    color: #C8A951;
+    letter-spacing: 0.04em;
+    text-align: center;
+    font-weight: 600;
+  }
+  .state-tag {
+    background: #C8A951;
+    color: #0D0D1A;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 24px 16px 12px;
+    text-transform: uppercase;
+  }
+
+  /* ============= GRADIENT BANNER ============= */
+  .banner {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+  }
+  /* Midnight preset (default for empty state) */
+  .banner.midnight {
+    background:
+      radial-gradient(ellipse at 25% 30%, rgba(45, 90, 130, 0.55), transparent 55%),
+      radial-gradient(ellipse at 75% 70%, rgba(120, 50, 100, 0.4), transparent 55%),
+      linear-gradient(135deg, #1a1f3a 0%, #0d1224 50%, #0a0f1f 100%);
+  }
+  /* Custom-derived gradient (populated state — assembled-from-films feel) */
+  .banner.custom {
+    background:
+      radial-gradient(ellipse at 30% 35%, rgba(200, 100, 60, 0.5), transparent 50%),
+      radial-gradient(ellipse at 70% 65%, rgba(80, 30, 140, 0.45), transparent 55%),
+      radial-gradient(ellipse at 50% 50%, rgba(45, 140, 100, 0.3), transparent 60%),
+      linear-gradient(160deg, #2a1530 0%, #1a1028 60%, #0d0a1a 100%);
+  }
+
+  /* Pen icon picker affordance */
+  .banner-edit {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    background: rgba(13, 13, 26, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 0.5px solid rgba(245, 240, 225, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .banner-edit svg { width: 16px; height: 16px; }
+
+  /* Subtle gradient scrim at bottom of banner for legibility */
+  .banner::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: linear-gradient(to bottom, transparent, rgba(13, 13, 26, 0.4) 70%, #0D0D1A);
+    pointer-events: none;
+  }
+
+  /* ============= AVATAR ============= */
+  .avatar-row {
+    position: relative;
+    padding: 0 20px;
+    margin-top: -42px;
+    z-index: 2;
+  }
+  .avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 3px solid #0D0D1A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .avatar.empty {
+    background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+    color: rgba(245, 240, 225, 0.55);
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .avatar.populated {
+    background:
+      radial-gradient(circle at 30% 30%, #c8a951, #8a6f30 70%, #5c4a1f 100%);
+  }
+  .avatar.populated .avatar-text {
+    color: #0D0D1A;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* ============= IDENTITY (NAME/HANDLE/BIO) ============= */
+  .identity {
+    padding: 14px 20px 0;
+  }
+  .name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 2px;
+  }
+  .handle {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(245, 240, 225, 0.5);
+    margin-bottom: 10px;
+  }
+  .bio {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: rgba(245, 240, 225, 0.78);
+    margin-bottom: 4px;
+  }
+  .bio-empty {
+    font-size: 14px;
+    font-weight: 400;
+    color: rgba(245, 240, 225, 0.32);
+    font-style: italic;
+  }
+
+  /* ============= 3-STAT ROW ============= */
+  .stats {
+    display: flex;
+    gap: 28px;
+    padding: 18px 20px 22px;
+    border-bottom: 0.5px solid rgba(245, 240, 225, 0.06);
+  }
+  .stat-num {
+    font-size: 18px;
+    font-weight: 600;
+    color: #F5F0E1;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: rgba(245, 240, 225, 0.5);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============= SECTION HEADERS ============= */
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 22px 20px 12px;
+  }
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: rgba(245, 240, 225, 0.55);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .section-link {
+    font-size: 13px;
+    color: #2DD4A8;
+    font-weight: 500;
+  }
+
+  /* ============= 4 FAVORITES STRIP ============= */
+  .favorites {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 0 20px;
+  }
+  .fav {
+    display: flex;
+    flex-direction: column;
+  }
+  .fav-poster {
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Empty state slots */
+  .fav-poster.empty {
+    background:
+      repeating-linear-gradient(45deg, rgba(245, 240, 225, 0.04) 0 6px, transparent 6px 12px),
+      rgba(245, 240, 225, 0.025);
+    border: 1px dashed rgba(245, 240, 225, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fav-poster.empty .plus {
+    color: rgba(245, 240, 225, 0.25);
+    font-size: 24px;
+    font-weight: 300;
+  }
+
+  /* Populated posters (gradient placeholders for mockup) */
+  .fav-poster.shrek      { background: linear-gradient(155deg, #5a8c3d, #2d4f1a 60%, #1a2f10); }
+  .fav-poster.ahx        { background: linear-gradient(155deg, #2a2a2a, #1a1a1a 60%, #0a0a0a); }
+  .fav-poster.darkknight { background: linear-gradient(155deg, #2d3a4d, #0f1a28 60%, #050a12); }
+  .fav-poster.founder    { background: linear-gradient(155deg, #c8451c, #7a2010 60%, #3d1008); }
+
+  .fav-arc {
+    height: 28px;
+    margin-top: 6px;
+    width: 100%;
+  }
+  .fav-arc-empty {
+    height: 28px;
+    margin-top: 6px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(245, 240, 225, 0.04) 50%, transparent);
+    border-radius: 2px;
+  }
+  .fav-title {
+    font-size: 11px;
+    color: rgba(245, 240, 225, 0.65);
+    margin-top: 5px;
+    text-align: center;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  .empty-microcopy {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(245, 240, 225, 0.42);
+    margin-top: 14px;
+    padding: 0 32px;
+    line-height: 1.45;
+  }
+
+  /* ============= RECENT REVIEWS (HORIZONTAL) ============= */
+  .reviews-scroll {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .reviews-scroll::-webkit-scrollbar { display: none; }
+  .review-card {
+    flex: 0 0 290px;
+    aspect-ratio: 5 / 7;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  .review-card.civilwar {
+    background:
+      linear-gradient(180deg, rgba(13, 13, 26, 0) 0%, rgba(13, 13, 26, 0.7) 70%, rgba(13, 13, 26, 0.95) 100%),
+      linear-gradient(160deg, #c8451c 0%, #7a2010 60%, #3d1008 100%);
+  }
+  .review-card.alien {
+    background:
+      linear-gradient(180deg, rgba(13, 13, 26, 0) 0%, rgba(13, 13, 26, 0.7) 70%, rgba(13, 13, 26, 0.95) 100%),
+      linear-gradient(160deg, #1a3d24 0%, #0a2515 60%, #051208 100%);
+  }
+  .score-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(13, 13, 26, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(200, 169, 81, 0.4);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #C8A951;
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .review-arc {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    height: 50px;
+    width: 100%;
+  }
+  .review-meta {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+  }
+  .review-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #F5F0E1;
+    margin-bottom: 3px;
+    line-height: 1.15;
+  }
+  .review-sub {
+    font-size: 12px;
+    color: rgba(245, 240, 225, 0.7);
+    font-weight: 400;
+  }
+
+  /* Empty review card */
+  .review-empty {
+    margin: 0 20px;
+    padding: 28px 20px;
+    background: rgba(245, 240, 225, 0.03);
+    border: 1px dashed rgba(245, 240, 225, 0.1);
+    border-radius: 14px;
+    text-align: center;
+  }
+  .review-empty-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    opacity: 0.4;
+  }
+  .review-empty-title {
+    font-size: 14px;
+    color: rgba(245, 240, 225, 0.65);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .review-empty-sub {
+    font-size: 12px;
+    color: rgba(245, 240, 225, 0.42);
+    line-height: 1.45;
+  }
+  .review-empty-cta {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 9px 18px;
+    background: #C8A951;
+    color: #0D0D1A;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 99px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ============= LISTS PREVIEW ============= */
+  .lists {
+    padding: 0 20px;
+  }
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid rgba(245, 240, 225, 0.06);
+  }
+  .list-row:last-child { border-bottom: none; }
+  .mosaic {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    flex-shrink: 0;
+  }
+  .mosaic > div { width: 100%; height: 100%; }
+  /* Sample mosaics */
+  .mosaic.peakcinema div:nth-child(1) { background: linear-gradient(135deg, #5a3a20, #2a1810); }
+  .mosaic.peakcinema div:nth-child(2) { background: linear-gradient(135deg, #2a4a3a, #102818); }
+  .mosaic.peakcinema div:nth-child(3) { background: linear-gradient(135deg, #4a2a4a, #1a101a); }
+  .mosaic.peakcinema div:nth-child(4) { background: linear-gradient(135deg, #3a3a5a, #181828); }
+
+  .mosaic.a24 div:nth-child(1) { background: linear-gradient(135deg, #5a1a2a, #2a0a10); }
+  .mosaic.a24 div:nth-child(2) { background: linear-gradient(135deg, #2a3a5a, #101828); }
+  .mosaic.a24 div:nth-child(3) { background: linear-gradient(135deg, #5a4a1a, #2a200a); }
+  .mosaic.a24 div:nth-child(4) { background: linear-gradient(135deg, #1a3a2a, #0a1810); }
+
+  .mosaic.devastating div:nth-child(1) { background: linear-gradient(135deg, #5a2010, #2a0808); }
+  .mosaic.devastating div:nth-child(2) { background: linear-gradient(135deg, #1a1a3a, #0a0a18); }
+  .mosaic.devastating div:nth-child(3) { background: linear-gradient(135deg, #3a1a3a, #18081a); }
+  .mosaic.devastating div:nth-child(4) { background: linear-gradient(135deg, #4a3a2a, #201810); }
+
+  .list-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .list-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #F5F0E1;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list-meta {
+    font-size: 12px;
+    color: rgba(245, 240, 225, 0.5);
+    font-weight: 400;
+  }
+  .list-chevron {
+    color: rgba(245, 240, 225, 0.3);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Lists empty state */
+  .lists-empty {
+    margin: 0 20px;
+    padding: 28px 20px;
+    background: rgba(245, 240, 225, 0.03);
+    border: 1px dashed rgba(245, 240, 225, 0.1);
+    border-radius: 14px;
+    text-align: center;
+  }
+
+  /* ============= TAB BAR (decorative — shows where this lives) ============= */
+  .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 393px;
+    background: rgba(13, 13, 26, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid rgba(245, 240, 225, 0.06);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 0 28px;
+    z-index: 100;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: rgba(245, 240, 225, 0.4);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .tab.active { color: #C8A951; }
+
+  /* ============= NOTES SECTION ============= */
+  .design-notes {
+    margin: 40px 16px 0;
+    padding: 18px;
+    background: rgba(45, 212, 168, 0.06);
+    border: 0.5px solid rgba(45, 212, 168, 0.25);
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: rgba(245, 240, 225, 0.85);
+  }
+  .design-notes h3 {
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #2DD4A8;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .design-notes ul { padding-left: 18px; margin-top: 6px; }
+  .design-notes li { margin-bottom: 6px; }
+  .design-notes strong { color: #F5F0E1; font-weight: 600; }
+  .design-notes p { margin-bottom: 8px; }
+  .design-notes p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+
+<div class="device">
+
+  <div class="mockup-banner">PR 1A · PROFILE REDESIGN MOCKUP · iPhone 14 Pro dimensions</div>
+
+  <!-- ============================================== -->
+  <!-- EMPTY STATE — what a brand-new user sees -->
+  <!-- ============================================== -->
+  <span class="state-tag">Empty state · brand new user · zero reviews · zero lists</span>
+
+  <!-- Banner with pen icon -->
+  <div class="banner midnight">
+    <div class="banner-edit" aria-label="Edit banner">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="#F5F0E1" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Avatar -->
+  <div class="avatar-row">
+    <div class="avatar empty">H</div>
+  </div>
+
+  <!-- Identity -->
+  <div class="identity">
+    <div class="name">Humza Raza</div>
+    <div class="handle">@humzaraza</div>
+    <div class="bio-empty">Add a bio in Edit Profile</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div>
+      <div class="stat-num">0</div>
+      <div class="stat-label">Reviewed</div>
+    </div>
+    <div>
+      <div class="stat-num">0</div>
+      <div class="stat-label">Following</div>
+    </div>
+    <div>
+      <div class="stat-num">0</div>
+      <div class="stat-label">Followers</div>
+    </div>
+  </div>
+
+  <!-- Favorites — empty -->
+  <div class="section-header-row">
+    <div class="section-title">Favorite films</div>
+  </div>
+  <div class="favorites">
+    <div class="fav">
+      <div class="fav-poster empty"><span class="plus">+</span></div>
+      <div class="fav-arc-empty"></div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster empty"><span class="plus">+</span></div>
+      <div class="fav-arc-empty"></div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster empty"><span class="plus">+</span></div>
+      <div class="fav-arc-empty"></div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster empty"><span class="plus">+</span></div>
+      <div class="fav-arc-empty"></div>
+    </div>
+  </div>
+  <div class="empty-microcopy">Review films to add favorites. Each favorite shows your personal arc shape.</div>
+
+  <!-- Recent Reviews — empty -->
+  <div class="section-header-row">
+    <div class="section-title">Recent reviews</div>
+  </div>
+  <div class="review-empty">
+    <div class="review-empty-icon">◐</div>
+    <div class="review-empty-title">No reviews yet</div>
+    <div class="review-empty-sub">Mark the moments that hit. Your arc takes shape from there.</div>
+    <div class="review-empty-cta">Find a film</div>
+  </div>
+
+  <!-- Lists — empty -->
+  <div class="section-header-row">
+    <div class="section-title">Lists</div>
+  </div>
+  <div class="lists-empty">
+    <div class="review-empty-icon">◫</div>
+    <div class="review-empty-title">No lists yet</div>
+    <div class="review-empty-sub">Group films that share an emotional shape, theme, or vibe.</div>
+    <div class="review-empty-cta">Create your first list</div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- POPULATED STATE — what a returning user sees -->
+  <!-- ============================================== -->
+  <span class="state-tag">Populated state · what it becomes</span>
+
+  <!-- Banner with custom-derived gradient -->
+  <div class="banner custom">
+    <div class="banner-edit" aria-label="Edit banner">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="#F5F0E1" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Avatar -->
+  <div class="avatar-row">
+    <div class="avatar populated"><span class="avatar-text">H</span></div>
+  </div>
+
+  <!-- Identity -->
+  <div class="identity">
+    <div class="name">Humza Raza</div>
+    <div class="handle">@humzaraza</div>
+    <div class="bio">Chasing films that feel like a punch to the chest. Toronto.</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div>
+      <div class="stat-num">247</div>
+      <div class="stat-label">Reviewed</div>
+    </div>
+    <div>
+      <div class="stat-num">143</div>
+      <div class="stat-label">Following</div>
+    </div>
+    <div>
+      <div class="stat-num">89</div>
+      <div class="stat-label">Followers</div>
+    </div>
+  </div>
+
+  <!-- Favorites — populated -->
+  <div class="section-header-row">
+    <div class="section-title">Favorite films</div>
+  </div>
+  <div class="favorites">
+    <div class="fav">
+      <div class="fav-poster shrek"></div>
+      <svg class="fav-arc" viewBox="0 0 80 28" preserveAspectRatio="none">
+        <polyline points="5,9.2 15,6.8 25,9.2 35,11.6 45,16.4 55,11.6 65,6.8 75,4.4"
+          stroke="#C8A951" stroke-width="1.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="fav-title">Shrek</div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster ahx"></div>
+      <svg class="fav-arc" viewBox="0 0 80 28" preserveAspectRatio="none">
+        <polyline points="5,11.6 15,14 25,16.4 35,11.6 45,9.2 55,6.8 65,14 75,21.2"
+          stroke="#C8A951" stroke-width="1.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="fav-title">American History X</div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster darkknight"></div>
+      <svg class="fav-arc" viewBox="0 0 80 28" preserveAspectRatio="none">
+        <polyline points="5,9.2 15,6.8 25,4.4 35,6.8 45,11.6 55,6.8 65,4.4 75,9.2"
+          stroke="#C8A951" stroke-width="1.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="fav-title">The Dark Knight</div>
+    </div>
+    <div class="fav">
+      <div class="fav-poster founder"></div>
+      <svg class="fav-arc" viewBox="0 0 80 28" preserveAspectRatio="none">
+        <polyline points="5,14 15,11.6 25,9.2 35,6.8 45,4.4 55,9.2 65,14 75,16.4"
+          stroke="#C8A951" stroke-width="1.4" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="fav-title">The Founder</div>
+    </div>
+  </div>
+
+  <!-- Recent Reviews — populated -->
+  <div class="section-header-row">
+    <div class="section-title">Recent reviews</div>
+    <div class="section-link">All →</div>
+  </div>
+  <div class="reviews-scroll">
+    <div class="review-card civilwar">
+      <div class="score-badge">7.2</div>
+      <svg class="review-arc" viewBox="0 0 290 50" preserveAspectRatio="none">
+        <polyline points="10,32 50,28 90,18 130,12 170,16 210,22 250,14 280,10"
+          stroke="#C8A951" stroke-width="2" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="review-meta">
+        <div class="review-title">Civil War</div>
+        <div class="review-sub">2024 · dir. Alex Garland</div>
+      </div>
+    </div>
+    <div class="review-card alien">
+      <div class="score-badge">6.4</div>
+      <svg class="review-arc" viewBox="0 0 290 50" preserveAspectRatio="none">
+        <polyline points="10,18 50,22 90,20 130,15 170,28 210,32 250,26 280,30"
+          stroke="#C8A951" stroke-width="2" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="review-meta">
+        <div class="review-title">Alien: Romulus</div>
+        <div class="review-sub">2024 · dir. Fede Álvarez</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lists — populated -->
+  <div class="section-header-row" style="margin-top: 24px;">
+    <div class="section-title">Lists</div>
+    <div class="section-link">All →</div>
+  </div>
+  <div class="lists">
+    <div class="list-row">
+      <div class="mosaic peakcinema"><div></div><div></div><div></div><div></div></div>
+      <div class="list-info">
+        <div class="list-title">Peak Cinema 2024</div>
+        <div class="list-meta">24 films</div>
+      </div>
+      <div class="list-chevron">›</div>
+    </div>
+    <div class="list-row">
+      <div class="mosaic a24"><div></div><div></div><div></div><div></div></div>
+      <div class="list-info">
+        <div class="list-title">A24 Ranked by Arc</div>
+        <div class="list-meta">38 films</div>
+      </div>
+      <div class="list-chevron">›</div>
+    </div>
+    <div class="list-row">
+      <div class="mosaic devastating"><div></div><div></div><div></div><div></div></div>
+      <div class="list-info">
+        <div class="list-title">Devastating Endings</div>
+        <div class="list-meta">17 films</div>
+      </div>
+      <div class="list-chevron">›</div>
+    </div>
+  </div>
+
+  <!-- Design notes -->
+  <div class="design-notes">
+    <h3>What's locked here</h3>
+    <ul>
+      <li><strong>Banner</strong> 180pt tall, gradient or photo (PR 1a is gradients only, 8 presets). Pen icon top-right opens picker.</li>
+      <li><strong>Avatar</strong> 84pt, 3pt dark border, overlaps banner by ~42pt.</li>
+      <li><strong>3 stats only</strong> (Avg Arc killed). Label is "Reviewed" not "Films" — review-first product.</li>
+      <li><strong>4 favorites</strong> review-gated. Empty state shows + slots with microcopy. Sparkline UNDER each poster (Spotify/Stocks pattern, no axes).</li>
+      <li><strong>Recent reviews</strong> ~75% width cards, 1 + peek visible, score badge top-right, sparkline mid-card, "title · year · dir" at bottom.</li>
+      <li><strong>Lists preview</strong> 3 rows max, 2x2 mosaic always shows first 4 films, "All →" goes to existing un-redesigned list view (Lists redesign is PR 3).</li>
+      <li><strong>NOT here:</strong> Stats teaser (cut from PR 1a, returns in PR 6), Recently Viewed (lives on Search tab post-auth), photo upload + film backdrop picker (PR 1b).</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Tap targets to verify on phone:</strong> pen icon hit area on banner, "All →" links, list rows, review cards, favorite slots.</p>
+  </div>
+
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 12L12 4L20 12V20H14V14H10V20H4V12Z" stroke="currentColor" stroke-width="1.6"/></svg>
+    Explore
+  </div>
+  <div class="tab">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M16 16L21 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Search
+  </div>
+  <div class="tab active">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M5 20C5 16 8 13 12 13C16 13 19 16 19 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Profile
+  </div>
+</div>
+
+</body>
+</html>
