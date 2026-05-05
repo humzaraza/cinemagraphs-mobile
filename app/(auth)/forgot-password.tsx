@@ -119,10 +119,11 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   heading: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.ivory,
     marginBottom: 6,
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontFamily: fonts.body,

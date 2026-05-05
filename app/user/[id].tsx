@@ -380,10 +380,11 @@ const styles = StyleSheet.create({
     color: colors.gold,
   },
   displayName: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 20,
     color: colors.ivory,
     marginTop: 10,
+    letterSpacing: -0.4,
   },
   username: {
     fontFamily: fonts.body,

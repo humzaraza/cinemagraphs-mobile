@@ -226,11 +226,12 @@ const slideStyles = StyleSheet.create({
     marginBottom: 32,
   },
   heading: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 22,
     color: colors.ivory,
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.4,
   },
   body: {
     fontFamily: fonts.body,

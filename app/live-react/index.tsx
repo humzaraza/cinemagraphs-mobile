@@ -1034,10 +1034,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   postTitleText: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 18,
     color: colors.ivory,
     marginBottom: 3,
+    letterSpacing: -0.2,
   },
   postSubtitle: {
     fontFamily: fonts.body,
@@ -1061,12 +1062,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   scoreCardValue: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 24,
     color: colors.gold,
   },
   scoreCardValueWhite: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 24,
     color: colors.ivory,
   },

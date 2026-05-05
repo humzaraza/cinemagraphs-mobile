@@ -73,11 +73,12 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, height: 32, justifyContent: 'center' },
   title: {
     flex: 1,
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.ivory,
     textAlign: 'center',
     marginRight: -32,
+    letterSpacing: -0.2,
   },
   content: { paddingHorizontal: 16 },
   sectionLabel: {

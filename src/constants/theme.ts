@@ -29,10 +29,9 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  heading: 'PlayfairDisplay_400Regular',
-  headingBold: 'PlayfairDisplay_700Bold',
   body: 'DMSans_400Regular',
   bodyMedium: 'DMSans_500Medium',
+  bodySemiBold: 'DMSans_600SemiBold',
   bodyBold: 'DMSans_700Bold',
 } as const;
 

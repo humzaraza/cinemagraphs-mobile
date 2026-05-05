@@ -723,9 +723,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,169,81,0.15)',
   },
   filmHeaderTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 15,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 16,
     color: colors.ivory,
+    letterSpacing: -0.2,
   },
   filmHeaderMeta: {
     fontFamily: fonts.body,
@@ -755,7 +756,7 @@ const styles = StyleSheet.create({
     color: colors.ivory,
   },
   overallScore: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 20,
     color: colors.gold,
   },
@@ -912,11 +913,12 @@ const styles = StyleSheet.create({
 
   // Post-submit shared
   postTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 17,
     color: colors.ivory,
     textAlign: 'center',
     marginBottom: 3,
+    letterSpacing: -0.2,
   },
   postSubtitle: {
     fontFamily: fonts.body,
@@ -952,7 +954,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreCardValue: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 22,
     color: colors.gold,
   },
@@ -1033,9 +1035,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   previewScoreValue: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 28,
     color: colors.gold,
+    letterSpacing: -0.6,
   },
   previewScoreLabel: {
     fontFamily: fonts.body,

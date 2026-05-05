@@ -457,9 +457,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 22,
     color: colors.ivory,
+    letterSpacing: -0.4,
   },
   reviewButton: {
     flexDirection: 'row',
@@ -579,10 +580,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   resultTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.ivory,
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   resultYear: {
     fontSize: 13,

@@ -208,10 +208,11 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   heading: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 20,
     color: colors.ivory,
     marginBottom: 4,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.body,

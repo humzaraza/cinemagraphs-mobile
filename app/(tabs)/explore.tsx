@@ -501,10 +501,11 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   sectionHeading: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.gold,
     marginBottom: 10,
+    letterSpacing: -0.1,
   },
 
   // Ticker

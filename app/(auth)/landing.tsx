@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     marginTop: -80,
   },
   logo: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 26,
     color: colors.gold,
     letterSpacing: 1.5,
