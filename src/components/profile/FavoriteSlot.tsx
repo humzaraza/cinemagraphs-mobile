@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
-import { fonts } from '../../constants/theme';
 import { getPosterUrl } from '../../lib/tmdb-image';
 import MiniArc from '../MiniArc';
 
@@ -68,13 +67,6 @@ export default function FavoriteSlot({
         <View style={styles.arc}>
           <MiniArc variant="favorite" points={film.sparklinePoints} />
         </View>
-        <Text
-          style={styles.title}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {film.title}
-        </Text>
       </Pressable>
     </View>
   );
@@ -125,13 +117,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
     borderRadius: 2,
     backgroundColor: 'rgba(245,240,225,0.04)',
-  },
-  title: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 11,
-    color: 'rgba(245,240,225,0.65)',
-    textAlign: 'center',
-    lineHeight: 14,
-    marginTop: 5,
   },
 });

@@ -79,25 +79,26 @@ export default function RecentReviewCard({
         <Text style={styles.scoreText}>{review.score.toFixed(1)}</Text>
       </View>
 
-      <View style={styles.arc}>
-        <MiniArc
-          variant="reviewCard"
-          points={review.sparklinePoints}
-          color={colors.gold}
-        />
-      </View>
-
-      <View style={styles.meta}>
-        <Text
-          style={styles.title}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {review.title}
-        </Text>
-        {subtitle.length > 0 && (
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        )}
+      <View style={styles.bottom}>
+        <View style={styles.arcWrap}>
+          <MiniArc
+            variant="reviewCard"
+            points={review.sparklinePoints}
+            color={colors.gold}
+          />
+        </View>
+        <View style={styles.bottomText}>
+          <Text
+            style={styles.title}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {review.title}
+          </Text>
+          {subtitle.length > 0 && (
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          )}
+        </View>
       </View>
     </Pressable>
   );
@@ -105,7 +106,7 @@ export default function RecentReviewCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: 290,
+    width: 240,
     aspectRatio: 5 / 7,
     borderRadius: 14,
     overflow: 'hidden',
@@ -139,19 +140,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.15,
     fontVariant: ['tabular-nums'],
   },
-  arc: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    transform: [{ translateY: -25 }],
-    alignItems: 'center',
-  },
-  meta: {
+  bottom: {
     position: 'absolute',
     bottom: 16,
-    left: 16,
-    right: 16,
+    left: 0,
+    right: 0,
+  },
+  arcWrap: {
+    marginBottom: 12,
+  },
+  bottomText: {
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 18,

@@ -16,7 +16,7 @@ const VARIANT_CONFIG: Record<
   { width: number; height: number; strokeWidth: number }
 > = {
   favorite:   { width: 80,  height: 28, strokeWidth: 1.4 },
-  reviewCard: { width: 290, height: 50, strokeWidth: 2 },
+  reviewCard: { width: 240, height: 50, strokeWidth: 2 },
 };
 
 export default function MiniArc({
