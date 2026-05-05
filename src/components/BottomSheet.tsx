@@ -85,9 +85,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.ivory,
+    letterSpacing: -0.2,
   },
   cancel: {
     fontFamily: fonts.body,

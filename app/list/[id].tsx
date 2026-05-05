@@ -387,10 +387,11 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, height: 32, justifyContent: 'center' },
   title: {
     flex: 1,
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.ivory,
     marginLeft: 4,
+    letterSpacing: -0.2,
   },
   toggleRow: { flexDirection: 'row', gap: 6 },
   toggleBtn: { padding: 4 },

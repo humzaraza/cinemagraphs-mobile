@@ -5,11 +5,6 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
-  PlayfairDisplay_400Regular,
-  PlayfairDisplay_500Medium,
-  PlayfairDisplay_700Bold,
-} from '@expo-google-fonts/playfair-display';
-import {
   DMSans_300Light,
   DMSans_400Regular,
   DMSans_500Medium,
@@ -50,9 +45,6 @@ function RootNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    PlayfairDisplay_400Regular,
-    PlayfairDisplay_500Medium,
-    PlayfairDisplay_700Bold,
     DMSans_300Light,
     DMSans_400Regular,
     DMSans_500Medium,

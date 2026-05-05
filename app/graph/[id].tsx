@@ -372,15 +372,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.ivory,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 12,
+    letterSpacing: -0.1,
   },
   headerScore: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
     color: colors.gold,
   },

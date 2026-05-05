@@ -498,7 +498,7 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   function renderScoreHeader() {
     const rowStyle = { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 6 };
     const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 15 };
-    const numStyle = { fontFamily: fonts.heading, fontWeight: '400' as const, fontSize: 18, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
+    const numStyle = { fontFamily: fonts.bodySemiBold, fontWeight: '600' as const, fontSize: 18, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
 
     if (graphMode === 'critics') {
       return (
@@ -1436,11 +1436,12 @@ const styles = StyleSheet.create({
     paddingTop: 36,
   },
   filmTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 18,
     color: colors.ivory,
     marginBottom: 3,
     lineHeight: 22,
+    letterSpacing: -0.4,
   },
   filmMeta: {
     fontFamily: fonts.body,
@@ -1494,12 +1495,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sentimentLabel: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.ivory,
+    letterSpacing: -0.1,
   },
   sentimentScore: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 18,
     color: colors.gold,
   },
@@ -1612,9 +1614,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reviewsTitle: {
-    fontFamily: fonts.heading,
-    fontSize: 13,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
     color: colors.ivory,
+    letterSpacing: -0.1,
   },
   reviewsSeeAll: {
     fontSize: 11,
@@ -1676,10 +1679,11 @@ const styles = StyleSheet.create({
 
   // Similar films
   similarHeading: {
-    fontFamily: fonts.heading,
-    fontSize: 13,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
     color: colors.ivory,
     marginBottom: 8,
+    letterSpacing: -0.1,
   },
   similarCard: {
     width: 70,

@@ -271,9 +271,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 18,
     color: colors.ivory,
+    letterSpacing: -0.2,
   },
 
   // Grid

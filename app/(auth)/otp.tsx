@@ -189,10 +189,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heading: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 20,
     color: colors.ivory,
     marginBottom: 6,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.body,

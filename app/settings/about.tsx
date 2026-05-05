@@ -148,9 +148,10 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, height: 32, justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
   wordmark: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 18,
     color: colors.gold,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.body,
@@ -172,10 +173,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.gold,
     marginBottom: 6,
+    letterSpacing: -0.1,
   },
   cardBody: {
     fontFamily: fonts.body,

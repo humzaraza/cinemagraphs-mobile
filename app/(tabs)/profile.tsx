@@ -1223,16 +1223,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   monthHeader: {
-    fontFamily: fonts.headingBold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
     color: colors.gold,
     marginBottom: 8,
+    letterSpacing: -0.1,
   },
   arcScore: {
     position: 'absolute',
     top: 8,
     right: 12,
-    fontFamily: fonts.headingBold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 20,
     color: colors.gold,
   },
@@ -1435,7 +1436,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   unauthLogo: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.bodyBold,
     fontSize: 26,
     color: colors.gold,
   },
