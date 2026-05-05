@@ -9,6 +9,7 @@ import {
   Dimensions,
   TextInput,
   Switch,
+  BackHandler,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,15 +24,43 @@ import {
   fetchUserLists,
   createUserList,
 } from '../../src/lib/api';
-import type { MockUser, MockFilm, MockWatchlistFilm } from '../../src/data/mockProfile';
+import {
+  mockProfileEmpty,
+  mockProfilePopulated,
+  type MockUser,
+  type MockFilm,
+  type MockWatchlistFilm,
+} from '../../src/data/mockProfile';
+import type { BannerPresetKey } from '../../src/constants/bannerPresets';
 import type { Film } from '../../src/types/film';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import FilmPicker from '../../src/components/FilmPicker';
 import FollowersModal from '../../src/components/FollowersModal';
+import ProfileBanner from '../../src/components/profile/ProfileBanner';
+import ProfileAvatar from '../../src/components/profile/ProfileAvatar';
+import ProfileIdentity from '../../src/components/profile/ProfileIdentity';
+import ProfileStats from '../../src/components/profile/ProfileStats';
+import SectionHeader from '../../src/components/profile/SectionHeader';
+import FavoritesStrip from '../../src/components/profile/FavoritesStrip';
+import RecentReviewsRow from '../../src/components/profile/RecentReviewsRow';
+import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+
+// Dev-iteration toggle for the Phase 5 mock fixtures. Flip to 'empty' to
+// preview the brand-new-user state.
+// TODO PR 1a / post-auth: replace fixture consumption with real API
+// (fetchUserProfile / fetchUserFilms / fetchUserLists) when the web ships
+// the new profile contract.
+const PROFILE_FIXTURES = {
+  empty: mockProfileEmpty,
+  populated: mockProfilePopulated,
+} as const;
+type ProfileFixtureMode = keyof typeof PROFILE_FIXTURES;
+const PROFILE_FIXTURE_MODE: ProfileFixtureMode = 'populated';
+const fixture = PROFILE_FIXTURES[PROFILE_FIXTURE_MODE];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -139,6 +168,11 @@ function Avatar({ size, initial, imageUrl }: { size: number; initial: string; im
 
 // ---------------------------------------------------------------------------
 // Sub-tab bar
+//
+// Hidden in PR 1a redesign. Legacy sub-tabs are reachable via "All ->" on
+// the new hub. Watchlist sub-tab is currently orphaned (no UI entry point);
+// will be re-wired as a pinned list on the Lists screen in PR 3. Definition
+// is kept in case rollback is needed during the PR 1a rollout.
 // ---------------------------------------------------------------------------
 
 const SUB_TABS: { key: SubTab; label: string }[] = [
@@ -429,6 +463,19 @@ export default function ProfileScreen() {
 
   useFocusEffect(loadProfile);
 
+  // Hardware back on legacy sub-tabs returns to the new hub instead of
+  // exiting the Profile tab. iOS swipe-back is route-level (handled by
+  // expo-router) so it cannot intercept internal sub-tab state in PR 1a;
+  // PR 3 lifts Lists/Watchlist into their own routes and resolves that.
+  useEffect(() => {
+    if (subTab === 'profile') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setSubTab('profile');
+      return true;
+    });
+    return () => sub.remove();
+  }, [subTab]);
+
   console.log('[Profile] authUser?.image:', authUser?.image);
 
   // Navigation helpers from profile hub rows
@@ -502,6 +549,11 @@ export default function ProfileScreen() {
 
   // -----------------------------------------------------------------------
   // Profile hub (sub-tab: profile)
+  //
+  // @deprecated PR 1a: replaced by inline JSX in the main return that
+  // composes ProfileBanner / ProfileAvatar / ProfileIdentity / ProfileStats
+  // / FavoritesStrip / RecentReviewsRow / ListsPreview. Kept here as a
+  // rollback safety net during the PR 1a rollout; safe to delete in PR 1c.
   // -----------------------------------------------------------------------
   const renderProfileHub = () => {
     const sectionRows: { label: string; count: number }[] = [
@@ -743,7 +795,7 @@ export default function ProfileScreen() {
                   {(list.previewPosters ?? []).slice(0, 4).map((p: string, i: number) => (
                     <Image
                       key={i}
-                      source={{ uri: getPosterUrl({ posterPath: p }, 'thumbnail') ?? undefined }}
+                      source={{ uri: getPosterUrl({ posterUrl: p }, 'thumbnail') ?? undefined }}
                       style={styles.listThumb}
                       resizeMode="cover"
                     />
@@ -799,36 +851,135 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header - same on every sub-tab */}
-        <View style={styles.collapsedHeader}>
-          <View style={[styles.collapsedCenter, subTab === 'profile' && { opacity: 0 }]}>
-            <Avatar size={44} initial={user.avatarInitial} imageUrl={authUser?.image ?? user?.image} />
-            <Text style={styles.collapsedName}>{user.name}</Text>
-          </View>
-          <Pressable
-            onPress={() => router.push('/settings' as any)}
-            style={styles.collapsedGear}
+      {subTab === 'profile' ? (
+        <ScrollView
+          style={{ flex: 1, backgroundColor: colors.background }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <ProfileBanner
+            presetKey={fixture.user.bannerValue as BannerPresetKey}
+            onEditPress={() => router.push('/header-picker' as any)}
+          />
+
+          <View
+            style={{
+              marginTop: -42,
+              paddingHorizontal: 20,
+              zIndex: 2,
+              alignItems: 'flex-start',
+            }}
           >
-            <GearIcon />
-          </Pressable>
+            <ProfileAvatar
+              name={fixture.user.name}
+              image={fixture.user.image}
+            />
+          </View>
+
+          <ProfileIdentity
+            name={fixture.user.name}
+            username={fixture.user.username}
+            bio={fixture.user.bio}
+            onBioPlaceholderPress={() => router.push('/settings/edit-profile' as any)}
+          />
+
+          <ProfileStats
+            reviewed={fixture.stats.reviewCount}
+            following={fixture.stats.followingCount}
+            followers={fixture.stats.followerCount}
+            onPressFollowing={() => {
+              setFollowersInitialTab('following');
+              setShowFollowersModal(true);
+            }}
+            onPressFollowers={() => {
+              setFollowersInitialTab('followers');
+              setShowFollowersModal(true);
+            }}
+          />
+
+          <SectionHeader title="FAVORITE FILMS" />
+          <FavoritesStrip
+            favorites={fixture.favoriteFilms}
+            onAddFavorite={() => {
+              // No-op for PR 1a; favorite editing ships in PR 9 (post-auth).
+            }}
+            onPressFilm={(filmId) => router.push(`/film/${filmId}` as any)}
+          />
+
+          <SectionHeader
+            title="RECENT REVIEWS"
+            allLink={
+              fixture.recentReviews.length > 0
+                ? { label: 'All →', onPress: () => setSubTab('my-films') }
+                : undefined
+            }
+          />
+          <RecentReviewsRow
+            reviews={fixture.recentReviews}
+            onPressReview={(filmId) => router.push(`/film/${filmId}` as any)}
+            onFindFilm={() => router.push('/(tabs)/search' as any)}
+          />
+
+          <SectionHeader
+            title="LISTS"
+            allLink={
+              fixture.lists.length > 0
+                ? { label: 'All →', onPress: () => setSubTab('lists') }
+                : undefined
+            }
+          />
+          <ListsPreview
+            lists={fixture.lists}
+            onPressList={(listId) => router.push(`/list/${listId}` as any)}
+            onCreateList={() => setShowCreateList(true)}
+          />
+        </ScrollView>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={styles.legacyHeader}>
+            <Pressable
+              onPress={() => setSubTab('profile')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Back to profile"
+            >
+              <Text style={styles.legacyHeaderChevron}>‹</Text>
+            </Pressable>
+            <Text style={styles.legacyHeaderTitle}>
+              {subTab === 'my-films'
+                ? 'My films'
+                : subTab === 'lists'
+                ? 'Lists'
+                : 'Watchlist'}
+            </Text>
+          </View>
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 80 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {subTab === 'my-films' && renderMyFilms()}
+            {subTab === 'lists' && renderLists()}
+            {subTab === 'watchlist' && renderWatchlist()}
+          </ScrollView>
         </View>
+      )}
 
-        {/* Sub-tabs - never moves */}
-        <SubTabBar active={subTab} onSelect={setSubTab} />
-
-        {/* Content */}
-        {subTab === 'profile' && renderProfileHub()}
-        {subTab === 'my-films' && renderMyFilms()}
-        {subTab === 'lists' && renderLists()}
-        {subTab === 'watchlist' && renderWatchlist()}
-      </ScrollView>
+      {/* Floating Settings affordance over the new hub. Placed top-left to
+          avoid colliding with the banner pen icon at top-right. */}
+      {subTab === 'profile' && (
+        <Pressable
+          onPress={() => router.push('/settings' as any)}
+          style={[styles.hubGear, { top: insets.top + 14 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={8}
+        >
+          <GearIcon />
+        </Pressable>
+      )}
 
       {/* ---- Create List Bottom Sheet ---- */}
       <BottomSheet
@@ -1467,5 +1618,42 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 6,
     backgroundColor: 'rgba(245,240,225,0.06)',
+  },
+
+  // ---- Legacy sub-tab back-chevron header (PR 1a) ----
+  legacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(245,240,225,0.06)',
+  },
+  legacyHeaderChevron: {
+    fontSize: 22,
+    color: colors.ivory,
+    fontWeight: '300',
+  },
+  legacyHeaderTitle: {
+    marginLeft: 12,
+    fontSize: 16,
+    fontFamily: fonts.bodySemiBold,
+    color: colors.ivory,
+  },
+
+  // ---- Floating gear icon over the new hub (PR 1a) ----
+  hubGear: {
+    position: 'absolute',
+    left: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 0.5,
+    borderColor: 'rgba(245,240,225,0.2)',
+    backgroundColor: 'rgba(13,13,26,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });
