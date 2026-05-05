@@ -844,7 +844,22 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      {/* Top nav bar. Holds the global Settings gear above the banner so
+          the banner stays a pure gradient with no UI elements over it.
+          Background matches the page so the bar reads as part of the
+          page chrome rather than a translucent overlay. */}
+      <View style={[styles.topNavBar, { paddingTop: insets.top }]}>
+        <Pressable
+          onPress={() => router.push('/settings' as any)}
+          style={styles.navGear}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={8}
+        >
+          <GearIcon />
+        </Pressable>
+      </View>
       {subTab === 'profile' ? (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           <ScrollView
@@ -959,23 +974,6 @@ export default function ProfileScreen() {
             {subTab === 'watchlist' && renderWatchlist()}
           </ScrollView>
         </View>
-      )}
-
-      {/* Floating Settings affordance over the new hub. Lives outside the
-          hub wrapper because a hot-reload edge case in this SDK / Expo Go
-          let the gear scroll with the hub's ScrollView even when it was a
-          sibling of ScrollView inside the wrapper. The outer container never
-          scrolls, so anchoring here pins reliably. */}
-      {subTab === 'profile' && (
-        <Pressable
-          onPress={() => router.push('/settings' as any)}
-          style={[styles.hubGear, { top: insets.top + 14 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-          hitSlop={8}
-        >
-          <GearIcon />
-        </Pressable>
       )}
 
       {/* ---- Create List Bottom Sheet ---- */}
@@ -1639,10 +1637,15 @@ const styles = StyleSheet.create({
     color: colors.ivory,
   },
 
-  // ---- Floating gear icon over the new hub (PR 1a) ----
-  hubGear: {
-    position: 'absolute',
-    left: 14,
+  // ---- Top nav bar with global Settings gear (PR 1a) ----
+  topNavBar: {
+    width: '100%',
+    paddingHorizontal: 14,
+    backgroundColor: colors.background,
+  },
+  navGear: {
+    alignSelf: 'flex-end',
+    marginTop: 14,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -1651,6 +1654,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,13,26,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
   },
 });
