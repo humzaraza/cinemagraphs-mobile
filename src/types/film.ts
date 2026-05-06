@@ -28,6 +28,11 @@ export interface Film {
   year: number;
   posterPath: string | null;
   posterUrl: string | null;
+  // Optional on the listing endpoints (only populated when the API
+  // includes backdrops, e.g. /api/films?hasBackdrop=true&sort=popular
+  // for the banner picker). Always populated on FilmDetail.
+  backdropPath?: string | null;
+  backdropUrl?: string | null;
   runtime: number | null;
   genres: string[];
   director: string | null;

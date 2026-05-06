@@ -24,14 +24,15 @@ import {
   fetchUserWatchlist,
   fetchUserLists,
   createUserList,
+  fetchFilmDetail,
   type UserProfile,
 } from '../../src/lib/api';
 import {
   type MockFilm,
   type MockWatchlistFilm,
 } from '../../src/data/mockProfile';
-import type { BannerPresetKey } from '../../src/constants/bannerPresets';
-import type { Film } from '../../src/types/film';
+import { resolveBannerSource } from '../../src/lib/banner-url';
+import type { Film, FilmDetail } from '../../src/types/film';
 // createList no longer needed - lists are created via API
 import BottomSheet from '../../src/components/BottomSheet';
 import FilmPicker from '../../src/components/FilmPicker';
@@ -378,6 +379,13 @@ export default function ProfileScreen() {
   // Banner 3-dots menu sheet
   const [showBannerMenu, setShowBannerMenu] = useState(false);
 
+  // Resolved banner backdrop film (PR 1b). When the user has a BACKDROP
+  // banner, the user profile API returns only the filmId in bannerValue
+  // (no resolved backdropUrl), so we fetch the film detail once to get
+  // the backdrop URL for ProfileBanner to render. GRADIENT users skip
+  // the fetch entirely (resolveBannerSource ignores the film record).
+  const [bannerFilm, setBannerFilm] = useState<FilmDetail | null>(null);
+
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
     fetchUserProfile()
@@ -425,6 +433,34 @@ export default function ProfileScreen() {
   }, [isAuthenticated]);
 
   useFocusEffect(loadProfile);
+
+  // Resolve the banner backdrop film whenever the persisted bannerType /
+  // bannerValue changes. Only fires for BACKDROP; GRADIENT clears any
+  // stale bannerFilm so a Backdrop -> Gradient switch immediately stops
+  // showing the old image. Errors are swallowed: a missing fetch falls
+  // back to the default gradient via resolveBannerSource.
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.user.bannerType !== 'BACKDROP') {
+      setBannerFilm(null);
+      return;
+    }
+    const targetId = profile.user.bannerValue;
+    // Skip refetch if we already resolved this film.
+    if (bannerFilm?.id === targetId) return;
+    let cancelled = false;
+    fetchFilmDetail(targetId)
+      .then((film) => {
+        if (cancelled) return;
+        setBannerFilm(film);
+      })
+      .catch(() => {
+        if (!cancelled) setBannerFilm(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, bannerFilm?.id]);
 
   // Hardware back on legacy sub-tabs returns to the new hub instead of
   // exiting the Profile tab. iOS swipe-back is route-level (handled by
@@ -725,7 +761,11 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
           >
           <ProfileBanner
-            presetKey={profile.user.bannerValue as BannerPresetKey}
+            source={resolveBannerSource(
+              profile.user.bannerType,
+              profile.user.bannerValue,
+              bannerFilm,
+            )}
             onMenuPress={() => setShowBannerMenu(true)}
           />
 
@@ -972,7 +1012,10 @@ export default function ProfileScreen() {
               setShowBannerMenu(false);
               router.push({
                 pathname: '/header-picker',
-                params: { current: profile.user.bannerValue },
+                params: {
+                  bannerType: profile.user.bannerType,
+                  bannerValue: profile.user.bannerValue,
+                },
               } as any);
             }}
             style={styles.menuRow}
