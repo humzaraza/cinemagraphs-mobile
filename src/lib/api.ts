@@ -86,6 +86,30 @@ export async function searchFilms(
   return (data?.films ?? []) as Film[];
 }
 
+// Banner picker (PR 1b) film listing. Hits /api/films with the popular
+// sort + hasBackdrop filter shipped in web PR #28. Default browse and
+// search both go through here; the only difference is whether `q` is
+// passed. `limit` defaults to 12 to match the picker's two-row 3-column
+// grid in the default browse state.
+export async function fetchBackdropFilms(
+  options: { q?: string; limit?: number; signal?: AbortSignal } = {},
+): Promise<Film[]> {
+  const { q, limit = 12, signal } = options;
+  const params = new URLSearchParams({
+    sort: 'popular',
+    hasBackdrop: 'true',
+    limit: String(limit),
+  });
+  const trimmed = q?.trim();
+  if (trimmed) params.set('q', trimmed);
+  const res = await apiFetch(`/films?${params.toString()}`, { signal });
+  if (!res.ok) {
+    throw new Error(`Failed to load films (${res.status})`);
+  }
+  const data = await res.json();
+  return (Array.isArray(data) ? data : data?.films ?? []) as Film[];
+}
+
 // Fetch a paginated category. Used by the category browse screen.
 // Maps category labels to /api/films query params.
 //
