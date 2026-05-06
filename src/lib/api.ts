@@ -317,7 +317,50 @@ export async function loginWithApple(identityToken: string, fullName?: string | 
 // Profile (real API calls)
 // ---------------------------------------------------------------------------
 
-export async function fetchUserProfile(): Promise<any> {
+export type BannerType = 'GRADIENT' | 'PHOTO' | 'BACKDROP';
+
+export interface UserProfileUser {
+  id: string;
+  name: string | null;
+  username: string | null;
+  bio: string | null;
+  image: string | null;
+  bannerType: BannerType;
+  bannerValue: string;
+}
+
+export interface UserProfileStats {
+  reviewCount: number;
+  followingCount: number;
+  followerCount: number;
+}
+
+export interface UserProfileRecentReview {
+  filmId: string;
+  title: string;
+  year: number | null;
+  director: string | null;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  score: number;
+  sparklinePoints: number[];
+}
+
+export interface UserProfileListPreview {
+  id: string;
+  name: string;
+  filmCount: number;
+  mosaicPosters: string[];
+}
+
+export interface UserProfile {
+  user: UserProfileUser;
+  stats: UserProfileStats;
+  recentReviews: UserProfileRecentReview[];
+  lists: UserProfileListPreview[];
+}
+
+export async function fetchUserProfile(): Promise<UserProfile | null> {
   const token = await getToken();
   const res = await apiFetch('/user/profile');
   if (!res.ok) {
@@ -325,6 +368,20 @@ export async function fetchUserProfile(): Promise<any> {
     return null;
   }
   return res.json();
+}
+
+export async function updateUserBanner(
+  bannerType: BannerType,
+  bannerValue: string,
+): Promise<void> {
+  const res = await apiFetch('/user/banner', {
+    method: 'PATCH',
+    body: JSON.stringify({ bannerType, bannerValue }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update banner');
+  }
 }
 
 export async function fetchUserFilms(type?: string): Promise<any[]> {

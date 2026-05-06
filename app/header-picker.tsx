@@ -6,10 +6,11 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
+  Alert,
   BackHandler,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../src/constants/theme';
 import BannerGradient from '../src/components/BannerGradient';
@@ -19,11 +20,7 @@ import {
   getBannerPreset,
   type BannerPresetKey,
 } from '../src/constants/bannerPresets';
-import {
-  PROFILE_FIXTURES,
-  PROFILE_FIXTURE_MODE,
-  setMockBannerValue,
-} from '../src/data/mockProfile';
+import { updateUserBanner } from '../src/lib/api';
 
 const PREVIEW_HEIGHT = 120;
 const SWATCH_PAD = 20;
@@ -35,15 +32,21 @@ export default function HeaderPickerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const { current } = useLocalSearchParams<{ current?: string }>();
 
-  // Saved value at mount. Held in a ref so the dirty check stays anchored
-  // to the value the user opened the picker with, even if the fixture is
-  // mutated mid-session.
+  // Saved value at mount, passed in by the profile screen via the `current`
+  // route param. Held in a ref so the dirty check stays anchored to the
+  // value the user opened the picker with. Falls back to the first preset
+  // if the param is missing or doesn't match the locked tuple (e.g. PHOTO
+  // banner type once that ships).
   const savedKey = useRef<BannerPresetKey>(
-    PROFILE_FIXTURES[PROFILE_FIXTURE_MODE].user.bannerValue as BannerPresetKey,
+    BANNER_PRESET_KEYS.includes(current as BannerPresetKey)
+      ? (current as BannerPresetKey)
+      : BANNER_PRESET_KEYS[0],
   ).current;
 
   const [inProgressKey, setInProgressKey] = useState<BannerPresetKey>(savedKey);
+  const [saving, setSaving] = useState(false);
 
   const isDirty = inProgressKey !== savedKey;
 
@@ -55,15 +58,18 @@ export default function HeaderPickerScreen() {
     return () => sub.remove();
   }, [router]);
 
-  const handleSave = () => {
-    if (!isDirty) return;
-    // TODO: replace mock mutation with PATCH /api/user/banner when the
-    // web side merges. Body shape:
-    //   { bannerType: 'GRADIENT', bannerValue: inProgressKey }
-    // Endpoint validates against the locked 8 preset keys. On error,
-    // show a toast and stay on this screen instead of navigating back.
-    setMockBannerValue(PROFILE_FIXTURE_MODE, inProgressKey);
-    router.back();
+  const handleSave = async () => {
+    if (!isDirty || saving) return;
+    setSaving(true);
+    try {
+      await updateUserBanner('GRADIENT', inProgressKey);
+      router.back();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not save banner';
+      Alert.alert('Save failed', message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const swatchOuterWidth = (screenWidth - SWATCH_PAD * 2 - SWATCH_GAP) / 2;
@@ -120,14 +126,14 @@ export default function HeaderPickerScreen() {
       >
         <Pressable
           onPress={handleSave}
-          disabled={!isDirty}
+          disabled={!isDirty || saving}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Save banner"
-          accessibilityState={{ disabled: !isDirty }}
-          style={[styles.saveBtn, !isDirty && styles.saveBtnDisabled]}
+          accessibilityState={{ disabled: !isDirty || saving }}
+          style={[styles.saveBtn, (!isDirty || saving) && styles.saveBtnDisabled]}
         >
-          <Text style={styles.saveText}>Save</Text>
+          <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save'}</Text>
         </Pressable>
       </View>
     </View>

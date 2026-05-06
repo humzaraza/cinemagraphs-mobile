@@ -40,7 +40,7 @@ export default function EditProfileScreen() {
     fetchUserProfile()
       .then((profile) => {
         if (profile) {
-          const u = profile.user ?? profile;
+          const u = profile.user;
           setName(u.name ?? '');
           setUsername(u.username ?? '');
           setBio(u.bio ?? '');
