@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   TextInput,
   Switch,
   BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,11 +24,9 @@ import {
   fetchUserWatchlist,
   fetchUserLists,
   createUserList,
+  type UserProfile,
 } from '../../src/lib/api';
 import {
-  PROFILE_FIXTURES,
-  PROFILE_FIXTURE_MODE,
-  type MockUser,
   type MockFilm,
   type MockWatchlistFilm,
 } from '../../src/data/mockProfile';
@@ -46,15 +45,7 @@ import FavoritesStrip from '../../src/components/profile/FavoritesStrip';
 import RecentReviewsRow from '../../src/components/profile/RecentReviewsRow';
 import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
-import { getRecentlyViewed, type RecentFilm } from '../../src/lib/recentlyViewed';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
-
-// Phase 5 mock fixtures live in src/data/mockProfile.ts so the picker
-// (app/header-picker.tsx) and this screen share a single source.
-// TODO PR 1a / post-auth: replace fixture consumption with real API
-// (fetchUserProfile / fetchUserFilms / fetchUserLists) when the web ships
-// the new profile contract.
-const fixture = PROFILE_FIXTURES[PROFILE_FIXTURE_MODE];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -358,13 +349,11 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, user: authUser } = useAuth();
 
-  const [user, setUser] = useState<(MockUser & Record<string, any>) | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [films, setFilms] = useState<MockFilm[]>([]);
   const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
   const [lists, setLists] = useState<any[]>([]);
-  const [recentFilms, setRecentFilms] = useState<RecentFilm[]>([]);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [profileError, setProfileError] = useState(false);
+  const [firstFetchComplete, setFirstFetchComplete] = useState(false);
 
   const [subTab, setSubTab] = useState<SubTab>('profile');
   const [filmFilter, setFilmFilter] = useState<FilmFilter>('reviewed');
@@ -391,29 +380,18 @@ export default function ProfileScreen() {
 
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
-    setProfileError(false);
     fetchUserProfile()
       .then((p) => {
         if (p) {
-          setUser({ ...(p.user ?? p), stats: p.stats ?? {} });
+          setProfile(p);
         } else {
-          // API returned null/empty - fall back to authUser
-          if (authUser) {
-            setUser({ ...authUser, image: authUser?.image ?? null, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
-          }
           console.error('[Profile] fetchUserProfile returned null');
         }
       })
       .catch((e) => {
         console.error('[Profile] fetchUserProfile error:', e);
-        // Fall back to authUser so we don't stuck on loading
-        if (authUser) {
-          setUser({ ...authUser, image: authUser?.image ?? null, bio: '', avatarInitial: (authUser.name ?? 'U').charAt(0).toUpperCase(), stats: { films: 0, following: 0, followers: 0 }, counts: { reviewed: 0, watched: 0, watchlist: 0, lists: 0, liveReacted: 0 } } as any);
-        } else {
-          setProfileError(true);
-        }
       })
-      .finally(() => setProfileLoaded(true));
+      .finally(() => setFirstFetchComplete(true));
     Promise.all([
       fetchUserFilms('reviewed'),
       fetchUserFilms('watched'),
@@ -444,8 +422,7 @@ export default function ProfileScreen() {
       .catch((e) => console.error('[Profile] fetchUserFilms error:', e));
     fetchUserWatchlist().then(setWatchlist).catch((e) => console.error('[Profile] fetchUserWatchlist error:', e));
     fetchUserLists().then(setLists).catch((e) => console.error('[Profile] fetchUserLists error:', e));
-    getRecentlyViewed().then(setRecentFilms);
-  }, [isAuthenticated, authUser]);
+  }, [isAuthenticated]);
 
   useFocusEffect(loadProfile);
 
@@ -507,15 +484,19 @@ export default function ProfileScreen() {
     );
   }
 
-  if (!user && !profileLoaded) {
+  // First-mount loading: spinner until the initial profile fetch resolves.
+  // Subsequent focus refetches keep the cached profile on screen (no spinner).
+  if (!profile && !firstFetchComplete) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.gold} />
+        </View>
       </View>
     );
   }
 
-  if (!user) {
+  if (!profile) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.unauthWrap}>
@@ -532,106 +513,6 @@ export default function ProfileScreen() {
   const watched = films.filter((f) => f.status === 'watched' || f.status === 'reviewed');
   const liveReacted = films.filter((f) => f.status === 'live-reacted');
   const activeFilms = filmFilter === 'reviewed' ? reviewed : filmFilter === 'reactions' ? liveReacted : watched;
-
-  // -----------------------------------------------------------------------
-  // Profile hub (sub-tab: profile)
-  //
-  // @deprecated PR 1a: replaced by inline JSX in the main return that
-  // composes ProfileBanner / ProfileAvatar / ProfileIdentity / ProfileStats
-  // / FavoritesStrip / RecentReviewsRow / ListsPreview. Kept here as a
-  // rollback safety net during the PR 1a rollout; safe to delete in PR 1c.
-  // -----------------------------------------------------------------------
-  const renderProfileHub = () => {
-    const sectionRows: { label: string; count: number }[] = [
-      { label: 'Reviewed', count: user?.counts?.reviewed ?? user?.stats?.reviewCount ?? user?.reviewCount ?? 0 },
-      // TODO: Unhide when watched/ticket stub feature is enabled
-      // { label: 'Watched', count: user?.counts?.watched ?? user?.stats?.watchedCount ?? user?.watchedCount ?? 0 },
-      { label: 'Watchlist', count: user?.counts?.watchlist ?? user?.stats?.watchlistCount ?? user?.watchlistCount ?? 0 },
-      { label: 'Lists', count: user?.counts?.lists ?? user?.stats?.listCount ?? user?.listCount ?? 0 },
-      { label: 'Following', count: user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0 },
-      { label: 'Followers', count: user?.stats?.followerCount ?? user?.stats?.followers ?? user?.followerCount ?? 0 },
-    ];
-
-    return (
-      <>
-        {/* Avatar + username + bio */}
-        <View style={styles.avatarSection}>
-          <Avatar size={56} initial={user?.avatarInitial ?? (user?.name ?? 'U').charAt(0).toUpperCase()} imageUrl={authUser?.image ?? user?.image} />
-          <Text style={styles.username}>{user?.name ?? ''}</Text>
-          <Text style={styles.bio}>{user?.bio ?? ''}</Text>
-        </View>
-
-        {/* Stats card */}
-        <View style={styles.statsCard}>
-          <Pressable style={styles.statCol}>
-            <Text style={styles.statNumber}>{user?.stats?.reviewCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Films</Text>
-          </Pressable>
-          <View style={styles.statDivider} />
-          <Pressable style={styles.statCol} onPress={() => { setFollowersInitialTab('following'); setShowFollowersModal(true); }}>
-            <Text style={styles.statNumber}>{user?.stats?.followingCount ?? user?.stats?.following ?? user?.followingCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Following</Text>
-          </Pressable>
-          <View style={styles.statDivider} />
-          <Pressable style={styles.statCol} onPress={() => { setFollowersInitialTab('followers'); setShowFollowersModal(true); }}>
-            <Text style={styles.statNumber}>{user?.stats?.followerCount ?? user?.stats?.followers ?? user?.followerCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </Pressable>
-        </View>
-
-        {/* Recently viewed */}
-        <Text style={styles.sectionLabel}>RECENTLY VIEWED</Text>
-        {recentFilms.length === 0 ? (
-          <View style={styles.emptySection}>
-            <Text style={styles.emptyText}>
-              No recently viewed films
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.recentScroll}
-            contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
-          >
-            {recentFilms.slice(0, 6).map((rf) => {
-              const uri = getPosterUrl(rf, 'card') ?? undefined;
-              return (
-                <Pressable
-                  key={rf.filmId}
-                  onPress={() => router.push(`/film/${rf.filmId}` as any)}
-                >
-                  <Image
-                    source={{ uri }}
-                    style={styles.recentPoster}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-
-        {/* Section rows */}
-        {sectionRows.map((row, i) => (
-          <Pressable
-            key={row.label}
-            onPress={() => handleRowTap(row.label)}
-            style={[
-              styles.sectionRow,
-              i < sectionRows.length - 1 && styles.sectionRowBorder,
-            ]}
-          >
-            <Text style={styles.sectionRowLabel}>{row.label}</Text>
-            <View style={styles.sectionRowRight}>
-              <Text style={styles.sectionRowCount}>{row.count}</Text>
-              <ChevronRight />
-            </View>
-          </Pressable>
-        ))}
-      </>
-    );
-  };
 
   // -----------------------------------------------------------------------
   // My Films
@@ -844,7 +725,7 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
           >
           <ProfileBanner
-            presetKey={fixture.user.bannerValue as BannerPresetKey}
+            presetKey={profile.user.bannerValue as BannerPresetKey}
             onMenuPress={() => setShowBannerMenu(true)}
           />
 
@@ -857,22 +738,22 @@ export default function ProfileScreen() {
             }}
           >
             <ProfileAvatar
-              name={fixture.user.name}
-              image={fixture.user.image}
+              name={profile.user.name}
+              image={profile.user.image}
             />
           </View>
 
           <ProfileIdentity
-            name={fixture.user.name}
-            username={fixture.user.username}
-            bio={fixture.user.bio}
+            name={profile.user.name}
+            username={profile.user.username}
+            bio={profile.user.bio}
             onBioPlaceholderPress={() => router.push('/settings/edit-profile' as any)}
           />
 
           <ProfileStats
-            reviewed={fixture.stats.reviewCount}
-            following={fixture.stats.followingCount}
-            followers={fixture.stats.followerCount}
+            reviewed={profile.stats.reviewCount}
+            following={profile.stats.followingCount}
+            followers={profile.stats.followerCount}
             onPressFollowing={() => {
               setFollowersInitialTab('following');
               setShowFollowersModal(true);
@@ -885,9 +766,9 @@ export default function ProfileScreen() {
 
           <SectionHeader title="FAVORITE FILMS" />
           <FavoritesStrip
-            favorites={fixture.favoriteFilms}
+            favorites={[]}
             onAddFavorite={() => {
-              // No-op for PR 1a; favorite editing ships in PR 9 (post-auth).
+              // No-op until favorite editing ships (PR 9).
             }}
             onPressFilm={(filmId) => router.push(`/film/${filmId}` as any)}
           />
@@ -895,13 +776,13 @@ export default function ProfileScreen() {
           <SectionHeader
             title="RECENT REVIEWS"
             allLink={
-              fixture.recentReviews.length > 0
+              profile.recentReviews.length > 0
                 ? { label: 'All →', onPress: () => setSubTab('my-films') }
                 : undefined
             }
           />
           <RecentReviewsRow
-            reviews={fixture.recentReviews}
+            reviews={profile.recentReviews}
             onPressReview={(filmId) => router.push(`/film/${filmId}` as any)}
             onFindFilm={() => router.push('/(tabs)/search' as any)}
           />
@@ -909,13 +790,13 @@ export default function ProfileScreen() {
           <SectionHeader
             title="LISTS"
             allLink={
-              fixture.lists.length > 0
+              profile.lists.length > 0
                 ? { label: 'All →', onPress: () => setSubTab('lists') }
                 : undefined
             }
           />
           <ListsPreview
-            lists={fixture.lists}
+            lists={profile.lists}
             onPressList={(listId) => router.push(`/list/${listId}` as any)}
             onCreateList={() => setShowCreateList(true)}
           />
@@ -1089,7 +970,10 @@ export default function ProfileScreen() {
           <Pressable
             onPress={() => {
               setShowBannerMenu(false);
-              router.push('/header-picker' as any);
+              router.push({
+                pathname: '/header-picker',
+                params: { current: profile.user.bannerValue },
+              } as any);
             }}
             style={styles.menuRow}
             accessibilityRole="button"
@@ -1135,6 +1019,11 @@ const styles = StyleSheet.create({
     color: 'rgba(245,240,225,0.4)',
     textAlign: 'center',
     marginTop: 40,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // ---- Header (all sub-tabs) ----
