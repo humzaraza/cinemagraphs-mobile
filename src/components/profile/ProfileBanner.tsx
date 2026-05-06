@@ -12,9 +12,11 @@ import BannerGradient from '../BannerGradient';
 import type { BannerSource } from '../../lib/banner-url';
 
 type ProfileBannerProps = {
-  // Resolved source (gradient preset or backdrop URI). Caller resolves
-  // via resolveBannerSource() so this component does not need to know
-  // about the persisted bannerType discriminant or do any film lookup.
+  // Resolved source (gradient preset, backdrop URI, or photo URI).
+  // Caller resolves via resolveBannerSource() so this component does not
+  // need to know about the persisted bannerType discriminant or do any
+  // film / blob lookup. backdrop and photo render identically (Image +
+  // scrim); only the URI source differs.
   source: BannerSource;
   onMenuPress: () => void;
 };

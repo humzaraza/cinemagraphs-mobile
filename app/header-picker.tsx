@@ -16,6 +16,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import ReAnimated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { colors, fonts } from '../src/constants/theme';
 import BannerGradient from '../src/components/BannerGradient';
 import {
@@ -31,6 +35,8 @@ import {
   type BannerType,
 } from '../src/lib/api';
 import {
+  computePhotoCrop,
+  computeSourceCropRect,
   getInitialState,
   getResetStateForTab,
   getStateAfterFilmSelection,
@@ -39,7 +45,9 @@ import {
   type PickerTab,
 } from '../src/lib/banner-picker';
 import { resolveBannerSource } from '../src/lib/banner-url';
+import { uploadBannerPhoto } from '../src/lib/banner-upload';
 import { getPosterUrl } from '../src/lib/tmdb-image';
+import { useAuth } from '../src/providers/AuthProvider';
 import type { Film, FilmDetail } from '../src/types/film';
 
 const SWATCH_PAD = 20;
@@ -58,6 +66,12 @@ const PICKER_TABS: { key: PickerTab; label: string }[] = [
   { key: 'PHOTO', label: 'Photo' },
 ];
 
+interface PickedPhoto {
+  uri: string;
+  width: number;
+  height: number;
+}
+
 // Route params come in as strings. Coerce bannerType to a known value or
 // fall back to GRADIENT (the only persisted type before PR 1b).
 function parseBannerType(raw: string | string[] | undefined): BannerType {
@@ -75,6 +89,7 @@ export default function HeaderPickerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const { user } = useAuth();
   const { bannerType: rawType, bannerValue: rawValue } = useLocalSearchParams<{
     bannerType?: string;
     bannerValue?: string;
@@ -109,7 +124,29 @@ export default function HeaderPickerScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const popularLoadedRef = useRef(false);
 
-  const saveEnabled = isSaveEnabled(state, persisted, state.activeTab);
+  // Photo mode state (PR 1b mobile prompt 3)
+  // pickedPhoto is the local image asset from the OS picker (file:// URI
+  // + native dimensions). isUploading is true during the crop -> upload
+  // -> PATCH chain; the screen dims controls until the chain resolves.
+  // translateX/Y are Reanimated shared values so the pan gesture updates
+  // on the UI thread without round-tripping through React state.
+  const [pickedPhoto, setPickedPhoto] = useState<PickedPhoto | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  // Save gating. The base check (draft differs from persisted) lives in
+  // banner-picker.ts; PHOTO adds two extra runtime gates: a photo must
+  // be picked AND we cannot already be uploading.
+  const baseSaveEnabled = isSaveEnabled(state, persisted, state.activeTab);
+  const saveEnabled =
+    state.activeTab === 'PHOTO'
+      ? baseSaveEnabled && !!pickedPhoto && !isUploading
+      : baseSaveEnabled;
+
+  // Visible save state: `saving` is the legacy gradient/backdrop spinner
+  // gate, isUploading is PHOTO-specific. Either one disables Save.
+  const savingOrUploading = saving || isUploading;
 
   // -------------------------------------------------------------------------
   // Persisted backdrop film fetch (mount-only when persisted is BACKDROP)
@@ -207,22 +244,23 @@ export default function HeaderPickerScreen() {
   }, []);
 
   // -------------------------------------------------------------------------
-  // Hardware back
+  // Hardware back (no-op while uploading so user cannot abandon mid-PUT)
   // -------------------------------------------------------------------------
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isUploading) return true; // swallow
       router.back();
       return true;
     });
     return () => sub.remove();
-  }, [router]);
+  }, [router, isUploading]);
 
   // -------------------------------------------------------------------------
   // Tab switch
   // -------------------------------------------------------------------------
   const onTabChange = useCallback(
     (tab: PickerTab) => {
-      if (tab === state.activeTab) return;
+      if (tab === state.activeTab || isUploading) return;
       setState(getResetStateForTab(tab, persisted));
       // Clear any pending search work so we don't apply stale results
       // to the BACKDROP tab on a tab toggle.
@@ -231,8 +269,12 @@ export default function HeaderPickerScreen() {
       setSearchQuery('');
       setSearchResults([]);
       setFilmsError(false);
+      // Discard any in-progress PHOTO selection; preview reverts to persisted.
+      setPickedPhoto(null);
+      translateX.value = 0;
+      translateY.value = 0;
     },
-    [persisted, state.activeTab],
+    [persisted, state.activeTab, isUploading, translateX, translateY],
   );
 
   // -------------------------------------------------------------------------
@@ -243,10 +285,53 @@ export default function HeaderPickerScreen() {
   }, []);
 
   // -------------------------------------------------------------------------
+  // Photo picker
+  // -------------------------------------------------------------------------
+  const pickPhoto = useCallback(async () => {
+    try {
+      // launchImageLibraryAsync surfaces the iOS / Android system picker.
+      // On modern iOS this does NOT require a permission prompt for the
+      // full library access we use here (PHPicker is sandboxed). Older
+      // platforms / Android may still prompt; if the user denies, the
+      // call simply resolves with canceled=true and we no-op.
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false, // we do our own pan-to-reposition crop
+        quality: 1,
+        exif: false,
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+      if (!asset.uri || !asset.width || !asset.height) return;
+      setPickedPhoto({ uri: asset.uri, width: asset.width, height: asset.height });
+      // Reset pan whenever a new photo loads so we start centered.
+      translateX.value = 0;
+      translateY.value = 0;
+      // Flip draft to PHOTO so isSaveEnabled allows save once the user
+      // taps Save. bannerValue is empty until upload returns the final
+      // pathname; PHOTO save reads pathname from the upload response,
+      // not from draft.bannerValue.
+      setState((prev) => ({
+        ...prev,
+        bannerType: 'PHOTO',
+        bannerValue: '',
+        selectedFilm: null,
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not open photo library';
+      Alert.alert('Photo picker error', message);
+    }
+  }, [translateX, translateY]);
+
+  // -------------------------------------------------------------------------
   // Save
   // -------------------------------------------------------------------------
   const handleSave = async () => {
-    if (!saveEnabled || saving) return;
+    if (!saveEnabled || savingOrUploading) return;
+    if (state.activeTab === 'PHOTO') {
+      await handlePhotoSave();
+      return;
+    }
     setSaving(true);
     try {
       await updateUserBanner(state.bannerType, state.bannerValue);
@@ -259,12 +344,67 @@ export default function HeaderPickerScreen() {
     }
   };
 
+  const handlePhotoSave = async () => {
+    if (!pickedPhoto) return;
+    if (!user?.id) {
+      Alert.alert('Save failed', 'Sign in to save a photo banner.');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      // 1. Crop the visible region of the photo to a 16:9 JPEG using the
+      //    final pan offsets. Math is in src/lib/banner-picker.ts so it
+      //    can be unit tested without RN in scope.
+      const crop = computeSourceCropRect({
+        photoWidth: pickedPhoto.width,
+        photoHeight: pickedPhoto.height,
+        frameWidth: previewWidth,
+        frameHeight: previewHeight,
+        panX: translateX.value,
+        panY: translateY.value,
+      });
+      const cropped = await ImageManipulator.manipulateAsync(
+        pickedPhoto.uri,
+        [
+          {
+            crop: {
+              originX: Math.max(0, Math.round(crop.originX)),
+              originY: Math.max(0, Math.round(crop.originY)),
+              width: Math.round(crop.width),
+              height: Math.round(crop.height),
+            },
+          },
+        ],
+        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      // 2. Upload to Vercel Blob via the two-step protocol. Returns the
+      //    FINAL pathname (random suffix appended server-side).
+      const upload = await uploadBannerPhoto({
+        fileUri: cropped.uri,
+        userId: user.id,
+        contentType: 'image/jpeg',
+      });
+      // 3. PATCH user banner with bannerType=PHOTO and the FINAL pathname.
+      await updateUserBanner('PHOTO', upload.pathname);
+      router.back();
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : 'Could not upload photo. Try again.';
+      Alert.alert('Save failed', message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // -------------------------------------------------------------------------
   // Preview source
   // -------------------------------------------------------------------------
   // The preview reflects the current draft. For BACKDROP, prefer the just-
   // selected film, then fall back to the persisted film record (when the
   // draft equals persisted, e.g. immediately after mount or a tab reset).
+  // PHOTO mode handles its own preview rendering below; this resolver
+  // returns gradient fallback for PHOTO so the non-photo branches don't
+  // need to special-case it.
   const previewSource = useMemo(() => {
     let film: Film | null = state.selectedFilm;
     if (
@@ -288,36 +428,54 @@ export default function HeaderPickerScreen() {
   const activeFilms = searchQuery.trim() ? searchResults : popularFilms;
   const sectionHeader = searchQuery.trim() ? 'Results' : 'Popular films';
 
+  // Photo preview label changes to indicate the gesture affordance once
+  // a photo is loaded. Other modes use the static "PREVIEW" label.
+  const showPhotoAdjuster =
+    state.activeTab === 'PHOTO' && pickedPhoto !== null;
+  const previewLabel = showPhotoAdjuster
+    ? 'PREVIEW · DRAG TO REPOSITION'
+    : 'PREVIEW';
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable
           onPress={() => router.back()}
+          disabled={isUploading}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Cancel"
+          accessibilityState={{ disabled: isUploading }}
           style={styles.backBtn}
         >
-          <Text style={styles.backChevron}>‹</Text>
+          <Text
+            style={[styles.backChevron, isUploading && styles.disabledText]}
+          >
+            ‹
+          </Text>
         </Pressable>
         <Text style={styles.title}>Banner style</Text>
         <Pressable
           onPress={handleSave}
-          disabled={!saveEnabled || saving}
+          disabled={!saveEnabled || savingOrUploading}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Save banner"
-          accessibilityState={{ disabled: !saveEnabled || saving }}
+          accessibilityState={{ disabled: !saveEnabled || savingOrUploading }}
           style={styles.saveBtn}
         >
-          <Text
-            style={[
-              styles.saveText,
-              (!saveEnabled || saving) && styles.saveTextDisabled,
-            ]}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Text>
+          {savingOrUploading ? (
+            <View style={styles.saveBusyRow}>
+              <ActivityIndicator size="small" color={colors.gold} />
+              <Text style={[styles.saveText, styles.saveTextBusy]}>Saving...</Text>
+            </View>
+          ) : (
+            <Text
+              style={[styles.saveText, !saveEnabled && styles.saveTextDisabled]}
+            >
+              Save
+            </Text>
+          )}
         </Pressable>
       </View>
 
@@ -329,11 +487,19 @@ export default function HeaderPickerScreen() {
       >
         {/* ---- Preview (16:9 WYSIWYG) ---- */}
         <View style={styles.previewWrap}>
-          <Text style={styles.previewLabel}>PREVIEW</Text>
+          <Text style={styles.previewLabel}>{previewLabel}</Text>
           <View
             style={[styles.previewFrame, { width: previewWidth, aspectRatio: 16 / 9 }]}
           >
-            {previewSource.kind === 'gradient' ? (
+            {showPhotoAdjuster && pickedPhoto ? (
+              <PhotoAdjuster
+                photo={pickedPhoto}
+                frameWidth={previewWidth}
+                frameHeight={previewHeight}
+                translateX={translateX}
+                translateY={translateY}
+              />
+            ) : previewSource.kind === 'gradient' ? (
               <BannerGradient
                 presetKey={previewSource.presetKey}
                 width={previewWidth}
@@ -351,7 +517,13 @@ export default function HeaderPickerScreen() {
         </View>
 
         {/* ---- Segmented control ---- */}
-        <View style={styles.segmentedWrap}>
+        <View
+          style={[
+            styles.segmentedWrap,
+            isUploading && styles.dimmedWhileUploading,
+          ]}
+          pointerEvents={isUploading ? 'none' : 'auto'}
+        >
           <View style={styles.segmented}>
             {PICKER_TABS.map((tab) => {
               const active = tab.key === state.activeTab;
@@ -359,10 +531,14 @@ export default function HeaderPickerScreen() {
                 <Pressable
                   key={tab.key}
                   onPress={() => onTabChange(tab.key)}
+                  disabled={isUploading}
                   style={[styles.segItem, active && styles.segItemActive]}
                   accessibilityRole="button"
                   accessibilityLabel={`${tab.label} mode`}
-                  accessibilityState={{ selected: active }}
+                  accessibilityState={{
+                    selected: active,
+                    disabled: isUploading,
+                  }}
                 >
                   <Text style={[styles.segText, active && styles.segTextActive]}>
                     {tab.label}
@@ -409,11 +585,246 @@ export default function HeaderPickerScreen() {
         )}
 
         {state.activeTab === 'PHOTO' && (
-          <View style={styles.photoPlaceholder}>
-            <Text style={styles.photoPlaceholderText}>Photo upload coming soon.</Text>
-          </View>
+          <PhotoPane
+            pickedPhoto={pickedPhoto}
+            isUploading={isUploading}
+            onPickPhoto={pickPhoto}
+          />
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Photo adjuster (PR 1b mobile prompt 3)
+// ---------------------------------------------------------------------------
+
+function PhotoAdjuster({
+  photo,
+  frameWidth,
+  frameHeight,
+  translateX,
+  translateY,
+}: {
+  photo: PickedPhoto;
+  frameWidth: number;
+  frameHeight: number;
+  translateX: ReturnType<typeof useSharedValue<number>>;
+  translateY: ReturnType<typeof useSharedValue<number>>;
+}) {
+  // Cover-fit math (bounded pan limits) is captured in useMemo so the
+  // worklet's clamp constants are stable for the lifetime of this photo.
+  // Reanimated worklets read JS scope via closure capture at gesture
+  // creation time; recreating the gesture on dimension change is the
+  // safe pattern.
+  const { renderedWidth, renderedHeight, maxPanX, maxPanY } = useMemo(
+    () =>
+      computePhotoCrop({
+        photoWidth: photo.width,
+        photoHeight: photo.height,
+        frameWidth,
+        frameHeight,
+        panX: translateX.value,
+        panY: translateY.value,
+      }),
+    // translateX/Y values are intentionally NOT in deps; we just need
+    // dimensions for the cover-fit, not the live pan offset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [photo.width, photo.height, frameWidth, frameHeight],
+  );
+
+  // Save start position so onUpdate's translation deltas accumulate
+  // correctly across re-pan gestures.
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .onStart(() => {
+          'worklet';
+          startX.value = translateX.value;
+          startY.value = translateY.value;
+        })
+        .onUpdate((e) => {
+          'worklet';
+          const nextX = startX.value + e.translationX;
+          const nextY = startY.value + e.translationY;
+          translateX.value = nextX < -maxPanX ? -maxPanX : nextX > maxPanX ? maxPanX : nextX;
+          translateY.value = nextY < -maxPanY ? -maxPanY : nextY > maxPanY ? maxPanY : nextY;
+        }),
+    [maxPanX, maxPanY, translateX, translateY, startX, startY],
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  return (
+    <GestureDetector gesture={pan}>
+      <View style={StyleSheet.absoluteFill}>
+        <ReAnimated.View
+          style={[
+            {
+              position: 'absolute',
+              left: (frameWidth - renderedWidth) / 2,
+              top: (frameHeight - renderedHeight) / 2,
+              width: renderedWidth,
+              height: renderedHeight,
+            },
+            animatedStyle,
+          ]}
+        >
+          <Image
+            source={{ uri: photo.uri }}
+            style={{ width: renderedWidth, height: renderedHeight }}
+            resizeMode="cover"
+          />
+        </ReAnimated.View>
+        <CornerBrackets />
+      </View>
+    </GestureDetector>
+  );
+}
+
+function CornerBrackets() {
+  // Four gold L-shaped indicators at the frame corners (per mockup
+  // Frame 5). 12pt segments with 1.5pt stroke; inset 6pt from each edge.
+  const c = colors.gold;
+  const len = 12;
+  const sw = 1.5;
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* TL */}
+      <View style={[bracketStyles.corner, { top: 6, left: 6 }]}>
+        <View style={{ width: len, height: sw, backgroundColor: c }} />
+        <View style={{ width: sw, height: len, backgroundColor: c }} />
+      </View>
+      {/* TR */}
+      <View
+        style={[
+          bracketStyles.corner,
+          { top: 6, right: 6, alignItems: 'flex-end' },
+        ]}
+      >
+        <View style={{ width: len, height: sw, backgroundColor: c }} />
+        <View style={{ width: sw, height: len, backgroundColor: c }} />
+      </View>
+      {/* BL */}
+      <View
+        style={[
+          bracketStyles.corner,
+          { bottom: 6, left: 6, justifyContent: 'flex-end' },
+        ]}
+      >
+        <View style={{ width: sw, height: len, backgroundColor: c }} />
+        <View style={{ width: len, height: sw, backgroundColor: c }} />
+      </View>
+      {/* BR */}
+      <View
+        style={[
+          bracketStyles.corner,
+          {
+            bottom: 6,
+            right: 6,
+            alignItems: 'flex-end',
+            justifyContent: 'flex-end',
+          },
+        ]}
+      >
+        <View style={{ width: sw, height: len, backgroundColor: c }} />
+        <View style={{ width: len, height: sw, backgroundColor: c }} />
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Photo pane (PR 1b mobile prompt 3)
+//
+// Two states: empty (no photo picked) shows the upload CTA + helper, and
+// loaded (a photo is picked) shows a "Choose a different photo" secondary
+// button + helper. Helper text changes to "Uploading to your account..."
+// during the save chain.
+// ---------------------------------------------------------------------------
+
+function PhotoPane({
+  pickedPhoto,
+  isUploading,
+  onPickPhoto,
+}: {
+  pickedPhoto: PickedPhoto | null;
+  isUploading: boolean;
+  onPickPhoto: () => void;
+}) {
+  if (!pickedPhoto) {
+    return (
+      <>
+        <View style={styles.photoEmptyIconWrap}>
+          <PhotoUploadIcon />
+        </View>
+        <Pressable
+          onPress={onPickPhoto}
+          disabled={isUploading}
+          accessibilityRole="button"
+          accessibilityLabel="Choose photo from library"
+          style={[styles.photoPrimaryBtn, isUploading && styles.dimmedWhileUploading]}
+        >
+          <Text style={styles.photoPrimaryBtnText}>Choose photo from library</Text>
+        </Pressable>
+        <Text style={styles.photoHelperText}>
+          {'JPG or PNG, up to 5MB.\nYou can reposition the crop after selecting.'}
+        </Text>
+      </>
+    );
+  }
+  return (
+    <>
+      <Pressable
+        onPress={onPickPhoto}
+        disabled={isUploading}
+        accessibilityRole="button"
+        accessibilityLabel="Choose a different photo"
+        style={[
+          styles.photoSecondaryBtn,
+          isUploading && styles.dimmedWhileUploading,
+        ]}
+      >
+        <Text style={styles.photoSecondaryBtnText}>Choose a different photo</Text>
+      </Pressable>
+      <Text style={styles.photoHelperText}>
+        {isUploading
+          ? 'Uploading to your account...'
+          : 'Drag the photo to reposition. Tap Save when ready.'}
+      </Text>
+    </>
+  );
+}
+
+function PhotoUploadIcon() {
+  // Decorative 56pt rounded box with a dashed gold border + photo glyph,
+  // matching mockup Frame 4. Pure SVG so it scales cleanly.
+  return (
+    <View style={styles.photoIconBox}>
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"
+          stroke={colors.gold}
+          strokeWidth={1.5}
+        />
+        <Circle cx={9} cy={9} r={2} stroke={colors.gold} strokeWidth={1.5} />
+        <Path
+          d="M21 15l-5-5L5 21"
+          stroke={colors.gold}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
     </View>
   );
 }
@@ -654,6 +1065,14 @@ function BackdropPosterCell({
   );
 }
 
+const bracketStyles = StyleSheet.create({
+  corner: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+  },
+});
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -679,6 +1098,9 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     fontWeight: '300',
   },
+  disabledText: {
+    color: 'rgba(245,240,225,0.25)',
+  },
   title: {
     fontSize: 16,
     fontFamily: fonts.bodySemiBold,
@@ -688,6 +1110,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     padding: 14,
+    minWidth: 80,
+    alignItems: 'flex-end',
+  },
+  saveBusyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   saveText: {
     fontSize: 14,
@@ -696,6 +1125,9 @@ const styles = StyleSheet.create({
   },
   saveTextDisabled: {
     color: 'rgba(245,240,225,0.25)',
+  },
+  saveTextBusy: {
+    color: 'rgba(245,240,225,0.5)',
   },
 
   // ---- Preview ----
@@ -745,6 +1177,9 @@ const styles = StyleSheet.create({
   },
   segTextActive: {
     color: colors.background,
+  },
+  dimmedWhileUploading: {
+    opacity: 0.4,
   },
 
   // ---- Section header (per mockup) ----
@@ -874,16 +1309,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // ---- Photo placeholder ----
-  photoPlaceholder: {
-    paddingVertical: 60,
+  // ---- Photo pane (PR 1b mobile prompt 3) ----
+  photoEmptyIconWrap: {
+    alignItems: 'center',
+    paddingTop: 28,
+    paddingBottom: 12,
+  },
+  photoIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: 'rgba(200,169,81,0.1)',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(200,169,81,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoPlaceholderText: {
-    fontFamily: fonts.body,
+  photoPrimaryBtn: {
+    marginHorizontal: SWATCH_PAD,
+    marginTop: 4,
+    paddingVertical: 14,
+    backgroundColor: colors.gold,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  photoPrimaryBtnText: {
+    fontSize: 14,
+    fontFamily: fonts.bodySemiBold,
+    color: colors.background,
+  },
+  photoSecondaryBtn: {
+    marginHorizontal: SWATCH_PAD,
+    marginTop: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.2)',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  photoSecondaryBtnText: {
     fontSize: 13,
+    fontFamily: fonts.bodyMedium,
+    color: colors.ivory,
+  },
+  photoHelperText: {
+    marginHorizontal: SWATCH_PAD,
+    marginTop: 12,
+    fontSize: 11,
+    fontFamily: fonts.body,
     color: 'rgba(245,240,225,0.45)',
     textAlign: 'center',
+    lineHeight: 16,
   },
 });
