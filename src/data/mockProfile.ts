@@ -1,5 +1,232 @@
 // Mock data for Profile tab. Will be replaced with real API calls after auth (Prompt 9).
 
+import type { BannerPresetKey } from '../constants/bannerPresets';
+
+// Re-export the locked banner preset tuple so PR 1a fixtures and the
+// web API contract validate against the same set.
+export { BANNER_PRESET_KEYS } from '../constants/bannerPresets';
+
+// PR 1a Phase 5: profile hub fixtures. Field names mirror the web API
+// contract (see redesign master spec). Replace mock consumption in
+// app/(tabs)/profile.tsx with real fetchUserProfile etc. when web ships.
+
+export type MockBannerType = 'GRADIENT' | 'PHOTO' | 'BACKDROP';
+
+export type MockFavoriteFilm = {
+  id: string;
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
+  sparklinePoints: number[];
+};
+
+export type MockRecentReview = {
+  filmId: string;
+  title: string;
+  year: number | null;
+  director: string | null;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  score: number;
+  sparklinePoints: number[];
+};
+
+export type MockListPreview = {
+  id: string;
+  name: string;
+  filmCount: number;
+  mosaicPosters: string[];
+};
+
+export type MockProfileFixture = {
+  user: {
+    id: string;
+    name: string | null;
+    username: string | null;
+    bio: string | null;
+    image: string | null;
+    bannerType: MockBannerType;
+    bannerValue: string;
+  };
+  stats: {
+    reviewCount: number;
+    followingCount: number;
+    followerCount: number;
+  };
+  favoriteFilms: MockFavoriteFilm[];
+  recentReviews: MockRecentReview[];
+  lists: MockListPreview[];
+};
+
+export const mockProfileEmpty: MockProfileFixture = {
+  user: {
+    id: 'mock-empty-user',
+    name: 'Humza Raza',
+    username: 'humzaraza',
+    bio: null,
+    image: null,
+    bannerType: 'GRADIENT',
+    bannerValue: 'midnight',
+  },
+  stats: { reviewCount: 0, followingCount: 0, followerCount: 0 },
+  favoriteFilms: [],
+  recentReviews: [],
+  lists: [],
+};
+
+export const mockProfilePopulated: MockProfileFixture = {
+  user: {
+    id: 'mock-pop-user',
+    name: 'Humza Raza',
+    username: 'humzaraza',
+    bio: 'Chasing films that feel like a punch to the chest. Toronto.',
+    image: null,
+    bannerType: 'GRADIENT',
+    bannerValue: 'dusk',
+  },
+  stats: { reviewCount: 247, followingCount: 143, followerCount: 89 },
+  favoriteFilms: [
+    {
+      id: 'oppenheimer-2023',
+      title: 'Oppenheimer',
+      year: 2023,
+      posterUrl: 'https://image.tmdb.org/t/p/w185/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+      sparklinePoints: [7, 6.5, 8, 7.5, 9, 8.5, 9.5, 8],
+    },
+    {
+      id: 'dune-part-two-2024',
+      title: 'Dune: Part Two',
+      year: 2024,
+      posterUrl: 'https://image.tmdb.org/t/p/w185/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+      sparklinePoints: [7, 7.5, 8, 8.5, 9, 9.5, 10, 9],
+    },
+    {
+      id: 'past-lives-2023',
+      title: 'Past Lives',
+      year: 2023,
+      posterUrl: 'https://image.tmdb.org/t/p/w185/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg',
+      sparklinePoints: [5, 6, 7, 7.5, 8, 9, 8.5],
+    },
+    {
+      id: 'anatomy-of-a-fall-2023',
+      title: 'Anatomy of a Fall',
+      year: 2023,
+      posterUrl: 'https://image.tmdb.org/t/p/w185/kQs6keheMwCxJxrzV83VUwFtHkB.jpg',
+      sparklinePoints: [6, 7, 8, 7, 8.5, 9, 8],
+    },
+  ],
+  recentReviews: [
+    {
+      filmId: 'oppenheimer-2023',
+      title: 'Oppenheimer',
+      year: 2023,
+      director: 'Christopher Nolan',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+      backdropUrl: null,
+      score: 9.0,
+      sparklinePoints: [7, 6.5, 8, 7.5, 9, 8.5, 9.5, 8],
+    },
+    {
+      filmId: 'poor-things-2023',
+      title: 'Poor Things',
+      year: 2023,
+      director: 'Yorgos Lanthimos',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg',
+      backdropUrl: null,
+      score: 8.5,
+      sparklinePoints: [6, 7, 8, 7.5, 9, 8, 8.5],
+    },
+    {
+      filmId: 'dune-part-two-2024',
+      title: 'Dune: Part Two',
+      year: 2024,
+      director: 'Denis Villeneuve',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+      backdropUrl: null,
+      score: 9.5,
+      sparklinePoints: [7, 7.5, 8, 8.5, 9, 9.5, 10, 9],
+    },
+    {
+      filmId: 'the-holdovers-2023',
+      title: 'The Holdovers',
+      year: 2023,
+      director: 'Alexander Payne',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/VHSzNBTwxV8vh7wylo7O9CLdac.jpg',
+      backdropUrl: null,
+      score: 8.0,
+      sparklinePoints: [6, 6.5, 7, 7.5, 8, 8.5, 7, 8],
+    },
+    {
+      filmId: 'killers-of-the-flower-moon-2023',
+      title: 'Killers of the Flower Moon',
+      year: 2023,
+      director: 'Martin Scorsese',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/dB6Krk806zeqd0YNp2ngQ9zXteH.jpg',
+      backdropUrl: null,
+      score: 7.5,
+      sparklinePoints: [7, 6, 5, 6.5, 7, 8, 7.5, 6],
+    },
+  ],
+  lists: [
+    {
+      id: 'list-best-2024',
+      name: 'Best of 2024',
+      filmCount: 24,
+      mosaicPosters: [
+        'https://image.tmdb.org/t/p/w185/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+        'https://image.tmdb.org/t/p/w185/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+        'https://image.tmdb.org/t/p/w185/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg',
+        'https://image.tmdb.org/t/p/w185/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg',
+      ],
+    },
+    {
+      id: 'list-comfort-rewatches',
+      name: 'Comfort rewatches',
+      filmCount: 1,
+      mosaicPosters: [
+        'https://image.tmdb.org/t/p/w185/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+        'https://image.tmdb.org/t/p/w185/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+        'https://image.tmdb.org/t/p/w185/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+        'https://image.tmdb.org/t/p/w185/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+      ],
+    },
+    {
+      id: 'list-devastating-endings',
+      name: 'Devastating Endings',
+      filmCount: 17,
+      mosaicPosters: [],
+    },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Active fixture index. Profile screen and header picker share this so a
+// mutation from the picker is reflected in the profile on next render.
+// PR 1a / post-auth: drop fixture indirection when real API consumption
+// replaces these mocks.
+// ---------------------------------------------------------------------------
+
+export const PROFILE_FIXTURES = {
+  empty: mockProfileEmpty,
+  populated: mockProfilePopulated,
+};
+
+export type ProfileFixtureMode = keyof typeof PROFILE_FIXTURES;
+
+// Dev-iteration toggle. Flip to 'empty' to preview the brand-new-user state.
+export const PROFILE_FIXTURE_MODE: ProfileFixtureMode = 'populated';
+
+export function setMockBannerValue(
+  mode: ProfileFixtureMode,
+  key: BannerPresetKey,
+): void {
+  PROFILE_FIXTURES[mode].user.bannerValue = key;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy mock shapes (used by ArcCard, legacy profile sub-tabs).
+// ---------------------------------------------------------------------------
+
 export interface MockUser {
   id: string;
   name: string;
