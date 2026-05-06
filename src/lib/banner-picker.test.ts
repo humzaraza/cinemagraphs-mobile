@@ -20,12 +20,15 @@ import {
   getResetStateForTab,
   getStateAfterFilmSelection,
   getInitialState,
+  computePhotoCrop,
+  computeSourceCropRect,
   type PickerState,
   type PickerPersisted,
 } from './banner-picker';
 import {
   resolveBannerSource,
   resolveBackdropUri,
+  resolvePhotoUri,
 } from './banner-url';
 import { fetchBackdropFilms } from './api';
 import { BANNER_DEFAULT_KEY } from '../constants/bannerPresets';
@@ -85,9 +88,20 @@ describe('isSaveEnabled', () => {
     expect(isSaveEnabled(draft, persistedBackdrop, 'BACKDROP')).toBe(false);
   });
 
-  it('always returns false in PHOTO mode (placeholder)', () => {
-    const draft = { bannerType: 'BACKDROP' as const, bannerValue: 'film-99', selectedFilm: filmStub() };
+  it('returns false in PHOTO mode when draft is still the persisted non-PHOTO state', () => {
+    // Tab switched to PHOTO but no photo picked yet: draft still
+    // mirrors the persisted GRADIENT state, so Save stays disabled.
+    const draft = { bannerType: 'GRADIENT' as const, bannerValue: 'midnight', selectedFilm: null };
     expect(isSaveEnabled(draft, persistedGradient, 'PHOTO')).toBe(false);
+  });
+
+  it('returns true in PHOTO mode once draft.bannerType has flipped to PHOTO', () => {
+    // After the user picks a photo, the picker sets draft.bannerType
+    // to PHOTO. The runtime gate (pickedPhoto present, not uploading)
+    // is layered on top of this in header-picker.tsx; here we only
+    // assert the type-level behaviour.
+    const draft = { bannerType: 'PHOTO' as const, bannerValue: '', selectedFilm: null };
+    expect(isSaveEnabled(draft, persistedGradient, 'PHOTO')).toBe(true);
   });
 });
 
@@ -238,9 +252,316 @@ describe('resolveBannerSource', () => {
     expect(src).toEqual({ kind: 'gradient', presetKey: BANNER_DEFAULT_KEY });
   });
 
-  it('PHOTO returns gradient fallback (placeholder until next prompt)', () => {
-    const src = resolveBannerSource('PHOTO', 'some-blob-path');
-    expect(src).toEqual({ kind: 'gradient', presetKey: BANNER_DEFAULT_KEY });
+  it('PHOTO returns photo source when EXPO_PUBLIC_VERCEL_BLOB_HOST is configured', () => {
+    const prev = process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = 'abc123.public.blob.vercel-storage.com';
+    try {
+      const src = resolveBannerSource('PHOTO', 'banners/user-1/123.jpg');
+      expect(src).toEqual({
+        kind: 'photo',
+        uri: 'https://abc123.public.blob.vercel-storage.com/banners/user-1/123.jpg',
+      });
+    } finally {
+      if (prev === undefined) delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+      else process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = prev;
+    }
+  });
+
+  it('PHOTO falls back to gradient when EXPO_PUBLIC_VERCEL_BLOB_HOST is missing', () => {
+    const prev = process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    try {
+      const src = resolveBannerSource('PHOTO', 'banners/user-1/123.jpg');
+      expect(src).toEqual({ kind: 'gradient', presetKey: BANNER_DEFAULT_KEY });
+    } finally {
+      if (prev !== undefined) process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = prev;
+    }
+  });
+
+  it('PHOTO passes through a fully-qualified URL even without env host', () => {
+    const prev = process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    try {
+      const src = resolveBannerSource(
+        'PHOTO',
+        'https://abc.public.blob.vercel-storage.com/banners/u/x.jpg',
+      );
+      expect(src).toEqual({
+        kind: 'photo',
+        uri: 'https://abc.public.blob.vercel-storage.com/banners/u/x.jpg',
+      });
+    } finally {
+      if (prev !== undefined) process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = prev;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolvePhotoUri standalone
+// ---------------------------------------------------------------------------
+
+describe('resolvePhotoUri', () => {
+  let prevHost: string | undefined;
+
+  beforeEach(() => {
+    prevHost = process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+  });
+
+  afterEach(() => {
+    if (prevHost === undefined) delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    else process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = prevHost;
+  });
+
+  it('returns null for empty bannerValue', () => {
+    process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = 'abc.public.blob.vercel-storage.com';
+    expect(resolvePhotoUri('')).toBeNull();
+  });
+
+  it('returns null when env host missing and value is just a pathname', () => {
+    delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    expect(resolvePhotoUri('banners/u/x.jpg')).toBeNull();
+  });
+
+  it('passes a fully-qualified https URL through unchanged', () => {
+    delete process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST;
+    expect(resolvePhotoUri('https://x.public.blob.vercel-storage.com/banners/u/x.jpg')).toBe(
+      'https://x.public.blob.vercel-storage.com/banners/u/x.jpg',
+    );
+  });
+
+  it('joins env host + pathname with a single slash regardless of leading slash', () => {
+    process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = 'abc.public.blob.vercel-storage.com';
+    expect(resolvePhotoUri('banners/u/x.jpg')).toBe(
+      'https://abc.public.blob.vercel-storage.com/banners/u/x.jpg',
+    );
+    expect(resolvePhotoUri('/banners/u/x.jpg')).toBe(
+      'https://abc.public.blob.vercel-storage.com/banners/u/x.jpg',
+    );
+  });
+
+  it('strips https:// prefix from env host if accidentally included', () => {
+    process.env.EXPO_PUBLIC_VERCEL_BLOB_HOST = 'https://abc.public.blob.vercel-storage.com/';
+    expect(resolvePhotoUri('banners/u/x.jpg')).toBe(
+      'https://abc.public.blob.vercel-storage.com/banners/u/x.jpg',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePhotoCrop: cover-fit + clamp
+// ---------------------------------------------------------------------------
+
+describe('computePhotoCrop', () => {
+  // 16:9 frame at 360 x 202.5 (matches a 360pt screen with 20pt side padding
+  // and the picker's 16:9 lock).
+  const frame = { frameWidth: 360, frameHeight: 202.5 };
+
+  it('landscape photo wider than frame: matches heights, overflows horizontally', () => {
+    // 4000x2000 photo, photoAspect 2.0 > frameAspect 1.778
+    const r = computePhotoCrop({
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.renderedHeight).toBeCloseTo(202.5);
+    expect(r.renderedWidth).toBeCloseTo(405); // 202.5 * 2
+    expect(r.maxPanX).toBeCloseTo(22.5); // (405 - 360) / 2
+    expect(r.maxPanY).toBe(0); // no vertical overflow
+  });
+
+  it('portrait photo taller than frame: matches widths, overflows vertically', () => {
+    // 1000x2000 photo, photoAspect 0.5 < frameAspect 1.778
+    const r = computePhotoCrop({
+      ...frame,
+      photoWidth: 1000,
+      photoHeight: 2000,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.renderedWidth).toBeCloseTo(360);
+    expect(r.renderedHeight).toBeCloseTo(720); // 360 / 0.5
+    expect(r.maxPanX).toBe(0);
+    expect(r.maxPanY).toBeCloseTo(258.75); // (720 - 202.5) / 2
+  });
+
+  it('square photo (1:1) overflows vertically only', () => {
+    const r = computePhotoCrop({
+      ...frame,
+      photoWidth: 1000,
+      photoHeight: 1000,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.renderedWidth).toBeCloseTo(360);
+    expect(r.renderedHeight).toBeCloseTo(360);
+    expect(r.maxPanX).toBe(0);
+    expect(r.maxPanY).toBeCloseTo(78.75);
+  });
+
+  it('exact 16:9 photo: no overflow on either axis, no panning possible', () => {
+    const r = computePhotoCrop({
+      ...frame,
+      photoWidth: 1600,
+      photoHeight: 900,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.renderedWidth).toBeCloseTo(360);
+    expect(r.renderedHeight).toBeCloseTo(202.5);
+    expect(r.maxPanX).toBe(0);
+    expect(r.maxPanY).toBe(0);
+  });
+
+  it('clamps panX inside [-maxPanX, maxPanX] for a landscape photo', () => {
+    const base = {
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panY: 0,
+    };
+    expect(computePhotoCrop({ ...base, panX: 0 }).clampedPanX).toBe(0);
+    expect(computePhotoCrop({ ...base, panX: 100 }).clampedPanX).toBeCloseTo(22.5);
+    expect(computePhotoCrop({ ...base, panX: -100 }).clampedPanX).toBeCloseTo(-22.5);
+    expect(computePhotoCrop({ ...base, panX: 10 }).clampedPanX).toBe(10);
+  });
+
+  it('clamps panY for a portrait photo and zeros panX', () => {
+    const base = {
+      ...frame,
+      photoWidth: 1000,
+      photoHeight: 2000,
+      panX: 50, // try to pan horizontally; should be zeroed
+    };
+    const r = computePhotoCrop({ ...base, panY: 1000 });
+    expect(r.clampedPanX).toBe(0);
+    expect(r.clampedPanY).toBeCloseTo(258.75);
+  });
+
+  it('returns safe defaults for degenerate inputs (zero or negative dims)', () => {
+    const r = computePhotoCrop({
+      photoWidth: 0,
+      photoHeight: 1000,
+      frameWidth: 360,
+      frameHeight: 202.5,
+      panX: 50,
+      panY: 50,
+    });
+    expect(r.renderedWidth).toBe(360);
+    expect(r.renderedHeight).toBe(202.5);
+    expect(r.maxPanX).toBe(0);
+    expect(r.maxPanY).toBe(0);
+    expect(r.clampedPanX).toBe(0);
+    expect(r.clampedPanY).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeSourceCropRect: rendered -> original photo pixel coordinates
+// ---------------------------------------------------------------------------
+
+describe('computeSourceCropRect', () => {
+  const frame = { frameWidth: 360, frameHeight: 202.5 };
+
+  it('landscape photo, no pan: crop is centered horizontally', () => {
+    // 4000x2000 photo, scaleFactor = 202.5/2000 = 0.10125
+    // renderedWidth = 405; visible region in rendered space starts at
+    // (405-360)/2 = 22.5 from the left of the rendered photo.
+    // In photo pixels: 22.5 / 0.10125 = ~222.22
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.originX).toBeCloseTo(222.22, 1);
+    expect(r.originY).toBeCloseTo(0, 5);
+    expect(r.width).toBeCloseTo(3555.56, 1); // 360 / 0.10125
+    expect(r.height).toBeCloseTo(2000, 1);
+  });
+
+  it('landscape photo panned right reveals more of the photo left side', () => {
+    // panX = +22.5 (max) shifts the photo right, so the visible region
+    // starts at the photo's left edge in rendered space (origin 0).
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panX: 22.5,
+      panY: 0,
+    });
+    expect(r.originX).toBeCloseTo(0, 5);
+  });
+
+  it('landscape photo panned left reveals more of the photo right side', () => {
+    // panX = -22.5 (max negative) shifts the photo left, so the visible
+    // region starts deeper into the photo. originX should be 2 * 222.22.
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panX: -22.5,
+      panY: 0,
+    });
+    expect(r.originX).toBeCloseTo(444.44, 1);
+  });
+
+  it('portrait photo, panned down reveals top of photo', () => {
+    // 1000x2000 photo, scaleFactor = 360/1000 = 0.36
+    // renderedHeight = 720; (720-202.5)/2 = 258.75 of vertical overflow each side
+    // panY = +258.75 (max) reveals the top of the photo (originY=0)
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 1000,
+      photoHeight: 2000,
+      panX: 0,
+      panY: 258.75,
+    });
+    expect(r.originX).toBeCloseTo(0, 5);
+    expect(r.originY).toBeCloseTo(0, 1);
+  });
+
+  it('exact 16:9 photo: crop covers the entire photo (originX=0, width=photoWidth)', () => {
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 1600,
+      photoHeight: 900,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r.originX).toBeCloseTo(0, 5);
+    expect(r.originY).toBeCloseTo(0, 5);
+    expect(r.width).toBeCloseTo(1600);
+    expect(r.height).toBeCloseTo(900);
+  });
+
+  it('returns zero rect for degenerate inputs', () => {
+    const r = computeSourceCropRect({
+      photoWidth: 0,
+      photoHeight: 0,
+      frameWidth: 0,
+      frameHeight: 0,
+      panX: 0,
+      panY: 0,
+    });
+    expect(r).toEqual({ originX: 0, originY: 0, width: 0, height: 0 });
+  });
+
+  it('out-of-range pan input is clamped before computing the crop', () => {
+    // panX way beyond the max should still produce an in-bounds origin
+    // (clamped to maxPanX internally by computePhotoCrop).
+    const r = computeSourceCropRect({
+      ...frame,
+      photoWidth: 4000,
+      photoHeight: 2000,
+      panX: 100000,
+      panY: 0,
+    });
+    expect(r.originX).toBeCloseTo(0, 5); // same as max-pan-right case
+    expect(r.originX).toBeGreaterThanOrEqual(0);
+    expect(r.originX + r.width).toBeLessThanOrEqual(4000.001);
   });
 });
 

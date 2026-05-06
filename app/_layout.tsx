@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -65,12 +66,16 @@ export default function RootLayout() {
     return null;
   }
 
+  // GestureHandlerRootView must wrap the entire app so PanGestureHandler
+  // (used by the Header picker Photo mode adjuster) can attach to gestures
+  // anywhere in the tree. Per react-native-gesture-handler docs it should
+  // sit at the root of the React tree, above navigation.
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
       <AuthProvider>
         <RootNav />
       </AuthProvider>
-    </View>
+    </GestureHandlerRootView>
   );
 }
