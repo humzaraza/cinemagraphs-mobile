@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinemagraphs PR 2 — Onboarding Flow Mockup v3</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080f;color:#fff;font-family:'DM Sans',sans-serif;padding:60px 20px 80px;max-width:1700px;margin:0 auto}
+h1{font-family:'DM Sans',sans-serif;font-size:30px;font-weight:600;text-align:center;color:#C8A951;margin-bottom:8px;letter-spacing:0.5px}
+.subtitle{text-align:center;color:rgba(255,255,255,0.4);font-size:14px;margin-bottom:48px}
+.section-title{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:600;color:#fff;text-align:center;margin-bottom:12px}
+.section-desc{text-align:center;color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:36px;max-width:760px;margin-left:auto;margin-right:auto;line-height:1.6}
+.section-divider{width:60px;height:1px;background:rgba(200,169,81,0.3);margin:0 auto 60px}
+.mockup-row{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;margin-bottom:60px}
+.mockup-wrapper{display:flex;flex-direction:column;align-items:center}
+.phone{width:300px;height:640px;border-radius:28px;border:2px solid rgba(200,169,81,0.3);background:#0D0D1A;overflow:hidden;position:relative;font-family:'DM Sans',sans-serif;color:#F5F0E1}
+.mockup-label{margin-top:16px;font-size:14px;font-weight:500;color:rgba(255,255,255,0.6);letter-spacing:0.5px}
+.mockup-note{max-width:300px;margin-top:8px;font-size:12px;line-height:1.5;color:rgba(255,255,255,0.3);text-align:center}
+.note-box{background:rgba(200,169,81,0.08);border-left:3px solid #C8A951;padding:14px 18px;margin:0 auto 30px;max-width:900px;font-size:13px;color:#ccc;line-height:1.7;border-radius:0 6px 6px 0}
+.decisions-box{background:rgba(45,212,168,0.05);border:1px solid rgba(45,212,168,0.2);padding:18px 22px;margin:0 auto 50px;max-width:900px;font-size:13px;color:#ddd;line-height:1.7;border-radius:8px}
+.decisions-box strong{color:#2DD4A8}
+.parked-box{background:rgba(255,165,0,0.05);border:1px solid rgba(255,165,0,0.2);padding:18px 22px;margin:0 auto 50px;max-width:900px;font-size:13px;color:#ddd;line-height:1.7;border-radius:8px}
+.parked-box strong{color:#FFA500}
+.changelog-box{background:rgba(120,140,220,0.05);border:1px solid rgba(120,140,220,0.2);padding:18px 22px;margin:0 auto 50px;max-width:900px;font-size:13px;color:#ddd;line-height:1.7;border-radius:8px}
+.changelog-box strong{color:#8a9ce0}
+.code-inline{font-family:monospace;font-size:12px;background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px}
+
+/* Phone shared bits */
+.status-bar{height:44px}
+.top-row{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:44px}
+.back-chevron{font-size:22px;line-height:1;color:#F5F0E1;font-weight:300}
+.skip-link{font-size:13px;font-weight:500;color:rgba(245,240,225,0.5)}
+.sticky-prompt{padding:8px 16px 14px;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.prompt-heading{font-size:18px;font-weight:600;color:#F5F0E1;letter-spacing:-0.3px;line-height:1.25;margin-bottom:6px}
+.prompt-helper{font-size:11px;color:rgba(245,240,225,0.4)}
+.continue-bar{position:absolute;bottom:0;left:0;right:0;padding:14px 16px 22px;background:linear-gradient(180deg,rgba(13,13,26,0) 0%,rgba(13,13,26,0.95) 30%,#0D0D1A 100%)}
+.continue-btn{width:100%;padding:13px;background:#C8A951;color:#0D0D1A;border-radius:10px;text-align:center;font-size:14px;font-weight:600}
+
+/* Era / Genre mosaic block */
+.scroll-area{padding:14px 16px 100px;overflow:hidden}
+.block-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.block{background:rgba(255,255,255,0.025);border:0.5px solid rgba(200,169,81,0.10);border-radius:10px;padding:10px 8px 8px;position:relative;transition:transform 0.2s}
+.block-selected{border:1.5px solid #C8A951;background:rgba(200,169,81,0.06);box-shadow:0 0 0 3px rgba(200,169,81,0.15);transform:scale(1.05)}
+.block-label{font-size:11px;font-weight:600;color:#F5F0E1;letter-spacing:0.3px;margin-bottom:6px;padding:0 2px}
+.block-label-selected{color:#C8A951}
+.poster-mosaic{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.poster-img{aspect-ratio:2/3;background-size:cover;background-position:center;border-radius:3px;background-color:#1a1a2e}
+.checkmark-badge{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:9px;background:#C8A951;display:flex;align-items:center;justify-content:center;z-index:2}
+.checkmark-svg{width:10px;height:10px}
+
+/* Real poster classes — TMDB w185 */
+.f-wizard-of-oz{background-image:url('https://image.tmdb.org/t/p/w185/uCC3j4pV9eOZwzDUWp2ilbcTf1f.jpg')}
+.f-modern-times{background-image:url('https://image.tmdb.org/t/p/w185/7uoiKOEjxBBW0AgDGQWrlfGQ90w.jpg')}
+.f-metropolis{background-image:url('https://image.tmdb.org/t/p/w185/kr9wXRN23zLuWJIelahas1mtnYj.jpg')}
+.f-nosferatu{background-image:url('https://image.tmdb.org/t/p/w185/zv7J85D8CC9qYagAEhPM63CIG6j.jpg')}
+.f-12-angry-men{background-image:url('https://image.tmdb.org/t/p/w185/2QXLVh32JKaWTjFJU3n8aIxRK9P.jpg')}
+.f-rear-window{background-image:url('https://image.tmdb.org/t/p/w185/ILVF0eJxHMddjxeQhswFtpMtqx.jpg')}
+.f-vertigo{background-image:url('https://image.tmdb.org/t/p/w185/15uOEfqBNTVtDUT7hGBVCka0rZz.jpg')}
+.f-citizen-kane{background-image:url('https://image.tmdb.org/t/p/w185/sav0jxhqiH0bPr2vZFU0Kjt2nZL.jpg')}
+.f-godfather{background-image:url('https://image.tmdb.org/t/p/w185/3bhkrj58Vtu7enYsRolD1fZdja1.jpg')}
+.f-star-wars{background-image:url('https://image.tmdb.org/t/p/w185/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg')}
+.f-alien{background-image:url('https://image.tmdb.org/t/p/w185/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg')}
+.f-godfather-2{background-image:url('https://image.tmdb.org/t/p/w185/hek3koDUyRQk7FIhPXsa6mT2Zc3.jpg')}
+.f-back-to-future{background-image:url('https://image.tmdb.org/t/p/w185/vN5B5WgYscRGcQpVhHl6p9DDTP0.jpg')}
+.f-shining{background-image:url('https://image.tmdb.org/t/p/w185/uAR0AWqhQL1hQa69UDEbb2rE5Wx.jpg')}
+.f-empire-strikes-back{background-image:url('https://image.tmdb.org/t/p/w185/nNAeTmF4CtdSgMDplXTDPOpYzsX.jpg')}
+.f-return-of-jedi{background-image:url('https://image.tmdb.org/t/p/w185/jQYlydvHm3kUix1f8prMucrplhm.jpg')}
+.f-fight-club{background-image:url('https://image.tmdb.org/t/p/w185/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg')}
+.f-shawshank{background-image:url('https://image.tmdb.org/t/p/w185/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg')}
+.f-pulp-fiction{background-image:url('https://image.tmdb.org/t/p/w185/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg')}
+.f-forrest-gump{background-image:url('https://image.tmdb.org/t/p/w185/saHP97rTPS5eLmrLQEcANmKrsFl.jpg')}
+.f-dark-knight{background-image:url('https://image.tmdb.org/t/p/w185/qJ2tW6WMUDux911r6m7haRef0WH.jpg')}
+.f-avatar{background-image:url('https://image.tmdb.org/t/p/w185/gKY6q7SjCkAU6FqvqWybDYgUKIF.jpg')}
+.f-harry-potter{background-image:url('https://image.tmdb.org/t/p/w185/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg')}
+.f-iron-man{background-image:url('https://image.tmdb.org/t/p/w185/78lPtwv72eTNqFW9COBYI0dWDJa.jpg')}
+.f-interstellar{background-image:url('https://image.tmdb.org/t/p/w185/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg')}
+.f-inception{background-image:url('https://image.tmdb.org/t/p/w185/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg')}
+.f-avengers{background-image:url('https://image.tmdb.org/t/p/w185/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg')}
+.f-deadpool{background-image:url('https://image.tmdb.org/t/p/w185/3E53WEZJqP6aM84D8CckXx4pIHw.jpg')}
+.f-spiderman-nwh{background-image:url('https://image.tmdb.org/t/p/w185/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg')}
+.f-dune{background-image:url('https://image.tmdb.org/t/p/w185/gDzOcq0pfeCeqMBwKIJlSmQpjkZ.jpg')}
+.f-avatar-2{background-image:url('https://image.tmdb.org/t/p/w185/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg')}
+.f-the-batman{background-image:url('https://image.tmdb.org/t/p/w185/74xTEgt7R36Fpooo50r9T25onhq.jpg')}
+.f-infinity-war{background-image:url('https://image.tmdb.org/t/p/w185/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg')}
+.f-inside-out{background-image:url('https://image.tmdb.org/t/p/w185/2H1TmgdfNtsKlU9jKdeNyYL5y8T.jpg')}
+.f-up{background-image:url('https://image.tmdb.org/t/p/w185/mFvoEwSfLqbcWwFsDjQebn9bzFe.jpg')}
+.f-finding-nemo{background-image:url('https://image.tmdb.org/t/p/w185/eHuGQ10FUzK1mdOY69wF5pGgEf5.jpg')}
+.f-wall-e{background-image:url('https://image.tmdb.org/t/p/w185/hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg')}
+.f-truman-show{background-image:url('https://image.tmdb.org/t/p/w185/vuza0WqY239yBXOadKlGwJsZJFE.jpg')}
+.f-hangover{background-image:url('https://image.tmdb.org/t/p/w185/A0uS9rHR56FeBtpjVki16M5xxSW.jpg')}
+.f-la-la-land{background-image:url('https://image.tmdb.org/t/p/w185/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg')}
+.f-joker{background-image:url('https://image.tmdb.org/t/p/w185/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg')}
+.f-se7en{background-image:url('https://image.tmdb.org/t/p/w185/191nKfP0ehp3uIvWqgPbFmI4lv9.jpg')}
+.f-silence-lambs{background-image:url('https://image.tmdb.org/t/p/w185/uS9m8OBk1A8eM9I042bx8XXpqAq.jpg')}
+.f-kingsman{background-image:url('https://image.tmdb.org/t/p/w185/r6q9wZK5a2K51KFj4LWVID6Ja1r.jpg')}
+.f-django{background-image:url('https://image.tmdb.org/t/p/w185/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg')}
+.f-titanic{background-image:url('https://image.tmdb.org/t/p/w185/9xjZS2rlVxm8SFx8kPC3aIGCOYQ.jpg')}
+.f-it{background-image:url('https://image.tmdb.org/t/p/w185/9E2y5Q7WlCVNEhP5GiVTjhEhx1o.jpg')}
+.f-split{background-image:url('https://image.tmdb.org/t/p/w185/lli31lYTFpvxVBeFHWoe5PMfW5s.jpg')}
+.f-call-me-by-name{background-image:url('https://image.tmdb.org/t/p/w185/mZ4gBdfkhP9tvLH1DO4m4HYtiyi.jpg')}
+.f-notebook{background-image:url('https://image.tmdb.org/t/p/w185/rNzQyW4f8B8cQeg7Dgj3n6eT5k9.jpg')}
+.f-beauty-beast{background-image:url('https://image.tmdb.org/t/p/w185/hUJ0UvQ5tgE2Z9WpfuduVSdiCiU.jpg')}
+.f-grease{background-image:url('https://image.tmdb.org/t/p/w185/2rM7fQKpb7cs1Iq7IBqub9LFDzJ.jpg')}
+.f-matrix{background-image:url('https://image.tmdb.org/t/p/w185/p96dm7sCMn4VYAStA6siNz30G1r.jpg')}
+.f-martian{background-image:url('https://image.tmdb.org/t/p/w185/fASz8A0yFE3QB6LgGoOfwvFSseV.jpg')}
+.f-parasite{background-image:url('https://image.tmdb.org/t/p/w185/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg')}
+.f-rise-apes{background-image:url('https://image.tmdb.org/t/p/w185/oqA45qMyyo1TtrnVEBKxqmTPhbN.jpg')}
+.f-oceans-eleven{background-image:url('https://image.tmdb.org/t/p/w185/hQQCdZrsHtZyR6NbKH2YyCqd2fR.jpg')}
+
+/* Accumulation strip */
+.accumulation-strip{position:relative;height:56px;background:rgba(13,13,26,0.6);border-bottom:0.5px solid rgba(200,169,81,0.1);padding:8px 16px;overflow:hidden}
+.acc-label{position:absolute;top:6px;left:16px;font-size:9px;color:rgba(200,169,81,0.6);letter-spacing:0.6px;text-transform:uppercase}
+.acc-cascade{position:absolute;top:18px;left:16px;right:16px;display:flex;height:36px;align-items:center;mask-image:linear-gradient(to right,black 80%,transparent 100%);-webkit-mask-image:linear-gradient(to right,black 80%,transparent 100%)}
+.acc-poster{width:24px;height:36px;border-radius:2px;flex-shrink:0;border:0.5px solid rgba(255,255,255,0.08);background-size:cover;background-position:center;background-color:#1a1a2e}
+.acc-poster-overlap{margin-left:-16px}
+.acc-poster-tiny{width:18px;height:28px;background-size:cover;background-position:center}
+
+/* Screen 3 film grid (placeholders for v3 — Humza's scope was era + genre blocks only) */
+.film-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.film-cell{position:relative}
+.film-poster{aspect-ratio:2/3;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border-radius:6px;border:0.5px solid rgba(200,169,81,0.10)}
+.film-poster-warm{background:linear-gradient(135deg,#3a2818,#5e3a1f)}
+.film-poster-cool{background:linear-gradient(135deg,#1a2e3a,#1f3a5e)}
+.film-poster-deep{background:linear-gradient(135deg,#2a1a3a,#3a1f5e)}
+.film-poster-neutral{background:linear-gradient(135deg,#2a2a2a,#404040)}
+.film-poster-selected{border:1.5px solid #C8A951;box-shadow:0 0 0 2px rgba(200,169,81,0.25)}
+.film-checkmark{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:8px;background:#C8A951;display:flex;align-items:center;justify-content:center}
+.film-title-mini{font-size:9px;font-weight:500;color:#F5F0E1;margin-top:5px;line-height:1.2;padding:0 2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.film-year-mini{font-size:8.5px;color:rgba(245,240,225,0.4);padding:0 2px;margin-top:1px}
+
+/* Dissolution */
+.dissolve-stage{padding:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.dissolve-cluster{position:relative;width:300px;height:520px}
+.dissolve-emerging-banner{position:absolute;left:30px;top:240px;width:240px;height:135px;border-radius:8px;background:linear-gradient(135deg,#3a2818 0%,#5e3a1f 30%,#1a0f08 60%,#0D0D1A 100%);opacity:0.78;filter:blur(2px);box-shadow:0 0 60px rgba(200,169,81,0.15)}
+.dissolve-poster-conv{position:absolute;width:50px;height:75px;border-radius:4px;background-size:cover;background-position:center;background-color:#1a1a2e}
+.conv-l1{top:90px;left:5px;transform:rotate(-25deg) scale(0.6);filter:blur(4px);opacity:0.45}
+.conv-l2{top:130px;left:25px;transform:rotate(-22deg) scale(0.7);filter:blur(3px);opacity:0.6}
+.conv-l3{top:175px;left:45px;transform:rotate(-19deg) scale(0.8);filter:blur(2px);opacity:0.75}
+.conv-l4{top:225px;left:60px;transform:rotate(-16deg) scale(0.85);filter:blur(1.5px);opacity:0.85}
+.conv-l5{top:285px;left:55px;transform:rotate(-12deg) scale(0.85);filter:blur(1.5px);opacity:0.8}
+.conv-l6{top:340px;left:40px;transform:rotate(-9deg) scale(0.75);filter:blur(2px);opacity:0.65}
+.conv-l7{top:390px;left:20px;transform:rotate(-6deg) scale(0.65);filter:blur(3px);opacity:0.5}
+.conv-r1{top:90px;right:5px;transform:rotate(25deg) scale(0.6);filter:blur(4px);opacity:0.45}
+.conv-r2{top:130px;right:25px;transform:rotate(22deg) scale(0.7);filter:blur(3px);opacity:0.6}
+.conv-r3{top:175px;right:45px;transform:rotate(19deg) scale(0.8);filter:blur(2px);opacity:0.75}
+.conv-r4{top:225px;right:60px;transform:rotate(16deg) scale(0.85);filter:blur(1.5px);opacity:0.85}
+.conv-r5{top:285px;right:55px;transform:rotate(12deg) scale(0.85);filter:blur(1.5px);opacity:0.8}
+.conv-r6{top:340px;right:40px;transform:rotate(9deg) scale(0.75);filter:blur(2px);opacity:0.65}
+.conv-r7{top:390px;right:20px;transform:rotate(6deg) scale(0.65);filter:blur(3px);opacity:0.5}
+.dissolve-helper{position:absolute;bottom:60px;left:0;right:0;text-align:center;font-size:13px;color:rgba(245,240,225,0.45)}
+
+/* Reveal */
+.reveal-stage{padding:54px 0 0;display:flex;flex-direction:column;align-items:center}
+.reveal-heading{font-size:18px;font-weight:600;color:#F5F0E1;letter-spacing:-0.3px;margin-bottom:6px;text-align:center;padding:0 24px}
+.reveal-sub{font-size:11px;color:rgba(245,240,225,0.4);margin-bottom:24px;text-align:center}
+.profile-preview{width:100%;background:#0D0D1A}
+.preview-banner{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#3a2818 0%,#5e3a1f 30%,#1a0f08 60%,#0a0a14 100%);position:relative;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.preview-banner-gradient-mapped{background:linear-gradient(135deg,#3a1f0f 0%,#7a3618 50%,#2a0a08 100%)}
+.preview-banner-gradient-default{background:linear-gradient(135deg,#0a0e27 0%,#1a1f3a 50%,#2d2a5e 100%)}
+.preview-avatar{position:absolute;left:18px;bottom:-26px;width:52px;height:52px;border-radius:26px;background:rgba(245,240,225,0.1);border:2.5px solid #0D0D1A;display:flex;align-items:center;justify-content:center;color:#C8A951;font-weight:600;font-size:18px}
+.preview-meta{padding:34px 18px 0}
+.preview-name{font-size:15px;font-weight:600;color:#F5F0E1;margin-bottom:2px}
+.preview-handle{font-size:11px;color:rgba(245,240,225,0.45);margin-bottom:8px}
+.preview-stats{display:flex;gap:18px;font-size:10px;color:rgba(245,240,225,0.35);margin-top:8px}
+.preview-stats strong{color:#F5F0E1;font-weight:600;font-size:11px}
+.reveal-cta{position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(180deg,rgba(13,13,26,0) 0%,rgba(13,13,26,0.95) 40%,#0D0D1A 100%)}
+.reveal-cta-btn{width:100%;padding:13px;background:#C8A951;color:#0D0D1A;border-radius:10px;text-align:center;font-size:14px;font-weight:600}
+</style>
+</head>
+<body>
+
+<h1>Cinemagraphs PR 2 — Onboarding Flow</h1>
+<p class="subtitle">Mockup v3 — real curated TMDB posters in era and genre blocks<br>57 unique films across 17 mosaic blocks</p>
+
+<div class="changelog-box">
+<strong>v3 changes from v2:</strong><br>
+&bull; Era blocks now render real curated TMDB posters (32 picks across 8 eras)<br>
+&bull; Genre blocks now render real curated TMDB posters (36 picks across 9 genres; Documentary dropped, no replacement)<br>
+&bull; Genre count corrected throughout: 9 not 10. Max-5 selection unchanged.<br>
+&bull; Accumulation strips on Screens 2 and 3 use real selected posters from the user-journey scenario (1980s + 1990s + 2010s eras, then Drama + Sci-fi + Thriller + Crime genres)<br>
+&bull; Dissolution Frame 8 uses real posters in the convergence arcs<br>
+&bull; Right-edge fade applied to the accumulation strip (Q3 locked decision: no horizontal scroll, decorative only)<br>
+&bull; Bio row removed from reveal previews when empty (Q9 locked decision)<br>
+&bull; Q1 closed: catalog-only confirmed via top-N-by-IMDb-votes per block<br>
+&bull; Screen 3 film grid (Frames 6, 7) intentionally KEPT as placeholders per Humza's v3 scope ("era and genre blocks")
+</div>
+
+<div class="note-box">
+<strong>For Claude Code (later, after approval):</strong> Match these mockups when building the three onboarding screens. Existing target file is <span class="code-inline">app/onboarding.tsx</span> (currently the Prompt 10 feature carousel; PR 2 replaces it).<br><br>
+<strong>Key rules:</strong> No em dashes. Gold #C8A951, Teal #2DD4A8, Ivory #F5F0E1, Background #0D0D1A. DM Sans only. 16:9 banner aspect on reveal. TMDB poster URLs use <span class="code-inline">getPosterUrl(film, 'thumbnail')</span> from <span class="code-inline">src/lib/tmdb-image.ts</span> (w185 size).<br><br>
+<strong>Curation locked:</strong> 57 unique films, 32 era picks + 36 genre picks (with 11 cross-block duplicates per relaxed dedup rule). Documentary genre dropped after curation iteration.
+</div>
+
+<div class="decisions-box">
+<strong>Locked decisions:</strong><br>
+&bull; <strong>Banner output is BACKDROP type.</strong> No schema work. Existing <span class="code-inline">bannerType=BACKDROP</span> with <span class="code-inline">bannerValue={filmId, backdropPath}</span> JSON.<br>
+&bull; <strong>Fallback hierarchy:</strong> complete onboarding + Screen 3 picks &rarr; BACKDROP from chosen film. Skip Screen 3 only OR no usable backdrop &rarr; GRADIENT preset mapped from era/genre taste. Skip everything &rarr; default GRADIENT (midnight).<br>
+&bull; <strong>Backdrop selection algorithm:</strong> top film by IMDb rating among Screen 3 picks that ALSO has a quality TMDB backdrop (width &ge;1280, no language-tagged title cards). Same filters as <span class="code-inline">/api/films/[id]/backdrops</span> route from PR 1c.<br>
+&bull; <strong>Screen 1:</strong> 8 era blocks (1920s-30s, 1940s-50s, 1960s-70s, 1980s, 1990s, 2000s, 2010s, 2020s). Max 4 selections. Cap overflow = no-op with shake animation.<br>
+&bull; <strong>Screen 2:</strong> 9 genre blocks (Drama, Horror, Comedy, Sci-fi, Thriller, Romance, Action, Animation, Crime). Max 5 selections. Cap overflow = no-op with shake.<br>
+&bull; <strong>Screen 3:</strong> 12 individual film posters with titles + years. Top 12 by IMDb votes among matching era+genre intersection. Excludes posters already shown in mosaic blocks. Adjacent-decade fallback if &lt;12 matches. No upper cap on user selections.<br>
+&bull; <strong>Microcopy:</strong> Screen 1 "Pick the eras you keep returning to". Screen 2 "Pick your genres". Screen 3 "Pick the films you love".<br>
+&bull; <strong>Block selection:</strong> tap one mosaic block as a unit; gold border + scale 1.05 + checkmark badge.<br>
+&bull; <strong>Cross-screen accumulation:</strong> posters from selected blocks compress into a horizontal cascade strip at the top of the next screen. Live-updates on deselect. Right-edge fade truncate (no horizontal scroll).<br>
+&bull; <strong>Continue gating:</strong> Continue button hidden until first selection on each screen. Skip top-right is the explicit zero-selection path.<br>
+&bull; <strong>Dissolution timing:</strong> 2 to 2.5 seconds total. Magnet-style convergence (posters stream inward in two arcs from screen edges with deceleration easing). Banner emerges from center with subtle glow.<br>
+&bull; <strong>Reveal:</strong> bio row hidden when empty. No source attribution pills.<br>
+&bull; <strong>Done CTA destination:</strong> <span class="code-inline">router.replace('/(tabs)/explore')</span> matching current onboarding.<br>
+&bull; <strong>Catalog source for mosaic posters:</strong> catalog-only (closed; verified via top-N-by-IMDb-votes catalog query).
+</div>
+
+<!-- ===== SECTION 1: SCREEN 1 ERA SELECTION ===== -->
+<p class="section-title">Section 1 — Screen 1: Era selection (real posters)</p>
+<p class="section-desc">8 era blocks as 2x2 poster mosaics with real curated TMDB posters. Sticky prompt at top stays visible while user scrolls. Max 4 selections.</p>
+
+<div class="mockup-row">
+
+<!-- Frame 1: Initial empty state -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div></div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick the eras you keep returning to</div>
+<div class="prompt-helper">We'll use these to find films you'll love.</div>
+</div>
+<div class="scroll-area">
+<div class="block-grid">
+
+<div class="block">
+<div class="block-label">1920s-30s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-wizard-of-oz"></div>
+<div class="poster-img f-modern-times"></div>
+<div class="poster-img f-metropolis"></div>
+<div class="poster-img f-nosferatu"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">1940s-50s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-12-angry-men"></div>
+<div class="poster-img f-rear-window"></div>
+<div class="poster-img f-vertigo"></div>
+<div class="poster-img f-citizen-kane"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">1960s-70s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-godfather"></div>
+<div class="poster-img f-star-wars"></div>
+<div class="poster-img f-alien"></div>
+<div class="poster-img f-godfather-2"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">1980s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-back-to-future"></div>
+<div class="poster-img f-shining"></div>
+<div class="poster-img f-empire-strikes-back"></div>
+<div class="poster-img f-return-of-jedi"></div>
+</div>
+</div>
+
+</div>
+<div style="text-align:center;font-size:9px;color:rgba(255,255,255,0.2);margin-top:14px;letter-spacing:0.5px">SCROLL FOR MORE ERAS &darr;</div>
+</div>
+</div>
+<p class="mockup-label">Frame 1 &mdash; Screen 1 initial</p>
+<p class="mockup-note">First 4 of 8 era blocks visible. Real TMDB posters. Continue hidden until first selection. Skip top-right.</p>
+</div>
+
+<!-- Frame 2: Mid-scroll with one selection -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div></div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick the eras you keep returning to</div>
+<div class="prompt-helper">We'll use these to find films you'll love.</div>
+</div>
+<div class="scroll-area">
+<div class="block-grid">
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">1960s-70s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-godfather"></div>
+<div class="poster-img f-star-wars"></div>
+<div class="poster-img f-alien"></div>
+<div class="poster-img f-godfather-2"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">1980s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-back-to-future"></div>
+<div class="poster-img f-shining"></div>
+<div class="poster-img f-empire-strikes-back"></div>
+<div class="poster-img f-return-of-jedi"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">1990s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-fight-club"></div>
+<div class="poster-img f-shawshank"></div>
+<div class="poster-img f-pulp-fiction"></div>
+<div class="poster-img f-forrest-gump"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">2000s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-dark-knight"></div>
+<div class="poster-img f-avatar"></div>
+<div class="poster-img f-harry-potter"></div>
+<div class="poster-img f-iron-man"></div>
+</div>
+</div>
+
+</div>
+</div>
+<div class="continue-bar">
+<div class="continue-btn">Continue</div>
+</div>
+</div>
+<p class="mockup-label">Frame 2 &mdash; mid-scroll, 1960s-70s selected</p>
+<p class="mockup-note">Gold border + scale 1.05 + checkmark badge + label color flip on selected block. Continue button now visible at bottom.</p>
+</div>
+
+<!-- Frame 3: Three selections -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div></div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick the eras you keep returning to</div>
+<div class="prompt-helper">We'll use these to find films you'll love.</div>
+</div>
+<div class="scroll-area">
+<div class="block-grid">
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">1980s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-back-to-future"></div>
+<div class="poster-img f-shining"></div>
+<div class="poster-img f-empire-strikes-back"></div>
+<div class="poster-img f-return-of-jedi"></div>
+</div>
+</div>
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">1990s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-fight-club"></div>
+<div class="poster-img f-shawshank"></div>
+<div class="poster-img f-pulp-fiction"></div>
+<div class="poster-img f-forrest-gump"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">2000s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-dark-knight"></div>
+<div class="poster-img f-avatar"></div>
+<div class="poster-img f-harry-potter"></div>
+<div class="poster-img f-iron-man"></div>
+</div>
+</div>
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">2010s</div>
+<div class="poster-mosaic">
+<div class="poster-img f-interstellar"></div>
+<div class="poster-img f-inception"></div>
+<div class="poster-img f-avengers"></div>
+<div class="poster-img f-deadpool"></div>
+</div>
+</div>
+
+</div>
+</div>
+<div class="continue-bar">
+<div class="continue-btn">Continue</div>
+</div>
+</div>
+<p class="mockup-label">Frame 3 &mdash; 3 selections (1980s, 1990s, 2010s)</p>
+<p class="mockup-note">Three blocks selected. Continue active gold. No counter shown. User can keep scrolling or commit. Tapping a 4th block would select it; tapping a 5th would shake (no-op).</p>
+</div>
+
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== SECTION 2: SCREEN 2 GENRE SELECTION ===== -->
+<p class="section-title">Section 2 — Screen 2: Genre selection (9 genres, real posters)</p>
+<p class="section-desc">9 genre blocks (Documentary dropped). Accumulation strip at top shows the user's era selections from the journey scenario: 1980s + 1990s + 2010s = 12 posters. Max 5 genre selections.</p>
+
+<div class="mockup-row">
+
+<!-- Frame 4: Screen 2 initial with accumulation strip from era selections -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div class="back-chevron">&lsaquo;</div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="accumulation-strip">
+<div class="acc-label">Your eras</div>
+<div class="acc-cascade">
+<!-- 1980s × 4 -->
+<div class="acc-poster f-back-to-future"></div>
+<div class="acc-poster acc-poster-overlap f-shining"></div>
+<div class="acc-poster acc-poster-overlap f-empire-strikes-back"></div>
+<div class="acc-poster acc-poster-overlap f-return-of-jedi"></div>
+<!-- 1990s × 4 -->
+<div class="acc-poster acc-poster-overlap f-fight-club"></div>
+<div class="acc-poster acc-poster-overlap f-shawshank"></div>
+<div class="acc-poster acc-poster-overlap f-pulp-fiction"></div>
+<div class="acc-poster acc-poster-overlap f-forrest-gump"></div>
+<!-- 2010s × 4 -->
+<div class="acc-poster acc-poster-overlap f-interstellar"></div>
+<div class="acc-poster acc-poster-overlap f-inception"></div>
+<div class="acc-poster acc-poster-overlap f-avengers"></div>
+<div class="acc-poster acc-poster-overlap f-deadpool"></div>
+</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick your genres</div>
+</div>
+<div class="scroll-area">
+<div class="block-grid">
+
+<div class="block">
+<div class="block-label">Drama</div>
+<div class="poster-mosaic">
+<div class="poster-img f-fight-club"></div>
+<div class="poster-img f-shawshank"></div>
+<div class="poster-img f-django"></div>
+<div class="poster-img f-titanic"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">Horror</div>
+<div class="poster-mosaic">
+<div class="poster-img f-it"></div>
+<div class="poster-img f-shining"></div>
+<div class="poster-img f-split"></div>
+<div class="poster-img f-alien"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">Comedy</div>
+<div class="poster-mosaic">
+<div class="poster-img f-forrest-gump"></div>
+<div class="poster-img f-truman-show"></div>
+<div class="poster-img f-hangover"></div>
+<div class="poster-img f-la-la-land"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">Sci-fi</div>
+<div class="poster-mosaic">
+<div class="poster-img f-inception"></div>
+<div class="poster-img f-avengers"></div>
+<div class="poster-img f-matrix"></div>
+<div class="poster-img f-martian"></div>
+</div>
+</div>
+
+</div>
+<div style="text-align:center;font-size:9px;color:rgba(255,255,255,0.2);margin-top:14px;letter-spacing:0.5px">SCROLL FOR MORE GENRES &darr;</div>
+</div>
+</div>
+<p class="mockup-label">Frame 4 &mdash; Screen 2 initial</p>
+<p class="mockup-note">Accumulation strip cascade: 12 posters from era selections (1980s + 1990s + 2010s). Right-edge fades out. First 4 of 9 genre blocks visible: Drama, Horror, Comedy, Sci-fi.</p>
+</div>
+
+<!-- Frame 5: Screen 2 with 4 genres selected -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div class="back-chevron">&lsaquo;</div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="accumulation-strip">
+<div class="acc-label">Your eras</div>
+<div class="acc-cascade">
+<div class="acc-poster f-back-to-future"></div>
+<div class="acc-poster acc-poster-overlap f-shining"></div>
+<div class="acc-poster acc-poster-overlap f-empire-strikes-back"></div>
+<div class="acc-poster acc-poster-overlap f-return-of-jedi"></div>
+<div class="acc-poster acc-poster-overlap f-fight-club"></div>
+<div class="acc-poster acc-poster-overlap f-shawshank"></div>
+<div class="acc-poster acc-poster-overlap f-pulp-fiction"></div>
+<div class="acc-poster acc-poster-overlap f-forrest-gump"></div>
+<div class="acc-poster acc-poster-overlap f-interstellar"></div>
+<div class="acc-poster acc-poster-overlap f-inception"></div>
+<div class="acc-poster acc-poster-overlap f-avengers"></div>
+<div class="acc-poster acc-poster-overlap f-deadpool"></div>
+</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick your genres</div>
+</div>
+<div class="scroll-area">
+<div class="block-grid">
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">Drama</div>
+<div class="poster-mosaic">
+<div class="poster-img f-fight-club"></div>
+<div class="poster-img f-shawshank"></div>
+<div class="poster-img f-django"></div>
+<div class="poster-img f-titanic"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">Horror</div>
+<div class="poster-mosaic">
+<div class="poster-img f-it"></div>
+<div class="poster-img f-shining"></div>
+<div class="poster-img f-split"></div>
+<div class="poster-img f-alien"></div>
+</div>
+</div>
+
+<div class="block">
+<div class="block-label">Comedy</div>
+<div class="poster-mosaic">
+<div class="poster-img f-forrest-gump"></div>
+<div class="poster-img f-truman-show"></div>
+<div class="poster-img f-hangover"></div>
+<div class="poster-img f-la-la-land"></div>
+</div>
+</div>
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">Sci-fi</div>
+<div class="poster-mosaic">
+<div class="poster-img f-inception"></div>
+<div class="poster-img f-avengers"></div>
+<div class="poster-img f-matrix"></div>
+<div class="poster-img f-martian"></div>
+</div>
+</div>
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">Thriller</div>
+<div class="poster-mosaic">
+<div class="poster-img f-pulp-fiction"></div>
+<div class="poster-img f-parasite"></div>
+<div class="poster-img f-rise-apes"></div>
+<div class="poster-img f-oceans-eleven"></div>
+</div>
+</div>
+
+<div class="block block-selected">
+<div class="checkmark-badge">
+<svg class="checkmark-svg" viewBox="0 0 12 12" fill="none">
+<path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<div class="block-label block-label-selected">Crime</div>
+<div class="poster-mosaic">
+<div class="poster-img f-joker"></div>
+<div class="poster-img f-se7en"></div>
+<div class="poster-img f-silence-lambs"></div>
+<div class="poster-img f-kingsman"></div>
+</div>
+</div>
+
+</div>
+</div>
+<div class="continue-bar">
+<div class="continue-btn">Continue</div>
+</div>
+</div>
+<p class="mockup-label">Frame 5 &mdash; Screen 2, 4 selections (Drama, Sci-fi, Thriller, Crime)</p>
+<p class="mockup-note">User scrolled past first row to access Thriller and Crime blocks. 4 of 5 max selections used. Continue active. Could add 1 more or commit. The strip overlap is real, not approximated.</p>
+</div>
+
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== SECTION 3: SCREEN 3 FILM SELECTION (PLACEHOLDERS PER V3 SCOPE) ===== -->
+<p class="section-title">Section 3 — Screen 3: Film selection</p>
+<p class="section-desc">Per v3 scope, Screen 3 grid keeps placeholder colors with sample titles since real candidates depend on user selections at runtime. The accumulation strip at top now shows real posters from the user's combined era + genre selections (28 posters total: 12 era + 16 genre).</p>
+
+<div class="mockup-row">
+
+<!-- Frame 6: Screen 3 grid empty -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div class="back-chevron">&lsaquo;</div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="accumulation-strip" style="height:64px">
+<div class="acc-label">Your taste so far</div>
+<div class="acc-cascade">
+<!-- 12 era posters -->
+<div class="acc-poster acc-poster-tiny f-back-to-future"></div>
+<div class="acc-poster acc-poster-tiny f-shining" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-empire-strikes-back" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-return-of-jedi" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-fight-club" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-shawshank" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-pulp-fiction" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-forrest-gump" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-interstellar" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-inception" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-avengers" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-deadpool" style="margin-left:-12px"></div>
+<!-- 16 genre posters: Drama, Sci-fi, Thriller, Crime (with cross-block dups for visual realism) -->
+<div class="acc-poster acc-poster-tiny f-fight-club" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-shawshank" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-django" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-titanic" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-inception" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-avengers" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-matrix" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-martian" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-pulp-fiction" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-parasite" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-rise-apes" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-oceans-eleven" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-joker" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-se7en" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-silence-lambs" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-kingsman" style="margin-left:-12px"></div>
+</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick the films you love</div>
+<div class="prompt-helper">Anything that catches your eye. Skip if nothing fits.</div>
+</div>
+<div class="scroll-area" style="padding-bottom:80px">
+<div class="film-grid">
+<div class="film-cell"><div class="film-poster film-poster-warm"></div><div class="film-title-mini">Heat</div><div class="film-year-mini">1995</div></div>
+<div class="film-cell"><div class="film-poster"></div><div class="film-title-mini">Goodfellas</div><div class="film-year-mini">1990</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep"></div><div class="film-title-mini">No Country</div><div class="film-year-mini">2007</div></div>
+<div class="film-cell"><div class="film-poster film-poster-cool"></div><div class="film-title-mini">Blade Runner</div><div class="film-year-mini">1982</div></div>
+<div class="film-cell"><div class="film-poster"></div><div class="film-title-mini">The Thing</div><div class="film-year-mini">1982</div></div>
+<div class="film-cell"><div class="film-poster film-poster-warm"></div><div class="film-title-mini">Boogie Nights</div><div class="film-year-mini">1997</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep"></div><div class="film-title-mini">Reservoir Dogs</div><div class="film-year-mini">1992</div></div>
+<div class="film-cell"><div class="film-poster film-poster-neutral"></div><div class="film-title-mini">Fargo</div><div class="film-year-mini">1996</div></div>
+<div class="film-cell"><div class="film-poster film-poster-cool"></div><div class="film-title-mini">Donnie Darko</div><div class="film-year-mini">2001</div></div>
+<div class="film-cell"><div class="film-poster"></div><div class="film-title-mini">The Departed</div><div class="film-year-mini">2006</div></div>
+<div class="film-cell"><div class="film-poster film-poster-warm"></div><div class="film-title-mini">Drive</div><div class="film-year-mini">2011</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep"></div><div class="film-title-mini">Sicario</div><div class="film-year-mini">2015</div></div>
+</div>
+</div>
+</div>
+<p class="mockup-label">Frame 6 &mdash; Screen 3 initial</p>
+<p class="mockup-note">28-poster cascade strip at top with real selected posters. Right-edge fades. 12-film grid below (placeholder colors with sample titles; actual films come from runtime algorithm). All sample titles are intentionally NOT in the curation list to model the real exclusion rule.</p>
+</div>
+
+<!-- Frame 7: Screen 3 with 4 films selected -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="status-bar"></div>
+<div class="top-row">
+<div class="back-chevron">&lsaquo;</div>
+<div class="skip-link">Skip</div>
+</div>
+<div class="accumulation-strip" style="height:64px">
+<div class="acc-label">Your taste so far</div>
+<div class="acc-cascade">
+<div class="acc-poster acc-poster-tiny f-back-to-future"></div>
+<div class="acc-poster acc-poster-tiny f-shining" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-empire-strikes-back" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-return-of-jedi" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-fight-club" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-shawshank" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-pulp-fiction" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-forrest-gump" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-interstellar" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-inception" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-avengers" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-deadpool" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-fight-club" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-shawshank" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-django" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-titanic" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-inception" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-avengers" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-matrix" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-martian" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-pulp-fiction" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-parasite" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-rise-apes" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-oceans-eleven" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-joker" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-se7en" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-silence-lambs" style="margin-left:-12px"></div>
+<div class="acc-poster acc-poster-tiny f-kingsman" style="margin-left:-12px"></div>
+</div>
+</div>
+<div class="sticky-prompt">
+<div class="prompt-heading">Pick the films you love</div>
+<div class="prompt-helper">Anything that catches your eye. Skip if nothing fits.</div>
+</div>
+<div class="scroll-area" style="padding-bottom:80px">
+<div class="film-grid">
+<div class="film-cell"><div class="film-poster film-poster-warm film-poster-selected"><div class="film-checkmark"><svg class="checkmark-svg" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="film-title-mini" style="color:#C8A951">Heat</div><div class="film-year-mini">1995</div></div>
+<div class="film-cell"><div class="film-poster"></div><div class="film-title-mini">Goodfellas</div><div class="film-year-mini">1990</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep film-poster-selected"><div class="film-checkmark"><svg class="checkmark-svg" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="film-title-mini" style="color:#C8A951">No Country</div><div class="film-year-mini">2007</div></div>
+<div class="film-cell"><div class="film-poster film-poster-cool"></div><div class="film-title-mini">Blade Runner</div><div class="film-year-mini">1982</div></div>
+<div class="film-cell"><div class="film-poster film-poster-selected"><div class="film-checkmark"><svg class="checkmark-svg" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="film-title-mini" style="color:#C8A951">The Thing</div><div class="film-year-mini">1982</div></div>
+<div class="film-cell"><div class="film-poster film-poster-warm"></div><div class="film-title-mini">Boogie Nights</div><div class="film-year-mini">1997</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep"></div><div class="film-title-mini">Reservoir Dogs</div><div class="film-year-mini">1992</div></div>
+<div class="film-cell"><div class="film-poster film-poster-neutral"></div><div class="film-title-mini">Fargo</div><div class="film-year-mini">1996</div></div>
+<div class="film-cell"><div class="film-poster film-poster-cool film-poster-selected"><div class="film-checkmark"><svg class="checkmark-svg" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#0D0D1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="film-title-mini" style="color:#C8A951">Donnie Darko</div><div class="film-year-mini">2001</div></div>
+<div class="film-cell"><div class="film-poster"></div><div class="film-title-mini">The Departed</div><div class="film-year-mini">2006</div></div>
+<div class="film-cell"><div class="film-poster film-poster-warm"></div><div class="film-title-mini">Drive</div><div class="film-year-mini">2011</div></div>
+<div class="film-cell"><div class="film-poster film-poster-deep"></div><div class="film-title-mini">Sicario</div><div class="film-year-mini">2015</div></div>
+</div>
+</div>
+<div class="continue-bar">
+<div class="continue-btn">Continue</div>
+</div>
+</div>
+<p class="mockup-label">Frame 7 &mdash; 4 films selected</p>
+<p class="mockup-note">No max cap. Selected: gold border + checkmark + title color flip. Highest IMDb-rated film with quality backdrop becomes the banner.</p>
+</div>
+
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== SECTION 4: DISSOLUTION + REVEAL ===== -->
+<p class="section-title">Section 4 — Dissolution (real posters) and reveal</p>
+<p class="section-desc">After Continue on Screen 3, posters from the user's selections stream inward in two arcs with deceleration easing. Banner emerges from center with subtle glow. 2 to 2.5 seconds total.</p>
+
+<div class="mockup-row">
+
+<!-- Frame 8: Magnet convergence dissolution with real posters -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="dissolve-stage">
+<div class="dissolve-cluster">
+<!-- Left arc: stream from left edge, all rotated INWARD -->
+<div class="dissolve-poster-conv conv-l1 f-empire-strikes-back"></div>
+<div class="dissolve-poster-conv conv-l2 f-shining"></div>
+<div class="dissolve-poster-conv conv-l3 f-pulp-fiction"></div>
+<div class="dissolve-poster-conv conv-l4 f-inception"></div>
+<div class="dissolve-poster-conv conv-l5 f-matrix"></div>
+<div class="dissolve-poster-conv conv-l6 f-joker"></div>
+<div class="dissolve-poster-conv conv-l7 f-parasite"></div>
+<!-- Right arc -->
+<div class="dissolve-poster-conv conv-r1 f-back-to-future"></div>
+<div class="dissolve-poster-conv conv-r2 f-fight-club"></div>
+<div class="dissolve-poster-conv conv-r3 f-forrest-gump"></div>
+<div class="dissolve-poster-conv conv-r4 f-deadpool"></div>
+<div class="dissolve-poster-conv conv-r5 f-titanic"></div>
+<div class="dissolve-poster-conv conv-r6 f-se7en"></div>
+<div class="dissolve-poster-conv conv-r7 f-django"></div>
+<!-- Banner emerging with subtle glow -->
+<div class="dissolve-emerging-banner"></div>
+</div>
+<div class="dissolve-helper">Building your profile...</div>
+</div>
+</div>
+<p class="mockup-label">Frame 8 &mdash; Magnet convergence (mid-state)</p>
+<p class="mockup-note">14 real posters streaming inward from left and right edges. Outer posters more blurred, smaller, lower opacity. Near-center posters sharper. Banner placeholder represents the chosen film's backdrop emerging at low opacity. Real impl: actual TMDB backdrop image.</p>
+</div>
+
+<!-- Frame 9: Reveal with backdrop banner -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="reveal-stage">
+<div class="reveal-heading">Your profile is ready</div>
+<div class="reveal-sub">Customize anything later in Settings.</div>
+</div>
+<div class="profile-preview">
+<div class="preview-banner">
+<div class="preview-avatar">H</div>
+</div>
+<div class="preview-meta">
+<div class="preview-name">humza</div>
+<div class="preview-handle">@humza</div>
+<div class="preview-stats"><div><strong>0</strong> films</div><div><strong>0</strong> following</div><div><strong>0</strong> followers</div></div>
+</div>
+</div>
+<div class="reveal-cta">
+<div class="reveal-cta-btn">Get started</div>
+</div>
+</div>
+<p class="mockup-label">Frame 9 &mdash; Reveal (BACKDROP path)</p>
+<p class="mockup-note">Banner placeholder represents the selected film's TMDB backdrop. No bio row (Q9 locked: hide if empty). No source attribution pill. Get started routes to /(tabs)/explore.</p>
+</div>
+
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== SECTION 5: FALLBACK PATHS ===== -->
+<p class="section-title">Section 5 — Fallback paths</p>
+<p class="section-desc">Skip Screen 3 (or no usable backdrop): GRADIENT preset mapped from era + genre taste. Skip everything: default GRADIENT (midnight). Bio row hidden in both per Q9.</p>
+
+<div class="mockup-row">
+
+<!-- Frame 10: Skip Screen 3 only -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="reveal-stage">
+<div class="reveal-heading">Your profile is ready</div>
+<div class="reveal-sub">Customize anything later in Settings.</div>
+</div>
+<div class="profile-preview">
+<div class="preview-banner preview-banner-gradient-mapped">
+<div class="preview-avatar">H</div>
+</div>
+<div class="preview-meta">
+<div class="preview-name">humza</div>
+<div class="preview-handle">@humza</div>
+<div class="preview-stats"><div><strong>0</strong> films</div><div><strong>0</strong> following</div><div><strong>0</strong> followers</div></div>
+</div>
+</div>
+<div class="reveal-cta">
+<div class="reveal-cta-btn">Get started</div>
+</div>
+</div>
+<p class="mockup-label">Frame 10 &mdash; Skip Screen 3 only</p>
+<p class="mockup-note">User skipped Screen 3 OR none of their picks had a quality backdrop. Banner is a GRADIENT preset mapped from era + genre selections. Same heading and CTA as BACKDROP path.</p>
+</div>
+
+<!-- Frame 11: Skip everything -->
+<div class="mockup-wrapper">
+<div class="phone">
+<div class="reveal-stage">
+<div class="reveal-heading">Welcome to Cinemagraphs</div>
+<div class="reveal-sub">You can set this up later in Settings.</div>
+</div>
+<div class="profile-preview">
+<div class="preview-banner preview-banner-gradient-default">
+<div class="preview-avatar">H</div>
+</div>
+<div class="preview-meta">
+<div class="preview-name">humza</div>
+<div class="preview-handle">@humza</div>
+<div class="preview-stats"><div><strong>0</strong> films</div><div><strong>0</strong> following</div><div><strong>0</strong> followers</div></div>
+</div>
+</div>
+<div class="reveal-cta">
+<div class="reveal-cta-btn">Get started</div>
+</div>
+</div>
+<p class="mockup-label">Frame 11 &mdash; Skip everything</p>
+<p class="mockup-note">User skipped all 3 screens. Heading shifts to "Welcome to Cinemagraphs". Default midnight gradient banner.</p>
+</div>
+
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ===== PARKED FOLLOWUPS ===== -->
+<p class="section-title">Open questions and parked followups</p>
+<p class="section-desc">Items deliberately deferred or that need a decision before code starts.</p>
+
+<div class="parked-box">
+<strong>1. CLOSED: Catalog source for mosaic posters.</strong> Catalog-only, confirmed via top-N-by-IMDb-votes catalog query during curation. Documentary block dropped after iteration revealed insufficient cohesive 4-poster sets.<br><br>
+
+<strong>2. CLOSED: Max-selection overflow.</strong> No-op with shake animation. Implementation: Reanimated <span class="code-inline">withSequence(withTiming(4), withTiming(-4), withTiming(0))</span>, ~200ms total. Tactile feedback that the cap exists, no auto-deselect.<br><br>
+
+<strong>3. CLOSED: Right-edge fade on accumulation strip.</strong> No horizontal scroll (would compete with grid scroll gesture). CSS <span class="code-inline">mask-image: linear-gradient(to right, black 80%, transparent 100%)</span>. Decorative, no interaction.<br><br>
+
+<strong>4. CLOSED: Hide bio row on reveal if empty.</strong> No "Bio coming soon" placeholder. Users add bio later from Settings.<br><br>
+
+<strong>5. Accumulation strip dedup behavior.</strong> 11 films appear in both an era and a genre block per the relaxed dedup rule from curation. When user selects an era AND a genre that share a film, does the strip show that film once or twice? Mockup shows duplicates for visual fidelity to the selection set. Real impl could either: (a) match mockup and show duplicates, or (b) dedup at strip-render time. Lean toward (b) for cleaner visual but not blocking.<br><br>
+
+<strong>6. Skip Screen 1 / Skip Screen 2 candidate pools.</strong> If user skips Screen 1, what does Screen 2 show? All 9 genre mosaics with default posters (already curated). If user skips Screen 1 AND Screen 2, what does Screen 3 show? Top 12 popular films overall. Reasonable defaults; confirm before build.<br><br>
+
+<strong>7. Backdrop algorithm tie-breaking.</strong> If top-rated Screen 3 pick has no usable backdrop, fall to second-rated. If none of the picks has a usable backdrop, fall through silently to GRADIENT mapped path. Confirmed.<br><br>
+
+<strong>8. Already-shown poster exclusion.</strong> Confirmed: Screen 3 algorithm excludes the 57 unique films shown in mosaic blocks. Adjacent-decade fallback if &lt;12 candidates remain. SQL count check on catalog before build to validate this won't deadlock for narrow selection combos (e.g., user picks only 1920s-30s + Horror).<br><br>
+
+<strong>9. Reveal screen avatar.</strong> Mockup shows "H" letter. OAuth avatar from Google/Apple sign-in should be used if present at this point in the flow; letter fallback only if not. Build-time concern.<br><br>
+
+<strong>10. Existing app/onboarding.tsx delete.</strong> The Prompt 10 carousel currently lives at this path. PR 2 replaces it. About.tsx covers the same content for depth-seekers. Delete in the same PR as new onboarding ships.
+</div>
+
+</body>
+</html>
