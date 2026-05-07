@@ -1,9 +1,9 @@
-// Centralized TMDB poster URL builder. Picks the right source size
-// based on render context to avoid upscaling small sources into
-// large containers (causes visible fuzziness on retina) or
-// downloading large sources into tiny containers (wastes data).
+// Centralized TMDB poster + backdrop URL builders. Pick the right source
+// size based on render context to avoid upscaling small sources into
+// large containers (causes visible fuzziness on retina) or downloading
+// large sources into tiny containers (wastes data).
 //
-// Size guide:
+// Poster size guide:
 // - thumbnail (w185): containers under ~60pt wide. Tiny inline
 //   poster chips, trending row thumbnails, list preview strips,
 //   review form headers, picker rows, small review-row posters.
@@ -17,6 +17,14 @@
 // - hero (original): full-bleed detail screens. Reserved for
 //   future full-bleed designs not currently in use. No callers
 //   today, kept for forward compatibility.
+//
+// Backdrop size guide (PR 1c mobile):
+// - thumbnail (w780): backdrop selection grid cards (2-col 16:9
+//   thumbs, ~190pt wide on a 393pt iPhone with 16pt edge padding).
+// - preview (w1280): full-banner render -- picker live preview AND
+//   the Profile banner. w1280 was chosen to give visibly sharp
+//   1.5x-2x rendering on retina at the typical screen widths
+//   without overshooting bandwidth.
 
 const TMDB_BASE = 'https://image.tmdb.org/t/p'
 
@@ -25,14 +33,20 @@ const TMDB_BASE = 'https://image.tmdb.org/t/p'
 // size segment to whatever the caller's context requires.
 const TMDB_PREFIX_RE = /^https:\/\/image\.tmdb\.org\/t\/p\/[^/]+\//
 
-const SIZE_MAP = {
+const POSTER_SIZE_MAP = {
   thumbnail: 'w185',
   card: 'w342',
   grid: 'w500',
   hero: 'original',
 } as const
 
-export type PosterContext = keyof typeof SIZE_MAP
+const BACKDROP_SIZE_MAP = {
+  thumbnail: 'w780',
+  preview: 'w1280',
+} as const
+
+export type PosterContext = keyof typeof POSTER_SIZE_MAP
+export type BackdropContext = keyof typeof BACKDROP_SIZE_MAP
 
 type FilmWithPoster = {
   posterUrl?: string | null
@@ -51,11 +65,28 @@ export function getPosterUrl(
   // context controls the source resolution instead of always rendering at
   // whatever size the URL was pre-baked with.
   if (TMDB_PREFIX_RE.test(path)) {
-    return path.replace(TMDB_PREFIX_RE, `${TMDB_BASE}/${SIZE_MAP[context]}/`)
+    return path.replace(TMDB_PREFIX_RE, `${TMDB_BASE}/${POSTER_SIZE_MAP[context]}/`)
   }
   // Non-TMDB full URL (user-uploaded avatar, external service, etc.)
   if (path.startsWith('http')) return path
   // Plain TMDB path stored without prefix; guard against missing leading slash.
   const sep = path.startsWith('/') ? '' : '/'
-  return `${TMDB_BASE}/${SIZE_MAP[context]}${sep}${path}`
+  return `${TMDB_BASE}/${POSTER_SIZE_MAP[context]}${sep}${path}`
+}
+
+// Build a TMDB backdrop URL for a given file_path and render context.
+// Same input shapes as getPosterUrl: plain path (with or without leading
+// slash), pre-built TMDB URL with baked-in size, or a non-TMDB full URL
+// (passed through). Returns null for empty / missing input.
+export function getBackdropUrl(
+  filePath: string | null | undefined,
+  context: BackdropContext,
+): string | null {
+  if (!filePath) return null
+  if (TMDB_PREFIX_RE.test(filePath)) {
+    return filePath.replace(TMDB_PREFIX_RE, `${TMDB_BASE}/${BACKDROP_SIZE_MAP[context]}/`)
+  }
+  if (filePath.startsWith('http')) return filePath
+  const sep = filePath.startsWith('/') ? '' : '/'
+  return `${TMDB_BASE}/${BACKDROP_SIZE_MAP[context]}${sep}${filePath}`
 }

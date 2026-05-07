@@ -39,6 +39,7 @@ function RootNav() {
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="live-react/index" />
       <Stack.Screen name="header-picker" />
+      <Stack.Screen name="backdrop-picker" />
       <Stack.Screen name="index" />
       <Stack.Screen name="+not-found" />
     </Stack>

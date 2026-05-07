@@ -196,15 +196,15 @@ describe('resolveBackdropUri', () => {
     expect(resolveBackdropUri({ backdropUrl: url })).toBe(url);
   });
 
-  it('prepends the TMDB base for a path with a leading slash', () => {
+  it('prepends the TMDB base for a path with a leading slash (PR 1c uses w1280)', () => {
     expect(resolveBackdropUri({ backdropPath: '/abc.jpg' })).toBe(
-      'https://image.tmdb.org/t/p/w780/abc.jpg',
+      'https://image.tmdb.org/t/p/w1280/abc.jpg',
     );
   });
 
-  it('prepends the TMDB base for a path without a leading slash', () => {
+  it('prepends the TMDB base for a path without a leading slash (PR 1c uses w1280)', () => {
     expect(resolveBackdropUri({ backdropPath: 'abc.jpg' })).toBe(
-      'https://image.tmdb.org/t/p/w780/abc.jpg',
+      'https://image.tmdb.org/t/p/w1280/abc.jpg',
     );
   });
 
@@ -226,7 +226,7 @@ describe('resolveBannerSource', () => {
     expect(src).toEqual({ kind: 'gradient', presetKey: BANNER_DEFAULT_KEY });
   });
 
-  it('returns backdrop source when BACKDROP and film provided', () => {
+  it('returns backdrop source when BACKDROP (legacy filmId) and film provided (PR 1c uses w1280)', () => {
     const src = resolveBannerSource(
       'BACKDROP',
       'film-1',
@@ -234,7 +234,7 @@ describe('resolveBannerSource', () => {
     );
     expect(src).toEqual({
       kind: 'backdrop',
-      uri: 'https://image.tmdb.org/t/p/w780/bd.jpg',
+      uri: 'https://image.tmdb.org/t/p/w1280/bd.jpg',
     });
   });
 
