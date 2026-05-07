@@ -394,9 +394,21 @@ export async function fetchUserProfile(): Promise<UserProfile | null> {
   return res.json();
 }
 
+// PR 1c (mobile companion to web PR #29) widened the BACKDROP banner
+// shape: bannerValue can now be a structured { filmId, backdropPath }
+// object instead of a plain filmId string. The server accepts both
+// forms (legacy string + new object) and stringifies the object on
+// persist, so this wrapper just forwards whatever shape the caller
+// passes. The outer JSON.stringify on the request body serialises the
+// nested object correctly. GRADIENT and PHOTO continue to use string
+// bannerValue (preset key, blob pathname).
+export type BannerValue =
+  | string
+  | { filmId: string; backdropPath: string | null };
+
 export async function updateUserBanner(
   bannerType: BannerType,
-  bannerValue: string,
+  bannerValue: BannerValue,
 ): Promise<void> {
   const res = await apiFetch('/user/banner', {
     method: 'PATCH',
@@ -406,6 +418,29 @@ export async function updateUserBanner(
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to update banner');
   }
+}
+
+// TMDB backdrop record returned by GET /api/films/<id>/backdrops (web
+// PR #29). Server filters out low-quality / text-overlay backdrops and
+// sorts by vote_count DESC before returning, so mobile renders the
+// array as-is.
+export interface Backdrop {
+  file_path: string;
+  width: number;
+  height: number;
+  vote_count: number;
+  vote_average: number;
+}
+
+export async function getBackdrops(filmId: string): Promise<Backdrop[]> {
+  const res = await apiFetch(`/films/${encodeURIComponent(filmId)}/backdrops`);
+  if (!res.ok) {
+    throw new Error(`Failed to load backdrops (${res.status})`);
+  }
+  const data = await res.json();
+  // Server may return { backdrops: [...] } or a bare array; tolerate both.
+  const list = Array.isArray(data) ? data : (data?.backdrops ?? []);
+  return list as Backdrop[];
 }
 
 export async function fetchUserFilms(type?: string): Promise<any[]> {

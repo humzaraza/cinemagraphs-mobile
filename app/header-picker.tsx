@@ -39,12 +39,15 @@ import {
   computeSourceCropRect,
   getInitialState,
   getResetStateForTab,
-  getStateAfterFilmSelection,
   isSaveEnabled,
   type PickerState,
   type PickerTab,
 } from '../src/lib/banner-picker';
-import { resolveBannerSource } from '../src/lib/banner-url';
+import {
+  parseBackdropBannerValue,
+  resolveBannerSource,
+} from '../src/lib/banner-url';
+import { clearBackdropsCache } from '../src/lib/backdrop-cache';
 import { uploadBannerPhoto } from '../src/lib/banner-upload';
 import { getPosterUrl } from '../src/lib/tmdb-image';
 import { useAuth } from '../src/providers/AuthProvider';
@@ -151,10 +154,18 @@ export default function HeaderPickerScreen() {
   // -------------------------------------------------------------------------
   // Persisted backdrop film fetch (mount-only when persisted is BACKDROP)
   // -------------------------------------------------------------------------
+  // PR 1c: persisted bannerValue may be JSON-encoded ({filmId, backdropPath})
+  // or a legacy plain filmId string. parseBackdropBannerValue handles both.
+  // We only fetch the film record so the preview can render when the row
+  // has a null backdropPath (legacy / migrated). When backdropPath is set,
+  // resolveBannerSource builds the URL directly from it without needing
+  // the film record.
   useEffect(() => {
     if (persisted.bannerType !== 'BACKDROP' || !persisted.bannerValue) return;
+    const parsed = parseBackdropBannerValue(persisted.bannerValue);
+    if (!parsed) return;
     let cancelled = false;
-    fetchFilmDetail(persisted.bannerValue)
+    fetchFilmDetail(parsed.filmId)
       .then((film) => {
         if (!cancelled) setPersistedFilm(film);
       })
@@ -165,6 +176,19 @@ export default function HeaderPickerScreen() {
       cancelled = true;
     };
   }, [persisted.bannerType, persisted.bannerValue]);
+
+  // -------------------------------------------------------------------------
+  // Backdrop response cache cleanup (PR 1c). The backdrop-picker screen
+  // populates a module-level Map<filmId, Backdrop[]> so re-entering the
+  // same film during a single picker session is instant. The cache is
+  // bounded by picker mount; we drop it when the picker unmounts so a
+  // future picker session sees fresh data.
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    return () => {
+      clearBackdropsCache();
+    };
+  }, []);
 
   // -------------------------------------------------------------------------
   // Popular films cache (load once when BACKDROP tab is first activated)
@@ -278,11 +302,29 @@ export default function HeaderPickerScreen() {
   );
 
   // -------------------------------------------------------------------------
-  // Film selection (BACKDROP)
+  // Film selection (BACKDROP) -- PR 1c
   // -------------------------------------------------------------------------
-  const onSelectFilm = useCallback((film: Film) => {
-    setState((prev) => getStateAfterFilmSelection(prev, film));
-  }, []);
+  // Tapping a film no longer mutates picker draft state; it pushes the
+  // backdrop-picker screen, which lets the user pick a specific TMDB
+  // backdrop and saves on its own. The picker's Save button stays
+  // disabled in BACKDROP tab as a result (no draft delta from a tap).
+  // The persisted-film highlight in the grid still works because it
+  // reads from persisted bannerValue, not from a draft mutation.
+  const onSelectFilm = useCallback(
+    (film: Film) => {
+      router.push({
+        pathname: '/backdrop-picker',
+        params: {
+          filmId: film.id,
+          filmTitle: film.title,
+          filmYear: film.year ? String(film.year) : '',
+          persistedBannerType: persisted.bannerType,
+          persistedBannerValue: persisted.bannerValue,
+        },
+      } as any);
+    },
+    [router, persisted.bannerType, persisted.bannerValue],
+  );
 
   // -------------------------------------------------------------------------
   // Photo picker
@@ -579,7 +621,11 @@ export default function HeaderPickerScreen() {
             films={activeFilms}
             loading={filmsLoading}
             error={filmsError}
-            selectedFilmId={state.bannerType === 'BACKDROP' ? state.bannerValue : null}
+            selectedFilmId={
+              state.bannerType === 'BACKDROP'
+                ? parseBackdropBannerValue(state.bannerValue)?.filmId ?? null
+                : null
+            }
             onSelectFilm={onSelectFilm}
           />
         )}
