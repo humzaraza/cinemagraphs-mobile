@@ -116,7 +116,8 @@ export function MosaicBlock({ block, selected, atCap, onPress, onCapHit }: Mosai
   );
 }
 
-const MOSAIC_RADIUS = 6;
+const MOSAIC_RADIUS = 10;
+const POSTER_RADIUS = 3;
 
 const styles = StyleSheet.create({
   blockContainer: {
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
   poster: {
     width: '100%',
     height: '100%',
+    borderRadius: POSTER_RADIUS,
   },
   selectedBorder: {
     position: 'absolute',
