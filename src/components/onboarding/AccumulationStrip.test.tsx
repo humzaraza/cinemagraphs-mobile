@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import * as React from 'react';
 
 vi.mock('react-native', () => ({
   View: 'View',
@@ -38,7 +37,7 @@ function render(films: CuratedFilm[], height?: 'compact' | 'tall', label = 'YOUR
   let tree: ReactTestRenderer | undefined;
   TestRenderer.act(() => {
     tree = TestRenderer.create(
-      React.createElement(AccumulationStrip, { films, label, height }),
+      <AccumulationStrip films={films} label={label} height={height} />,
     );
   });
   if (!tree) throw new Error('renderer never assigned');

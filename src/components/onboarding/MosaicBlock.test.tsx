@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import * as React from 'react';
 
 vi.mock('react-native', () => ({
   View: 'View',
@@ -13,14 +12,10 @@ vi.mock('react-native', () => ({
   },
 }));
 
-vi.mock('react-native-reanimated', () => ({
-  default: { View: 'AnimatedView' },
-  useSharedValue: (initial: number) => ({ value: initial }),
-  useAnimatedStyle: (cb: () => Record<string, unknown>) => cb(),
-  withSpring: (target: number) => target,
-  withTiming: (target: number) => target,
-  withSequence: (...args: number[]) => args[args.length - 1] ?? 0,
-}));
+vi.mock('react-native-reanimated', async () => {
+  const { createReanimatedMock } = await import('../../test/reanimated-mock');
+  return createReanimatedMock();
+});
 
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { MosaicBlock } from './MosaicBlock';
@@ -49,7 +44,7 @@ type Props = {
 function render(props: Props) {
   let tree: ReactTestRenderer | undefined;
   TestRenderer.act(() => {
-    tree = TestRenderer.create(React.createElement(MosaicBlock, props));
+    tree = TestRenderer.create(<MosaicBlock {...props} />);
   });
   if (!tree) throw new Error('renderer never assigned');
   return tree;
