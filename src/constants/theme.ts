@@ -31,6 +31,12 @@ export const colors = {
   borderSubtle: 'rgba(255,255,255,0.04)',
   // Gold glow ring around selected mosaic blocks
   goldHalo: 'rgba(200,169,81,0.15)',
+
+  // Accumulation band (translucent overlay strip in onboarding)
+  bandBackground: 'rgba(13,13,26,0.6)',
+  bandBorder: 'rgba(200,169,81,0.1)',
+  // Tiny uppercase eyebrow labels (e.g., the band's "YOUR ERAS")
+  labelGold: 'rgba(200,169,81,0.6)',
 } as const;
 
 export const fonts = {

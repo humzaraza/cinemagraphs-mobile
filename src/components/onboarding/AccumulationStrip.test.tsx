@@ -18,6 +18,7 @@ vi.mock('expo-linear-gradient', () => ({
 
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { AccumulationStrip } from './AccumulationStrip';
+import { colors } from '../../constants/theme';
 import type { CuratedFilm } from '../../data/onboardingCuration';
 
 const A: CuratedFilm = { title: 'Alpha', year: 2000, posterPath: '/a.jpg' };
@@ -88,5 +89,33 @@ describe('AccumulationStrip', () => {
     const tree = render([A, B, C]);
     const grads = tree.root.findAllByProps({ testID: 'accumulation-fade-gradient' });
     expect(grads).toHaveLength(1);
+  });
+
+  it('band container has backgroundColor bandBackground', () => {
+    const tree = render([A]);
+    const band = tree.root.findByProps({ testID: 'accumulation-band' });
+    const flat = flatten(band.props.style);
+    expect(flat.backgroundColor).toBe(colors.bandBackground);
+  });
+
+  it('compact band has height 56', () => {
+    const tree = render([A], 'compact');
+    const band = tree.root.findByProps({ testID: 'accumulation-band' });
+    const flat = flatten(band.props.style);
+    expect(flat.height).toBe(56);
+  });
+
+  it('tall band has height 64', () => {
+    const tree = render([A], 'tall');
+    const band = tree.root.findByProps({ testID: 'accumulation-band' });
+    const flat = flatten(band.props.style);
+    expect(flat.height).toBe(64);
+  });
+
+  it('label has color labelGold', () => {
+    const tree = render([A], undefined, 'YOUR PICKS');
+    const labelNode = tree.root.findByProps({ children: 'YOUR PICKS' });
+    const flat = flatten(labelNode.props.style);
+    expect(flat.color).toBe(colors.labelGold);
   });
 });

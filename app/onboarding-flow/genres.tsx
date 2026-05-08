@@ -5,56 +5,64 @@ import { useRouter } from 'expo-router';
 
 import { colors } from '../../src/constants/theme';
 import { useOnboarding } from '../../src/contexts/onboarding-context';
-import { ERA_BLOCKS, type OnboardingBlock } from '../../src/data/onboardingCuration';
+import {
+  ERA_BLOCKS,
+  GENRE_BLOCKS,
+  type CuratedFilm,
+  type OnboardingBlock,
+} from '../../src/data/onboardingCuration';
 import { MosaicBlock } from '../../src/components/onboarding/MosaicBlock';
+import { AccumulationStrip } from '../../src/components/onboarding/AccumulationStrip';
 import { OnboardingHeader } from '../../src/components/onboarding/OnboardingHeader';
 import { ContinueButton } from '../../src/components/onboarding/ContinueButton';
 
-const ERA_CAP = 4;
+const GENRE_CAP = 5;
 // Vertical space the absolute continue bar occupies above the safe-area inset.
 // FlatList content reserves this much padding at the bottom so the last items
 // scroll above the bar instead of being permanently hidden behind it.
 const CONTINUE_BAR_HEIGHT = 90;
 
-export default function ErasScreen() {
+export default function GenresScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { eras, setEras } = useOnboarding();
+  const { eras, genres, setGenres } = useOnboarding();
 
-  const atCap = eras.length >= ERA_CAP;
-  const isAtCapForBlock = (id: string) => atCap && !eras.includes(id);
+  const atCap = genres.length >= GENRE_CAP;
+  const isAtCapForBlock = (id: string) => atCap && !genres.includes(id);
 
   const handlePress = (blockId: string) => {
-    const isSelected = eras.includes(blockId);
+    const isSelected = genres.includes(blockId);
     if (isSelected) {
-      setEras(eras.filter((id) => id !== blockId));
+      setGenres(genres.filter((id) => id !== blockId));
       return;
     }
     if (atCap) return;
-    setEras([...eras, blockId]);
+    setGenres([...genres, blockId]);
   };
 
   const handleContinue = () => {
-    router.push('/onboarding-flow/genres' as any);
+    router.push('/onboarding-flow/films' as any);
   };
 
   const handleSkip = () => {
-    setEras([]);
-    router.push('/onboarding-flow/genres' as any);
+    setGenres([]);
+    router.push('/onboarding-flow/films' as any);
   };
+
+  const eraFilms: CuratedFilm[] = eras.flatMap((id) => {
+    const block = ERA_BLOCKS.find((b) => b.id === id);
+    return block ? [...block.films] : [];
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaView edges={['top']}>
-        <OnboardingHeader
-          title="Pick the eras you keep returning to"
-          helper="We'll use these to find films you'll love."
-          onSkip={handleSkip}
-        />
+        <OnboardingHeader title="Pick your genres" onSkip={handleSkip} />
       </SafeAreaView>
+      <AccumulationStrip films={eraFilms} label="Your eras" height="compact" />
       <FlatList
         style={{ flex: 1 }}
-        data={ERA_BLOCKS}
+        data={GENRE_BLOCKS}
         numColumns={2}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
@@ -67,7 +75,7 @@ export default function ErasScreen() {
           <View style={{ flex: 1 }}>
             <MosaicBlock
               block={item}
-              selected={eras.includes(item.id)}
+              selected={genres.includes(item.id)}
               atCap={isAtCapForBlock(item.id)}
               onPress={() => handlePress(item.id)}
             />
@@ -85,7 +93,7 @@ export default function ErasScreen() {
         />
         <SafeAreaView edges={['bottom']}>
           <View style={styles.continueBarInner}>
-            <ContinueButton visible={eras.length > 0} onPress={handleContinue} />
+            <ContinueButton visible={genres.length > 0} onPress={handleContinue} />
           </View>
         </SafeAreaView>
       </View>

@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -11,6 +10,9 @@ type AccumulationStripProps = {
   label: string;
   height?: 'compact' | 'tall';
 };
+
+const COMPACT_HEIGHT = 56;
+const TALL_HEIGHT = 64;
 
 function dedupeByPosterPath(films: CuratedFilm[]): CuratedFilm[] {
   const seen = new Set<string>();
@@ -25,11 +27,12 @@ function dedupeByPosterPath(films: CuratedFilm[]): CuratedFilm[] {
 
 export function AccumulationStrip({ films, label, height = 'compact' }: AccumulationStripProps) {
   const deduped = dedupeByPosterPath(films);
+  const containerHeight = height === 'tall' ? TALL_HEIGHT : COMPACT_HEIGHT;
   const sizeStyle = height === 'tall' ? styles.posterTall : styles.posterCompact;
   const overlapStyle = height === 'tall' ? styles.overlapTall : styles.overlapCompact;
 
   return (
-    <View style={styles.container}>
+    <View testID="accumulation-band" style={[styles.band, { height: containerHeight }]}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.cascadeRow}>
         {deduped.map((film, index) => (
@@ -55,28 +58,38 @@ export function AccumulationStrip({ films, label, height = 'compact' }: Accumula
 }
 
 const styles = StyleSheet.create({
-  container: {
+  band: {
     width: '100%',
+    backgroundColor: colors.bandBackground,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.bandBorder,
+    position: 'relative',
+    overflow: 'hidden',
   },
   label: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.ivory,
-    opacity: 0.7,
-    letterSpacing: 1.2,
+    position: 'absolute',
+    top: 6,
+    left: 16,
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.labelGold,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    marginBottom: 8,
   },
   cascadeRow: {
-    width: '100%',
+    position: 'absolute',
+    top: 18,
+    left: 16,
+    right: 16,
+    height: 36,
     flexDirection: 'row',
+    alignItems: 'center',
     overflow: 'hidden',
-    position: 'relative',
   },
   poster: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 1.5,
+    borderRadius: 2,
   },
   posterCompact: {
     width: 24,
