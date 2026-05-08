@@ -23,7 +23,7 @@ export default function FilmsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
-  const { eras, genres, filmIds, setFilmIds } = useOnboarding();
+  const { eras, genres, filmIds, setFilmIds, setFilmDetails } = useOnboarding();
 
   const ITEM_WIDTH =
     (screenWidth - HORIZONTAL_PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
@@ -61,8 +61,11 @@ export default function FilmsScreen() {
   const handleToggle = (filmId: string) => {
     if (filmIds.includes(filmId)) {
       setFilmIds(filmIds.filter((id) => id !== filmId));
+      setFilmDetails(films.filter((f) => f.id !== filmId && filmIds.includes(f.id)));
     } else {
       setFilmIds([...filmIds, filmId]);
+      const nextIds = [...filmIds, filmId];
+      setFilmDetails(films.filter((f) => nextIds.includes(f.id)));
     }
   };
 
@@ -72,6 +75,7 @@ export default function FilmsScreen() {
 
   const handleSkip = () => {
     setFilmIds([]);
+    setFilmDetails([]);
     router.push('/onboarding-flow/reveal' as any);
   };
 

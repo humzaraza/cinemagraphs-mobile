@@ -26,12 +26,13 @@ function setup() {
 }
 
 describe('OnboardingContext', () => {
-  it('initial state is three empty arrays', () => {
+  it('initial state is four empty arrays', () => {
     const { state } = setup();
     const s = state();
     expect(s.eras).toEqual([]);
     expect(s.genres).toEqual([]);
     expect(s.filmIds).toEqual([]);
+    expect(s.filmDetails).toEqual([]);
   });
 
   it('setEras updates eras only; genres and filmIds untouched', () => {
@@ -56,7 +57,7 @@ describe('OnboardingContext', () => {
     expect(s.filmIds).toEqual([]);
   });
 
-  it('setFilmIds updates filmIds only; eras and genres untouched', () => {
+  it('setFilmIds updates filmIds only; eras, genres, filmDetails untouched', () => {
     const { state } = setup();
     TestRenderer.act(() => {
       state().setFilmIds(['film_a', 'film_b']);
@@ -65,16 +66,45 @@ describe('OnboardingContext', () => {
     expect(s.filmIds).toEqual(['film_a', 'film_b']);
     expect(s.eras).toEqual([]);
     expect(s.genres).toEqual([]);
+    expect(s.filmDetails).toEqual([]);
   });
 
-  it('reset clears all three back to empty', () => {
+  it('setFilmDetails updates filmDetails only; other arrays untouched', () => {
     const { state } = setup();
+    const film = {
+      id: 'film_a',
+      tmdbId: 1,
+      title: 'A',
+      year: 2020,
+      posterPath: '/a.jpg',
+    };
+    TestRenderer.act(() => {
+      state().setFilmDetails([film]);
+    });
+    const s = state();
+    expect(s.filmDetails).toEqual([film]);
+    expect(s.eras).toEqual([]);
+    expect(s.genres).toEqual([]);
+    expect(s.filmIds).toEqual([]);
+  });
+
+  it('reset clears all four arrays back to empty', () => {
+    const { state } = setup();
+    const film = {
+      id: 'film_a',
+      tmdbId: 1,
+      title: 'A',
+      year: 2020,
+      posterPath: '/a.jpg',
+    };
     TestRenderer.act(() => {
       state().setEras(['era_1990s']);
       state().setGenres(['genre_drama']);
       state().setFilmIds(['film_a']);
+      state().setFilmDetails([film]);
     });
     expect(state().eras).toEqual(['era_1990s']);
+    expect(state().filmDetails).toEqual([film]);
     TestRenderer.act(() => {
       state().reset();
     });
@@ -82,6 +112,7 @@ describe('OnboardingContext', () => {
     expect(s.eras).toEqual([]);
     expect(s.genres).toEqual([]);
     expect(s.filmIds).toEqual([]);
+    expect(s.filmDetails).toEqual([]);
   });
 
   it('useOnboarding outside provider throws expected message', () => {

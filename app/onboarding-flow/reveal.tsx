@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,11 @@ import {
   BANNER_DEFAULT_KEY,
 } from '../../src/constants/bannerPresets';
 import BannerGradient from '../../src/components/BannerGradient';
+import {
+  DissolutionAnimation,
+  type DissolutionPoster,
+} from '../../src/components/onboarding/DissolutionAnimation';
+import { ERA_BLOCKS, GENRE_BLOCKS } from '../../src/data/onboardingCuration';
 
 // Matches ProfileBanner.tsx: scrim fades the bottom of the banner so the
 // avatar that overlaps below stays legible against any preset / backdrop.
@@ -34,10 +40,11 @@ const SCRIM_LOCATIONS = [0, 0.7, 1] as const;
 export default function RevealScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
-  const { eras, genres, filmIds } = useOnboarding();
+  const { eras, genres, filmIds, filmDetails } = useOnboarding();
 
   const [bannerSpec, setBannerSpec] = useState<BannerSpec | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [animationDone, setAnimationDone] = useState(false);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -65,6 +72,45 @@ export default function RevealScreen() {
     };
   }, [eras, genres, filmIds]);
 
+  // Posters streamed in by the dissolution: era + genre block films
+  // (already curated, embedded in the bundle) plus the user's Screen 3
+  // picks from filmDetails. Deduped by posterPath, capped at 12, computed
+  // once at mount so the animation has a stable input.
+  const posters = useMemo<DissolutionPoster[]>(() => {
+    const eraFilms = ERA_BLOCKS
+      .filter((b) => eras.includes(b.id))
+      .flatMap((b) => b.films);
+    const genreFilms = GENRE_BLOCKS
+      .filter((b) => genres.includes(b.id))
+      .flatMap((b) => b.films);
+
+    const all: DissolutionPoster[] = [
+      ...eraFilms.map((f) => ({
+        posterPath: f.posterPath,
+        key: `era-${f.posterPath}`,
+      })),
+      ...genreFilms.map((f) => ({
+        posterPath: f.posterPath,
+        key: `genre-${f.posterPath}`,
+      })),
+      ...filmDetails
+        .filter((f): f is typeof f & { posterPath: string } => !!f.posterPath)
+        .map((f) => ({
+          posterPath: f.posterPath as string,
+          key: `s3-${f.id}`,
+        })),
+    ];
+
+    const seen = new Set<string>();
+    const unique = all.filter((p) => {
+      if (seen.has(p.posterPath)) return false;
+      seen.add(p.posterPath);
+      return true;
+    });
+    return unique.slice(0, 12);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const noSelections =
     eras.length === 0 && genres.length === 0 && filmIds.length === 0;
   const heading = noSelections ? 'Welcome to Cinemagraphs' : 'Your profile is ready';
@@ -76,6 +122,9 @@ export default function RevealScreen() {
     router.replace('/(tabs)/explore' as any);
   };
 
+  const showAnimation = !isLoading && bannerSpec && !animationDone;
+  const showRevealContent = !isLoading && bannerSpec && animationDone;
+
   return (
     <View style={styles.root}>
       <SafeAreaView edges={['top']}>
@@ -85,11 +134,21 @@ export default function RevealScreen() {
         </View>
       </SafeAreaView>
 
-      {isLoading || !bannerSpec ? (
-        <LoadingState screenWidth={screenWidth} />
-      ) : (
-        <RevealContent spec={bannerSpec} screenWidth={screenWidth} />
-      )}
+      {isLoading || !bannerSpec ? <LoadingState screenWidth={screenWidth} /> : null}
+
+      {showRevealContent && bannerSpec ? (
+        <Animated.View entering={FadeIn.duration(300)}>
+          <RevealContent spec={bannerSpec} screenWidth={screenWidth} />
+        </Animated.View>
+      ) : null}
+
+      {showAnimation && bannerSpec ? (
+        <DissolutionAnimation
+          posters={posters}
+          bannerSpec={bannerSpec}
+          onComplete={() => setAnimationDone(true)}
+        />
+      ) : null}
 
       <View pointerEvents="box-none" style={styles.ctaBar}>
         <LinearGradient
