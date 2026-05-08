@@ -1,5 +1,6 @@
-import { View, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../src/constants/theme';
 import { useOnboarding } from '../../src/contexts/onboarding-context';
@@ -14,8 +15,13 @@ import { OnboardingHeader } from '../../src/components/onboarding/OnboardingHead
 import { ContinueButton } from '../../src/components/onboarding/ContinueButton';
 
 const ERA_CAP = 4;
+// Vertical space the absolute continue bar occupies above the safe-area inset.
+// FlatList content reserves this much padding at the bottom so the last items
+// scroll above the bar instead of being permanently hidden behind it.
+const CONTINUE_BAR_HEIGHT = 160;
 
 export default function ErasScreen() {
+  const insets = useSafeAreaInsets();
   const { eras, setEras } = useOnboarding();
 
   const atCap = eras.length >= ERA_CAP;
@@ -52,6 +58,7 @@ export default function ErasScreen() {
       <SafeAreaView edges={['top']}>
         <OnboardingHeader
           title="Pick the eras you keep returning to"
+          helper="We'll use these to find films you'll love."
           onSkip={handleSkip}
         />
       </SafeAreaView>
@@ -61,7 +68,11 @@ export default function ErasScreen() {
         numColumns={2}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
-        contentContainerStyle={{ gap: 12, paddingVertical: 16 }}
+        contentContainerStyle={{
+          gap: 12,
+          paddingTop: 16,
+          paddingBottom: CONTINUE_BAR_HEIGHT + insets.bottom,
+        }}
         renderItem={({ item }: { item: OnboardingBlock }) => (
           <View style={{ flex: 1 }}>
             <MosaicBlock
@@ -73,12 +84,37 @@ export default function ErasScreen() {
           </View>
         )}
       />
-      <SafeAreaView edges={['bottom']}>
-        <View style={{ paddingHorizontal: 16, gap: 12, paddingBottom: 12 }}>
-          <AccumulationStrip films={selectedFilms} label="Your eras" height="compact" />
-          <ContinueButton visible={eras.length > 0} onPress={handleContinue} />
-        </View>
-      </SafeAreaView>
+      <View pointerEvents="box-none" style={styles.continueBar}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(13,13,26,0)', colors.background]}
+          locations={[0, 0.3]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView edges={['bottom']}>
+          <View style={styles.continueBarInner}>
+            <AccumulationStrip films={selectedFilms} label="Your eras" height="compact" />
+            <ContinueButton visible={eras.length > 0} onPress={handleContinue} />
+          </View>
+        </SafeAreaView>
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  continueBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  continueBarInner: {
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 22,
+    gap: 12,
+  },
+});

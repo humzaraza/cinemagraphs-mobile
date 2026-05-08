@@ -5,9 +5,15 @@ type OnboardingHeaderProps = {
   title: string;
   onSkip: () => void;
   skipLabel?: string;
+  helper?: string;
 };
 
-export function OnboardingHeader({ title, onSkip, skipLabel = 'Skip' }: OnboardingHeaderProps) {
+export function OnboardingHeader({
+  title,
+  onSkip,
+  skipLabel = 'Skip',
+  helper,
+}: OnboardingHeaderProps) {
   return (
     <View>
       <View style={styles.topRow}>
@@ -23,6 +29,11 @@ export function OnboardingHeader({ title, onSkip, skipLabel = 'Skip' }: Onboardi
       </View>
       <View style={styles.stickyPrompt}>
         <Text style={styles.title}>{title}</Text>
+        {helper ? (
+          <Text testID="onboarding-helper" style={styles.helper}>
+            {helper}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -49,6 +60,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.dashedLine,
   },
   title: {
     fontFamily: fonts.bodySemiBold,
@@ -56,5 +69,12 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     letterSpacing: -0.3,
     lineHeight: 22.5,
+    marginBottom: 6,
+  },
+  helper: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.ivory,
+    opacity: 0.4,
   },
 });

@@ -14,7 +14,7 @@ vi.mock('react-native', () => ({
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { OnboardingHeader } from './OnboardingHeader';
 
-type Props = { title: string; onSkip: () => void; skipLabel?: string };
+type Props = { title: string; onSkip: () => void; skipLabel?: string; helper?: string };
 
 function render(props: Props) {
   let tree: ReactTestRenderer | undefined;
@@ -61,5 +61,17 @@ describe('OnboardingHeader', () => {
     const titleNode = tree.root.findByProps({ children: 'X' });
     expect(titleNode.props.onPress).toBeUndefined();
     expect(onSkip).not.toHaveBeenCalled();
+  });
+
+  it('renders helper text when helper prop is provided', () => {
+    const tree = render({ title: 'X', onSkip: () => {}, helper: 'helpful copy here' });
+    const helperNode = tree.root.findByProps({ testID: 'onboarding-helper' });
+    expect(helperNode.props.children).toBe('helpful copy here');
+  });
+
+  it('does NOT render helper text when helper prop is omitted', () => {
+    const tree = render({ title: 'X', onSkip: () => {} });
+    const matches = tree.root.findAllByProps({ testID: 'onboarding-helper' });
+    expect(matches).toHaveLength(0);
   });
 });
