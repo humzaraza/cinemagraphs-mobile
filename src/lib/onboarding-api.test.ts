@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchScreen3Candidates } from './onboarding-api';
+import { fetchScreen3Candidates, fetchSelectBanner } from './onboarding-api';
 
 describe('fetchScreen3Candidates', () => {
   let originalFetch: typeof globalThis.fetch;
@@ -58,5 +58,61 @@ describe('fetchScreen3Candidates', () => {
     }) as unknown as typeof globalThis.fetch;
 
     await expect(fetchScreen3Candidates([], [])).rejects.toThrow('500');
+  });
+});
+
+describe('fetchSelectBanner', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('returns the parsed JSON response on 200', async () => {
+    const expected = {
+      bannerType: 'BACKDROP' as const,
+      bannerValue: { filmId: 'tt0110912', backdropPath: '/abc.jpg' },
+      source: 'screen3' as const,
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => expected,
+    }) as unknown as typeof globalThis.fetch;
+
+    const result = await fetchSelectBanner(['tt0110912'], ['genre_drama'], ['era_1990s']);
+    expect(result).toEqual(expected);
+  });
+
+  it('returns local error-fallback midnight gradient on non-2xx', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    }) as unknown as typeof globalThis.fetch;
+
+    const result = await fetchSelectBanner([], [], []);
+    expect(result).toEqual({
+      bannerType: 'GRADIENT',
+      bannerValue: 'midnight',
+      source: 'error-fallback',
+    });
+  });
+
+  it('returns local error-fallback midnight gradient when fetch throws', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(
+      new Error('network down'),
+    ) as unknown as typeof globalThis.fetch;
+
+    const result = await fetchSelectBanner([], [], []);
+    expect(result).toEqual({
+      bannerType: 'GRADIENT',
+      bannerValue: 'midnight',
+      source: 'error-fallback',
+    });
   });
 });
