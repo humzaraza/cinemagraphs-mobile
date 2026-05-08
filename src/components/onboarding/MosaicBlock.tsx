@@ -188,6 +188,11 @@ const styles = StyleSheet.create({
     borderWidth: HALO_OFFSET,
     borderColor: colors.goldHalo,
   },
+  // TODO: Mockup .checkmark-badge is 18x18 with borderRadius 9
+  // (mockup line 50). This implementation uses 22x22 /
+  // borderRadius 11 from an early Chunk 2 spec. Tighten to 18/9
+  // if device review flags it as oversized. FilmPosterCard's
+  // checkmark already follows the mockup at 16x16.
   checkmarkBadge: {
     position: 'absolute',
     top: -6,

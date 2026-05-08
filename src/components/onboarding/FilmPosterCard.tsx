@@ -75,6 +75,10 @@ const styles = StyleSheet.create({
   cell: {
     position: 'relative',
   },
+  // NOTE: Halo alpha here is gold@0.25 per mockup .film-poster-
+  // selected (box-shadow 0 0 0 2px rgba(200,169,81,0.25)).
+  // MosaicBlock uses gold@0.15 (colors.goldHalo) per its own
+  // mockup spec. The difference is intentional design, not drift.
   halo: {
     position: 'absolute',
     top: -HALO_OFFSET,
