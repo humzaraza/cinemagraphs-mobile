@@ -17,7 +17,7 @@ const CONTINUE_BAR_HEIGHT = 90;
 const NUM_COLUMNS = 3;
 const COLUMN_GAP = 10;
 const HORIZONTAL_PADDING = 16;
-const SKELETON_COUNT = 12;
+const SKELETON_COUNT = 18;
 
 export default function FilmsScreen() {
   const insets = useSafeAreaInsets();
