@@ -14,7 +14,13 @@ vi.mock('react-native', () => ({
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { OnboardingHeader } from './OnboardingHeader';
 
-type Props = { title: string; onSkip: () => void; skipLabel?: string; helper?: string };
+type Props = {
+  title: string;
+  onSkip: () => void;
+  skipLabel?: string;
+  helper?: string;
+  onBack?: () => void;
+};
 
 function render(props: Props) {
   let tree: ReactTestRenderer | undefined;
@@ -73,5 +79,41 @@ describe('OnboardingHeader', () => {
     const tree = render({ title: 'X', onSkip: () => {} });
     const matches = tree.root.findAllByProps({ testID: 'onboarding-helper' });
     expect(matches).toHaveLength(0);
+  });
+
+  it('renders the back chevron when onBack is provided', () => {
+    const tree = render({ title: 'X', onSkip: () => {}, onBack: () => {} });
+    const chevron = tree.root.findByProps({ testID: 'onboarding-back-chevron' });
+    expect(chevron).toBeTruthy();
+  });
+
+  it('does NOT render the back chevron when onBack is omitted', () => {
+    const tree = render({ title: 'X', onSkip: () => {} });
+    const matches = tree.root.findAllByProps({ testID: 'onboarding-back-chevron' });
+    expect(matches).toHaveLength(0);
+  });
+
+  it('tapping the back chevron fires onBack exactly once', () => {
+    const onBack = vi.fn();
+    const tree = render({ title: 'X', onSkip: () => {}, onBack });
+    const chevron = tree.root.findByProps({ testID: 'onboarding-back-chevron' });
+    const fire = chevron.props.onPress as () => void;
+    TestRenderer.act(() => {
+      fire();
+    });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('tapping the back chevron does NOT fire onSkip', () => {
+    const onSkip = vi.fn();
+    const onBack = vi.fn();
+    const tree = render({ title: 'X', onSkip, onBack });
+    const chevron = tree.root.findByProps({ testID: 'onboarding-back-chevron' });
+    const fire = chevron.props.onPress as () => void;
+    TestRenderer.act(() => {
+      fire();
+    });
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onSkip).not.toHaveBeenCalled();
   });
 });

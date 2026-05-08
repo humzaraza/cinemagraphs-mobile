@@ -57,9 +57,9 @@ export default function ErasScreen() {
         data={ERA_BLOCKS}
         numColumns={2}
         keyExtractor={(item) => item.id}
-        columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
+        columnWrapperStyle={{ gap: 10, paddingHorizontal: 16 }}
         contentContainerStyle={{
-          gap: 12,
+          gap: 10,
           paddingTop: 16,
           paddingBottom: CONTINUE_BAR_HEIGHT + insets.bottom,
         }}

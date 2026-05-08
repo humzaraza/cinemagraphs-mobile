@@ -57,7 +57,11 @@ export default function GenresScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaView edges={['top']}>
-        <OnboardingHeader title="Pick your genres" onSkip={handleSkip} />
+        <OnboardingHeader
+          title="Pick your genres"
+          onSkip={handleSkip}
+          onBack={() => router.back()}
+        />
       </SafeAreaView>
       <AccumulationStrip films={eraFilms} label="Your eras" height="compact" />
       <FlatList
@@ -65,9 +69,9 @@ export default function GenresScreen() {
         data={GENRE_BLOCKS}
         numColumns={2}
         keyExtractor={(item) => item.id}
-        columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
+        columnWrapperStyle={{ gap: 10, paddingHorizontal: 16 }}
         contentContainerStyle={{
-          gap: 12,
+          gap: 10,
           paddingTop: 16,
           paddingBottom: CONTINUE_BAR_HEIGHT + insets.bottom,
         }}

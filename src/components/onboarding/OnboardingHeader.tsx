@@ -6,6 +6,7 @@ type OnboardingHeaderProps = {
   onSkip: () => void;
   skipLabel?: string;
   helper?: string;
+  onBack?: () => void;
 };
 
 export function OnboardingHeader({
@@ -13,11 +14,18 @@ export function OnboardingHeader({
   onSkip,
   skipLabel = 'Skip',
   helper,
+  onBack,
 }: OnboardingHeaderProps) {
   return (
     <View>
       <View style={styles.topRow}>
-        <View />
+        {onBack ? (
+          <Pressable testID="onboarding-back-chevron" onPress={onBack} hitSlop={8}>
+            <Text style={styles.backChevron}>{'‹'}</Text>
+          </Pressable>
+        ) : (
+          <View />
+        )}
         <Pressable
           testID="onboarding-skip"
           onPress={onSkip}
@@ -50,6 +58,12 @@ const styles = StyleSheet.create({
   skipBase: {
     paddingVertical: 4,
     paddingHorizontal: 4,
+  },
+  backChevron: {
+    fontFamily: 'DMSans_300Light',
+    fontSize: 22,
+    lineHeight: 22,
+    color: colors.ivory,
   },
   skipText: {
     fontFamily: fonts.bodyMedium,
