@@ -48,12 +48,12 @@ export default function GenresScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/onboarding-flow/films' as any);
+    router.push('/onboarding/films' as any);
   };
 
   const handleSkip = () => {
     setGenres([]);
-    router.push('/onboarding-flow/films' as any);
+    router.push('/onboarding/films' as any);
   };
 
   const eraFilms: CuratedFilm[] = eras.flatMap((id) => {

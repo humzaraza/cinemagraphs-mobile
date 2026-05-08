@@ -42,12 +42,12 @@ export default function ErasScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/onboarding-flow/genres' as any);
+    router.push('/onboarding/genres' as any);
   };
 
   const handleSkip = () => {
     setEras([]);
-    router.push('/onboarding-flow/genres' as any);
+    router.push('/onboarding/genres' as any);
   };
 
   return (

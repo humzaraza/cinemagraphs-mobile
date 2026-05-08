@@ -760,29 +760,6 @@ export default function ProfileScreen() {
             contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
             showsVerticalScrollIndicator={false}
           >
-          {/* DEBUG_REMOVE_AFTER_CHUNK_3_SMOKE_START */}
-          <Pressable
-            onPress={() => router.push('/onboarding-flow/eras' as any)}
-            style={{
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              backgroundColor: 'rgba(200,169,81,0.1)',
-              borderRadius: 8,
-              marginVertical: 8,
-              marginHorizontal: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: fonts.bodyMedium,
-                fontSize: 13,
-                color: colors.gold,
-              }}
-            >
-              DEBUG: Test new onboarding
-            </Text>
-          </Pressable>
-          {/* DEBUG_REMOVE_AFTER_CHUNK_3_SMOKE_END */}
           <ProfileBanner
             source={resolveBannerSource(
               profile.user.bannerType,

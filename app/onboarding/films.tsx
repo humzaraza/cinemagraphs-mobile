@@ -67,12 +67,12 @@ export default function FilmsScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/onboarding-flow/reveal' as any);
+    router.push('/onboarding/reveal' as any);
   };
 
   const handleSkip = () => {
     setFilmIds([]);
-    router.push('/onboarding-flow/reveal' as any);
+    router.push('/onboarding/reveal' as any);
   };
 
   const tasteSoFarFilms: CuratedFilm[] = [...eras, ...genres].flatMap((id) => {
