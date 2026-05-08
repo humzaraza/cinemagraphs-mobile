@@ -24,17 +24,15 @@ const SPRING_CONFIG = { damping: 14, stiffness: 180 } as const;
 const SHAKE_STEP_MS = 50;
 
 export function MosaicBlock({ block, selected, atCap, onPress, onCapHit }: MosaicBlockProps) {
-  const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const borderOpacity = useSharedValue(0);
 
   React.useEffect(() => {
-    scale.value = withSpring(selected ? 1.05 : 1, SPRING_CONFIG);
     borderOpacity.value = withSpring(selected ? 1 : 0, SPRING_CONFIG);
-  }, [selected, scale, borderOpacity]);
+  }, [selected, borderOpacity]);
 
   const containerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
+    transform: [{ translateX: translateX.value }],
   }));
 
   const borderAnimatedStyle = useAnimatedStyle(() => ({
@@ -130,12 +128,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   labelContainer: {
+    width: '100%',
     marginBottom: 6,
   },
   label: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 12,
     letterSpacing: 0.3,
+    textAlign: 'center',
   },
   labelUnselected: {
     color: colors.ivory,
@@ -154,8 +154,10 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 4,
-    marginBottom: 4,
+    // 8pt gap (mockup says 4pt; overridden after device smoke
+    // showed cells smearing together)
+    gap: 8,
+    marginBottom: 8,
   },
   cell: {
     flex: 1,
