@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -19,7 +19,14 @@ const CONTINUE_BAR_HEIGHT = 90;
 export default function ErasScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
   const { eras, setEras } = useOnboarding();
+
+  const HORIZONTAL_PADDING = 16;
+  const COLUMN_GAP = 10;
+  const NUM_COLUMNS = 2;
+  const ITEM_WIDTH =
+    (screenWidth - HORIZONTAL_PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
   const atCap = eras.length >= ERA_CAP;
   const isAtCapForBlock = (id: string) => atCap && !eras.includes(id);
@@ -64,7 +71,7 @@ export default function ErasScreen() {
           paddingBottom: CONTINUE_BAR_HEIGHT + insets.bottom,
         }}
         renderItem={({ item }: { item: OnboardingBlock }) => (
-          <View style={{ flex: 1 }}>
+          <View style={{ width: ITEM_WIDTH }}>
             <MosaicBlock
               block={item}
               selected={eras.includes(item.id)}
