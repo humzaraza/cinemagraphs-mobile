@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.dashedLine,
+    borderBottomColor: colors.borderSubtle,
   },
   title: {
     fontFamily: fonts.bodySemiBold,

@@ -66,6 +66,11 @@ export function MosaicBlock({ block, selected, atCap, onPress, onCapHit }: Mosai
         </View>
 
         <View style={styles.mosaicWrapper}>
+          <Animated.View
+            testID="mosaic-halo"
+            pointerEvents="none"
+            style={[styles.halo, borderAnimatedStyle]}
+          />
           <View style={styles.mosaicGrid}>
             <View style={styles.row}>
               <View style={styles.cell}>
@@ -118,6 +123,7 @@ export function MosaicBlock({ block, selected, atCap, onPress, onCapHit }: Mosai
 
 const MOSAIC_RADIUS = 10;
 const POSTER_RADIUS = 3;
+const HALO_OFFSET = 3;
 
 const styles = StyleSheet.create({
   blockContainer: {
@@ -169,6 +175,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
     borderRadius: MOSAIC_RADIUS,
+  },
+  halo: {
+    position: 'absolute',
+    top: -HALO_OFFSET,
+    right: -HALO_OFFSET,
+    bottom: -HALO_OFFSET,
+    left: -HALO_OFFSET,
+    borderRadius: MOSAIC_RADIUS + HALO_OFFSET,
+    borderWidth: HALO_OFFSET,
+    borderColor: colors.goldHalo,
   },
   checkmarkBadge: {
     position: 'absolute',

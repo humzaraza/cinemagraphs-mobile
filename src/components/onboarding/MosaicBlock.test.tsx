@@ -95,6 +95,18 @@ describe('MosaicBlock', () => {
     expect(onCapHit).not.toHaveBeenCalled();
   });
 
+  it('halo View renders when selected=true', () => {
+    const tree = render({ block, selected: true, atCap: false, onPress: noop });
+    const halo = tree.root.findByProps({ testID: 'mosaic-halo' });
+    expect(halo).toBeTruthy();
+  });
+
+  it('halo View renders when selected=false (always rendered, opacity-driven)', () => {
+    const tree = render({ block, selected: false, atCap: false, onPress: noop });
+    const halo = tree.root.findByProps({ testID: 'mosaic-halo' });
+    expect(halo).toBeTruthy();
+  });
+
   it('atCap=false: tap fires onPress regardless of selected state', () => {
     const onPressUnselected = vi.fn();
     const tree1 = render({ block, selected: false, atCap: false, onPress: onPressUnselected });

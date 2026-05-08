@@ -26,6 +26,11 @@ export const colors = {
   // Input fields
   inputBackground: 'rgba(245,240,225,0.06)',
   inputBorder: 'rgba(200,169,81,0.15)',
+
+  // Subtle white border (mockup hairline dividers at 0.04 alpha)
+  borderSubtle: 'rgba(255,255,255,0.04)',
+  // Gold glow ring around selected mosaic blocks
+  goldHalo: 'rgba(200,169,81,0.15)',
 } as const;
 
 export const fonts = {

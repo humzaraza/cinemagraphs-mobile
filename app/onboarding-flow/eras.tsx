@@ -4,13 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../src/constants/theme';
 import { useOnboarding } from '../../src/contexts/onboarding-context';
-import {
-  ERA_BLOCKS,
-  type CuratedFilm,
-  type OnboardingBlock,
-} from '../../src/data/onboardingCuration';
+import { ERA_BLOCKS, type OnboardingBlock } from '../../src/data/onboardingCuration';
 import { MosaicBlock } from '../../src/components/onboarding/MosaicBlock';
-import { AccumulationStrip } from '../../src/components/onboarding/AccumulationStrip';
 import { OnboardingHeader } from '../../src/components/onboarding/OnboardingHeader';
 import { ContinueButton } from '../../src/components/onboarding/ContinueButton';
 
@@ -18,7 +13,7 @@ const ERA_CAP = 4;
 // Vertical space the absolute continue bar occupies above the safe-area inset.
 // FlatList content reserves this much padding at the bottom so the last items
 // scroll above the bar instead of being permanently hidden behind it.
-const CONTINUE_BAR_HEIGHT = 160;
+const CONTINUE_BAR_HEIGHT = 90;
 
 export default function ErasScreen() {
   const insets = useSafeAreaInsets();
@@ -47,11 +42,6 @@ export default function ErasScreen() {
     console.log('[onboarding/eras] skip');
     // TODO Chunk 4: navigate to /onboarding-flow/genres with empty eras
   };
-
-  const selectedFilms: CuratedFilm[] = eras.flatMap((id) => {
-    const block = ERA_BLOCKS.find((b) => b.id === id);
-    return block ? [...block.films] : [];
-  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -95,7 +85,6 @@ export default function ErasScreen() {
         />
         <SafeAreaView edges={['bottom']}>
           <View style={styles.continueBarInner}>
-            <AccumulationStrip films={selectedFilms} label="Your eras" height="compact" />
             <ContinueButton visible={eras.length > 0} onPress={handleContinue} />
           </View>
         </SafeAreaView>
@@ -115,6 +104,5 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingHorizontal: 16,
     paddingBottom: 22,
-    gap: 12,
   },
 });
