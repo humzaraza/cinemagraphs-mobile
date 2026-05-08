@@ -127,8 +127,10 @@ function RevealContent({
 
   return (
     <View style={styles.preview}>
-      <View style={[styles.banner, { width: screenWidth, height: bannerHeight }]}>
-        <BannerLayer spec={spec} width={screenWidth} height={bannerHeight} />
+      <View style={[styles.bannerWrap, { width: screenWidth, height: bannerHeight }]}>
+        <View style={styles.bannerClip}>
+          <BannerLayer spec={spec} width={screenWidth} height={bannerHeight} />
+        </View>
         <View style={styles.avatar} testID="reveal-avatar">
           <Text style={styles.avatarLetter}>C</Text>
         </View>
@@ -215,12 +217,8 @@ function LoadingState({ screenWidth }: { screenWidth: number }) {
   const bannerHeight = (screenWidth * 9) / 16;
   return (
     <View style={styles.preview}>
-      <View
-        style={[
-          styles.bannerSkeleton,
-          { width: screenWidth, height: bannerHeight },
-        ]}
-      >
+      <View style={[styles.bannerWrap, { width: screenWidth, height: bannerHeight }]}>
+        <View style={[styles.bannerClip, styles.bannerSkeletonFill]} />
         <View style={styles.avatar} />
       </View>
       <View style={styles.meta}>
@@ -260,9 +258,16 @@ const styles = StyleSheet.create({
   preview: {
     backgroundColor: colors.background,
   },
-  banner: {
-    overflow: 'hidden',
+  // Outer wrapper sized to the banner. No overflow:hidden so the avatar
+  // can extend below the bottom edge into the meta block. Clipping happens
+  // on the inner bannerClip View.
+  bannerWrap: {
     position: 'relative',
+  },
+  bannerClip: {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSubtle,
   },
@@ -324,10 +329,8 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     opacity: 1,
   },
-  bannerSkeleton: {
+  bannerSkeletonFill: {
     backgroundColor: colors.cardBackground,
-    overflow: 'hidden',
-    position: 'relative',
   },
   nameSkeleton: {
     width: 80,
