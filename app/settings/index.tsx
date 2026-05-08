@@ -191,6 +191,22 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/*
+          TODO: After Prompt 9 ships auth, gate this on admin email
+          (cinemagraphs.corp@gmail.com) instead of __DEV__.
+        */}
+        {__DEV__ && (
+          <>
+            <SectionLabel label="DEVELOPER" />
+            <View style={styles.section}>
+              <Row
+                label="Re-run onboarding"
+                onPress={() => router.push('/onboarding' as any)}
+              />
+            </View>
+          </>
+        )}
+
         {/* Sign out */}
         <Pressable style={styles.signOutBtn} onPress={() => { signOut(); router.replace('/'); }}>
           <Text style={styles.signOutText}>Sign out</Text>
