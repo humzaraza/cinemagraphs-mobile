@@ -1,10 +1,12 @@
 import * as SecureStore from 'expo-secure-store';
 import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
 
-// TODO: This origin is also defined in src/lib/api-config.ts
-// (env-driven with fallback). Migrate this file to import
-// API_BASE_URL from there next time you touch this file.
-const API_BASE = 'https://cinemagraphs.ca/api';
+// Origin for the cinemagraphs.ca API. Override via EXPO_PUBLIC_API_BASE_URL
+// at build time (e.g., to point at a staging environment). API_BASE composes
+// the origin with the /api prefix used by every endpoint in this file.
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://cinemagraphs.ca';
+const API_BASE = `${API_BASE_URL}/api`;
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync('auth_token');
@@ -19,6 +21,77 @@ export async function setToken(token: string): Promise<void> {
 
 export async function removeToken(): Promise<void> {
   await SecureStore.deleteItemAsync('auth_token');
+}
+
+// ---------------------------------------------------------------------------
+// Token pair storage (added in PR 3b Chunk B1)
+//
+// Stored as a single JSON-encoded string under TOKENS_KEY for atomic writes.
+// SecureStore writes are not transactional across keys; encoding both tokens
+// in one value means a mid-write crash leaves either the full old pair or
+// the full new pair, never a half-updated state.
+//
+// Old single-token helpers (getToken/setToken/removeToken) and the
+// 'auth_token' key are retained until B2 migrates AuthProvider over.
+// ---------------------------------------------------------------------------
+
+const TOKENS_KEY = 'auth_tokens';
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export async function getTokens(): Promise<TokenPair | null> {
+  const raw = await SecureStore.getItemAsync(TOKENS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<TokenPair>;
+    if (
+      typeof parsed.accessToken !== 'string' ||
+      !parsed.accessToken ||
+      typeof parsed.refreshToken !== 'string' ||
+      !parsed.refreshToken
+    ) {
+      return null;
+    }
+    return { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken };
+  } catch {
+    // Malformed JSON; treat as no stored tokens.
+    return null;
+  }
+}
+
+export async function setTokens(pair: TokenPair): Promise<void> {
+  if (!pair.accessToken || typeof pair.accessToken !== 'string') {
+    throw new Error('setTokens requires a non-empty accessToken string');
+  }
+  if (!pair.refreshToken || typeof pair.refreshToken !== 'string') {
+    throw new Error('setTokens requires a non-empty refreshToken string');
+  }
+  await SecureStore.setItemAsync(TOKENS_KEY, JSON.stringify(pair));
+}
+
+export async function removeTokens(): Promise<void> {
+  await SecureStore.deleteItemAsync(TOKENS_KEY);
+}
+
+/**
+ * Convenience: read just the access token without forcing callers to
+ * destructure the pair. Returns null if no pair is stored.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const pair = await getTokens();
+  return pair?.accessToken ?? null;
+}
+
+/**
+ * Convenience: read just the refresh token. Used by the refresh flow
+ * and by signOut for server-side family revocation.
+ */
+export async function getRefreshToken(): Promise<string | null> {
+  const pair = await getTokens();
+  return pair?.refreshToken ?? null;
 }
 
 export async function apiFetch(

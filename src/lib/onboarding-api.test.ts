@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// onboarding-api transitively imports from ./api, which pulls in
+// expo-secure-store. Stub it here so the real react-native module
+// (which contains Flow syntax) never loads in this suite.
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(),
+  setItemAsync: vi.fn(),
+  deleteItemAsync: vi.fn(),
+}));
+
 import { fetchScreen3Candidates, fetchSelectBanner } from './onboarding-api';
 
 describe('fetchScreen3Candidates', () => {
