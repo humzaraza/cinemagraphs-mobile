@@ -7,9 +7,10 @@ import {
   verifyOTP,
   loginWithGoogle,
   loginWithApple,
-  getToken,
-  setToken,
-  removeToken,
+  getAccessToken,
+  setTokens,
+  removeTokens,
+  cleanupLegacyTokenKey,
   apiFetch,
   type AuthUser,
   type AuthResponse,
@@ -60,16 +61,18 @@ export function useAuth() {
 // ---------------------------------------------------------------------------
 
 async function storeAuth(data: AuthResponse) {
-  const t = data.token;
-  if (typeof t !== 'string' || !t) {
-    throw new Error('Auth response missing token');
+  if (!data.accessToken || typeof data.accessToken !== 'string') {
+    throw new Error('Auth response missing accessToken');
   }
-  await setToken(t);
+  if (!data.refreshToken || typeof data.refreshToken !== 'string') {
+    throw new Error('Auth response missing refreshToken');
+  }
+  await setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
   await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user ?? {}));
 }
 
 async function clearAuth() {
-  await removeToken();
+  await removeTokens();
   await SecureStore.deleteItemAsync('auth_user');
 }
 
@@ -89,8 +92,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (didRestore.current) return;
     didRestore.current = true;
     (async () => {
+      // Clean up the pre-PR-3b 'auth_token' key if it exists. Idempotent.
+      await cleanupLegacyTokenKey();
+
       try {
-        const stored = await getToken();
+        const stored = await getAccessToken();
         if (!stored) return;
 
         const res = await apiFetch('/user/profile');
@@ -115,7 +121,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
       } catch {
         // Network error, fall back to cached user
-        const stored = await getToken();
+        const stored = await getAccessToken();
         const cached = await SecureStore.getItemAsync('auth_user');
         if (stored && cached) {
           setUser(JSON.parse(cached));
@@ -152,7 +158,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // 3. Set user and token last so isAuthenticated flips after needsOnboarding is ready
     setUser(data.user);
-    setTokenState(data.token);
+    setTokenState(data.accessToken);
   }, []);
 
   // --- Public auth methods (no navigation, state only) ---

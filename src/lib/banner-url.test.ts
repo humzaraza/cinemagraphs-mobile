@@ -265,7 +265,10 @@ describe('getBackdrops', () => {
   });
 
   it('sends Authorization header when token is stored', async () => {
-    tokenStore['auth_token'] = 'jwt-abc';
+    tokenStore['auth_tokens'] = JSON.stringify({
+      accessToken: 'jwt-abc',
+      refreshToken: 'refresh-abc',
+    });
     mockBackdropsResponse({ backdrops: [] });
     await getBackdrops('tt-auth');
     const init = fetchSpy.mock.calls[0][1] as RequestInit;

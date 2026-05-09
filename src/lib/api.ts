@@ -8,31 +8,13 @@ export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://cinemagraphs.ca';
 const API_BASE = `${API_BASE_URL}/api`;
 
-export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync('auth_token');
-}
-
-export async function setToken(token: string): Promise<void> {
-  if (typeof token !== 'string' || !token) {
-    throw new Error('setToken requires a non-empty string');
-  }
-  await SecureStore.setItemAsync('auth_token', token);
-}
-
-export async function removeToken(): Promise<void> {
-  await SecureStore.deleteItemAsync('auth_token');
-}
-
 // ---------------------------------------------------------------------------
-// Token pair storage (added in PR 3b Chunk B1)
+// Token pair storage
 //
 // Stored as a single JSON-encoded string under TOKENS_KEY for atomic writes.
 // SecureStore writes are not transactional across keys; encoding both tokens
 // in one value means a mid-write crash leaves either the full old pair or
 // the full new pair, never a half-updated state.
-//
-// Old single-token helpers (getToken/setToken/removeToken) and the
-// 'auth_token' key are retained until B2 migrates AuthProvider over.
 // ---------------------------------------------------------------------------
 
 const TOKENS_KEY = 'auth_tokens';
@@ -94,11 +76,20 @@ export async function getRefreshToken(): Promise<string | null> {
   return pair?.refreshToken ?? null;
 }
 
+/**
+ * One-shot cleanup of the legacy 'auth_token' key from pre-PR-3b builds.
+ * Called from AuthProvider on mount. Idempotent: a no-op for fresh
+ * installs and for users who already cleaned up.
+ */
+export async function cleanupLegacyTokenKey(): Promise<void> {
+  await SecureStore.deleteItemAsync('auth_token');
+}
+
 export async function apiFetch(
   path: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const token = await getToken();
+  const token = await getAccessToken();
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -308,7 +299,8 @@ export interface AuthUser {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: AuthUser;
 }
 
@@ -461,7 +453,7 @@ export interface UserProfile {
 }
 
 export async function fetchUserProfile(): Promise<UserProfile | null> {
-  const token = await getToken();
+  const token = await getAccessToken();
   const res = await apiFetch('/user/profile');
   if (!res.ok) {
     console.error('[API] fetchUserProfile failed:', res.status, 'token:', token?.slice(0, 20) ?? 'null');
@@ -662,7 +654,7 @@ export async function updateUserProfile(data: { name?: string; username?: string
 }
 
 export async function uploadAvatar(uri: string): Promise<{ url: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
   const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
   const fileName = ext === 'png' ? 'avatar.png' : 'avatar.jpg';

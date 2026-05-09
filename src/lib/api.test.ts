@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 vi.mock('expo-secure-store', () => ({
   getItemAsync: vi.fn(),
@@ -13,6 +13,8 @@ import {
   removeTokens,
   getAccessToken,
   getRefreshToken,
+  cleanupLegacyTokenKey,
+  apiFetch,
 } from './api';
 
 const TOKENS_KEY = 'auth_tokens';
@@ -108,5 +110,54 @@ describe('getAccessToken / getRefreshToken', () => {
   it('getRefreshToken returns null when no pair is stored', async () => {
     vi.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
     expect(await getRefreshToken()).toBeNull();
+  });
+});
+
+describe('cleanupLegacyTokenKey', () => {
+  it('calls SecureStore.deleteItemAsync with the legacy auth_token key exactly once', async () => {
+    vi.mocked(SecureStore.deleteItemAsync).mockResolvedValue(undefined);
+    await cleanupLegacyTokenKey();
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(1);
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_token');
+  });
+});
+
+describe('apiFetch Authorization header', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('attaches Bearer access token from the new pair storage', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(
+      JSON.stringify({ accessToken: 'a-token', refreshToken: 'r-token' }),
+    );
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await apiFetch('/films');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const init = fetchSpy.mock.calls[0][1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer a-token');
+  });
+
+  it('omits the Authorization header when no tokens are stored', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await apiFetch('/films');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const init = fetchSpy.mock.calls[0][1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBeUndefined();
   });
 });
