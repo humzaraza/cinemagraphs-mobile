@@ -187,7 +187,9 @@ async function attachAuthAndFetch(
   if (accessToken) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
   }
-  console.log('[API]', options.method ?? 'GET', url);
+  if (__DEV__) {
+    console.log('[API]', options.method ?? 'GET', url);
+  }
   return fetch(url, { ...options, headers });
 }
 
@@ -575,10 +577,11 @@ export interface UserProfile {
 }
 
 export async function fetchUserProfile(): Promise<UserProfile | null> {
-  const token = await getAccessToken();
   const res = await apiFetch('/user/profile');
   if (!res.ok) {
-    console.error('[API] fetchUserProfile failed:', res.status, 'token:', token?.slice(0, 20) ?? 'null');
+    if (__DEV__) {
+      console.error('[API] fetchUserProfile failed:', res.status);
+    }
     return null;
   }
   return res.json();
@@ -639,7 +642,9 @@ export async function fetchUserFilms(type?: string): Promise<any[]> {
   if (!res.ok) return [];
   const data = await res.json();
   const films = Array.isArray(data) ? data : data.films ?? [];
-  console.log(`[API] fetchUserFilms(${type}) returned ${films.length} films, sample keys:`, films[0] ? Object.keys(films[0]) : 'empty');
+  if (__DEV__) {
+    console.log(`[API] fetchUserFilms(${type}) returned ${films.length} films, sample keys:`, films[0] ? Object.keys(films[0]) : 'empty');
+  }
   return films;
 }
 
@@ -680,7 +685,9 @@ export async function fetchUserLists(): Promise<any[]> {
   }
   const data = await res.json();
   const lists = Array.isArray(data) ? data : data.lists ?? [];
-  console.log('[API] fetchUserLists returned', lists.length, 'lists, first:', JSON.stringify(lists[0])?.slice(0, 200));
+  if (__DEV__) {
+    console.log('[API] fetchUserLists returned', lists.length, 'lists, first:', JSON.stringify(lists[0])?.slice(0, 200));
+  }
   return lists;
 }
 
@@ -692,7 +699,9 @@ export async function fetchUserList(listId: string): Promise<any> {
 }
 
 export async function createUserList(name: string, genreTag: string, filmIds: string[], isPublic?: boolean): Promise<any> {
-  console.log('[API] createUserList called with:', { name, genreTag, filmIds, isPublic });
+  if (__DEV__) {
+    console.log('[API] createUserList called with:', { name, genreTag, filmIds, isPublic });
+  }
   const res = await apiFetch('/user/lists', {
     method: 'POST',
     body: JSON.stringify({ name, genreTag, filmIds, ...(isPublic !== undefined && { isPublic }) }),
@@ -703,7 +712,9 @@ export async function createUserList(name: string, genreTag: string, filmIds: st
     throw new Error(err.error || 'Failed to create list');
   }
   const data = await res.json();
-  console.log('[API] createUserList response:', JSON.stringify(data).slice(0, 300));
+  if (__DEV__) {
+    console.log('[API] createUserList response:', JSON.stringify(data).slice(0, 300));
+  }
   return data;
 }
 

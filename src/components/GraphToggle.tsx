@@ -45,7 +45,9 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
   }, []);
 
   const openPopover = () => {
-    console.log('[GraphToggle] pill tapped, open:', open);
+    if (__DEV__) {
+      console.log('[GraphToggle] pill tapped, open:', open);
+    }
     if (locked || open) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch (e) {}
     measure((layout) => {
@@ -64,7 +66,9 @@ export default function GraphToggle({ active, onChange, locked }: Props) {
 
   const closePopover = (newMode?: GraphMode) => {
     if (newMode && newMode !== active) {
-      console.log('[GraphToggle] option tapped:', newMode);
+      if (__DEV__) {
+        console.log('[GraphToggle] option tapped:', newMode);
+      }
       try { Haptics.selectionAsync(); } catch (e) {}
       onChange(newMode);
     }

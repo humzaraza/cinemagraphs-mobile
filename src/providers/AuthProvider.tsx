@@ -111,7 +111,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           setTokenState(stored);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
-          console.error('[Auth] Token rejected on mount, status:', res.status);
+          if (__DEV__) {
+            console.error('[Auth] Token rejected on mount, status:', res.status);
+          }
           await clearAuth();
         } else {
           // Other error (500, network hiccup) - try cached user as offline fallback
@@ -160,13 +162,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // 2. Check onboarding BEFORE setting user/token (which trigger navigation)
     const userId = data.user?.id ?? data.user?.email;
-    console.log('[Auth] handlePostAuth called, userId:', userId);
+    if (__DEV__) {
+      console.log('[Auth] handlePostAuth called, userId:', userId);
+    }
     if (userId) {
       const key = `has_seen_onboarding_${userId}`;
       const seen = await AsyncStorage.getItem(key);
-      console.log('[Auth] has_seen_onboarding key:', key);
-      console.log('[Auth] has_seen_onboarding value:', seen);
-      console.log('[Auth] setting needsOnboarding to:', seen !== 'true');
+      if (__DEV__) {
+        console.log('[Auth] has_seen_onboarding key:', key);
+        console.log('[Auth] has_seen_onboarding value:', seen);
+        console.log('[Auth] setting needsOnboarding to:', seen !== 'true');
+      }
       if (seen !== 'true') {
         setNeedsOnboarding(true);
       }
@@ -188,9 +194,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   // --- Public auth methods (no navigation, state only) ---
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.log('[Auth] signIn function called');
+    if (__DEV__) {
+      console.log('[Auth] signIn function called');
+    }
     const data = await loginWithEmail(email, password);
-    console.log('[Auth] signIn API response received, user:', data.user?.id ?? data.user?.email);
+    if (__DEV__) {
+      console.log('[Auth] signIn API response received, user:', data.user?.id ?? data.user?.email);
+    }
     await handlePostAuth(data);
   }, [handlePostAuth]);
 
