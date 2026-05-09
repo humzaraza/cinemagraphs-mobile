@@ -1,6 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
 
+// TODO: This origin is also defined in src/lib/api-config.ts
+// (env-driven with fallback). Migrate this file to import
+// API_BASE_URL from there next time you touch this file.
 const API_BASE = 'https://cinemagraphs.ca/api';
 
 export async function getToken(): Promise<string | null> {
