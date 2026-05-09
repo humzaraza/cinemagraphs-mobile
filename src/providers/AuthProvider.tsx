@@ -19,6 +19,7 @@ import {
   type AuthResponse,
 } from '../lib/api';
 import { consumePendingBanner } from '../lib/onboarding-persistence';
+import { trackEvent, EVENTS } from '../lib/events';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -212,6 +213,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const verifyOtp = useCallback(async (email: string, code: string) => {
     const data = await verifyOTP(email, code);
     await handlePostAuth(data);
+    trackEvent(EVENTS.SIGNUP_COMPLETE, { method: 'email' });
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {

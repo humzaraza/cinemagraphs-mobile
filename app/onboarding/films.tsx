@@ -12,6 +12,7 @@ import { OnboardingHeader } from '../../src/components/onboarding/OnboardingHead
 import { ContinueButton } from '../../src/components/onboarding/ContinueButton';
 import { FilmPosterCard } from '../../src/components/onboarding/FilmPosterCard';
 import { fetchScreen3Candidates, type Screen3Film } from '../../src/lib/onboarding-api';
+import { trackEvent, EVENTS } from '../../src/lib/events';
 
 const CONTINUE_BAR_HEIGHT = 90;
 const NUM_COLUMNS = 3;
@@ -32,6 +33,10 @@ export default function FilmsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+
+  useEffect(() => {
+    trackEvent(EVENTS.ONBOARDING_STEP_VIEW, { screen: 'films' });
+  }, []);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -71,6 +76,7 @@ export default function FilmsScreen() {
   };
 
   const handleSkip = () => {
+    trackEvent(EVENTS.ONBOARDING_SKIP, { screen: 'films' });
     setFilmIds([]);
     router.push('/onboarding/reveal' as any);
   };
