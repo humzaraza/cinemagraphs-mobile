@@ -18,6 +18,7 @@ import {
   type AuthUser,
   type AuthResponse,
 } from '../lib/api';
+import { consumePendingBanner } from '../lib/onboarding-persistence';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -176,6 +177,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // 3. Set user and token last so isAuthenticated flips after needsOnboarding is ready
     setUser(data.user);
     setTokenState(data.accessToken);
+
+    // 4. Consume pendingBanner if user is still on defaults. Runs after
+    //    setUser/setTokenState so any concurrent UI render shows the user
+    //    as authenticated immediately; banner application is async and
+    //    updates the server record but doesn't block sign-in completion.
+    await consumePendingBanner();
   }, []);
 
   // --- Public auth methods (no navigation, state only) ---

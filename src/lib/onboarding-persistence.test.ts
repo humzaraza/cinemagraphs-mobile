@@ -6,12 +6,19 @@ vi.mock('expo-secure-store', () => ({
   deleteItemAsync: vi.fn(),
 }));
 
+vi.mock('./api', () => ({
+  fetchUserProfile: vi.fn(),
+  updateUserBanner: vi.fn(),
+}));
+
 import * as SecureStore from 'expo-secure-store';
 import {
   savePendingBanner,
   readPendingBanner,
   clearPendingBanner,
+  consumePendingBanner,
 } from './onboarding-persistence';
+import { fetchUserProfile, updateUserBanner } from './api';
 import type { BannerSpec } from './onboarding-api';
 
 describe('onboarding-persistence', () => {
@@ -67,6 +74,112 @@ describe('onboarding-persistence', () => {
 
   it('clears the persisted banner', async () => {
     await clearPendingBanner();
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pendingBanner');
+  });
+});
+
+describe('consumePendingBanner', () => {
+  beforeEach(() => {
+    vi.mocked(SecureStore.getItemAsync).mockReset();
+    vi.mocked(SecureStore.setItemAsync).mockReset();
+    vi.mocked(SecureStore.deleteItemAsync).mockReset();
+    vi.mocked(fetchUserProfile).mockReset();
+    vi.mocked(updateUserBanner).mockReset();
+  });
+
+  const pendingBackdrop = {
+    bannerType: 'BACKDROP' as const,
+    bannerValue: { filmId: 'tt0110912', backdropPath: '/abc.jpg' },
+  };
+
+  function profileWithBanner(bannerType: string, bannerValue: string) {
+    return {
+      user: {
+        id: 'u1',
+        name: null,
+        username: null,
+        bio: null,
+        image: null,
+        bannerType,
+        bannerValue,
+      },
+      stats: { reviewCount: 0, followingCount: 0, followerCount: 0 },
+      recentReviews: [],
+      lists: [],
+    } as unknown as Awaited<ReturnType<typeof fetchUserProfile>>;
+  }
+
+  it('is a no-op when nothing is in the cache', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(null);
+
+    await consumePendingBanner();
+
+    expect(fetchUserProfile).not.toHaveBeenCalled();
+    expect(updateUserBanner).not.toHaveBeenCalled();
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('applies the pending banner and clears the cache when the user is on the default GRADIENT/midnight', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(
+      JSON.stringify(pendingBackdrop),
+    );
+    vi.mocked(fetchUserProfile).mockResolvedValueOnce(
+      profileWithBanner('GRADIENT', 'midnight'),
+    );
+    vi.mocked(updateUserBanner).mockResolvedValueOnce(undefined);
+    vi.mocked(SecureStore.deleteItemAsync).mockResolvedValueOnce(undefined);
+
+    await consumePendingBanner();
+
+    expect(updateUserBanner).toHaveBeenCalledTimes(1);
+    expect(updateUserBanner).toHaveBeenCalledWith(
+      pendingBackdrop.bannerType,
+      pendingBackdrop.bannerValue,
+    );
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pendingBanner');
+  });
+
+  it('skips the apply but still clears the cache when the user already has a customized banner', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(
+      JSON.stringify(pendingBackdrop),
+    );
+    vi.mocked(fetchUserProfile).mockResolvedValueOnce(
+      profileWithBanner('PHOTO', 'banners/u1/123.jpg'),
+    );
+    vi.mocked(SecureStore.deleteItemAsync).mockResolvedValueOnce(undefined);
+
+    await consumePendingBanner();
+
+    expect(updateUserBanner).not.toHaveBeenCalled();
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pendingBanner');
+  });
+
+  it('does not apply when the profile fetch fails, and still clears the cache', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(
+      JSON.stringify(pendingBackdrop),
+    );
+    vi.mocked(fetchUserProfile).mockRejectedValueOnce(new Error('500'));
+    vi.mocked(SecureStore.deleteItemAsync).mockResolvedValueOnce(undefined);
+
+    await consumePendingBanner();
+
+    expect(updateUserBanner).not.toHaveBeenCalled();
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pendingBanner');
+  });
+
+  it('clears the cache and does not throw when updateUserBanner fails', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(
+      JSON.stringify(pendingBackdrop),
+    );
+    vi.mocked(fetchUserProfile).mockResolvedValueOnce(
+      profileWithBanner('GRADIENT', 'midnight'),
+    );
+    vi.mocked(updateUserBanner).mockRejectedValueOnce(new Error('PATCH 500'));
+    vi.mocked(SecureStore.deleteItemAsync).mockResolvedValueOnce(undefined);
+
+    await expect(consumePendingBanner()).resolves.toBeUndefined();
+
+    expect(updateUserBanner).toHaveBeenCalledTimes(1);
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('pendingBanner');
   });
 });
