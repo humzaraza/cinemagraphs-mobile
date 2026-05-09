@@ -85,27 +85,149 @@ export async function cleanupLegacyTokenKey(): Promise<void> {
   await SecureStore.deleteItemAsync('auth_token');
 }
 
-export async function apiFetch(
-  path: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const token = await getAccessToken();
+// ---------------------------------------------------------------------------
+// Refresh flow (added in PR 3b Chunk B3)
+//
+// refreshPromise serializes concurrent refresh attempts. When multiple
+// requests hit 401 at the same time, all of them share one POST to
+// /api/auth/mobile/refresh instead of stampeding the endpoint.
+// ---------------------------------------------------------------------------
 
+let refreshPromise: Promise<TokenPair | null> | null = null;
+
+async function refreshTokensViaApi(): Promise<TokenPair | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return null;
+
+      const res = await fetch(`${API_BASE}/auth/mobile/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      if (
+        typeof data?.accessToken !== 'string' ||
+        !data.accessToken ||
+        typeof data?.refreshToken !== 'string' ||
+        !data.refreshToken
+      ) {
+        return null;
+      }
+
+      const newPair: TokenPair = {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      };
+      await setTokens(newPair);
+      return newPair;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+type SignOutHandler = () => void | Promise<void>;
+let onAuthFailure: SignOutHandler | null = null;
+
+export function setOnAuthFailure(handler: SignOutHandler | null): void {
+  onAuthFailure = handler;
+}
+
+/**
+ * Fire-and-forget server-side family revocation. Returns immediately;
+ * the network call runs in the background with a 2-second abort timeout.
+ *
+ * Used by AuthProvider.signOut. Does NOT throw on network failure.
+ * Worst case: server keeps the family alive until the refresh token
+ * expires naturally (30 days) or the family is invalidated by replay.
+ */
+export function requestServerLogout(refreshToken: string): void {
+  if (!refreshToken) return;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+  fetch(`${API_BASE}/auth/mobile/logout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+    signal: controller.signal,
+  })
+    .catch(() => {
+      // Swallow: network errors, timeouts, server 500s. Local cleanup
+      // already happened; this call was best-effort.
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
+}
+
+async function attachAuthAndFetch(
+  url: string,
+  options: RequestInit,
+  accessToken: string | null,
+): Promise<Response> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+  if (accessToken) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
+  }
+  console.log('[API]', options.method ?? 'GET', url);
+  return fetch(url, { ...options, headers });
+}
 
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const url = `${API_BASE}${path}`;
+
+  // Snapshot the access token from before the first attempt. If the
+  // first attempt comes back 401 and we DID send a token, that means
+  // the token was rejected and we should try to refresh. If we did NOT
+  // send a token, the 401 just means the endpoint requires auth and
+  // we don't have any. Skip the refresh attempt.
+  const initialToken = await getAccessToken();
+  const firstRes = await attachAuthAndFetch(url, options, initialToken);
+
+  if (firstRes.status !== 401 || !initialToken) {
+    return firstRes;
   }
 
-  const url = `${API_BASE}${path}`;
-  console.log('[API]', options.method ?? 'GET', url);
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+  // Try to refresh and retry once.
+  const newPair = await refreshTokensViaApi();
+  if (!newPair) {
+    // Refresh failed. Trigger auto-signout, return the original 401 so
+    // the caller can handle the response shape they expected.
+    if (onAuthFailure) {
+      try {
+        await onAuthFailure();
+      } catch {
+        // Don't let signout errors bubble into apiFetch's contract.
+      }
+    }
+    return firstRes;
+  }
+
+  // Refresh succeeded. Retry the original request once with the new
+  // access token. Return whatever this attempt produces, even if also
+  // 401 (don't re-refresh; that path means something deeper is wrong).
+  return attachAuthAndFetch(url, options, newPair.accessToken);
 }
 
 async function extractFilms(res: Response): Promise<Film[]> {

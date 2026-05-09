@@ -8,9 +8,12 @@ import {
   loginWithGoogle,
   loginWithApple,
   getAccessToken,
+  getRefreshToken,
   setTokens,
   removeTokens,
   cleanupLegacyTokenKey,
+  setOnAuthFailure,
+  requestServerLogout,
   apiFetch,
   type AuthUser,
   type AuthResponse,
@@ -135,6 +138,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     })();
   }, []);
 
+  // --- Register the auth-failure handler with apiFetch ---
+  // apiFetch invokes this when a 401 + refresh attempt both fail. The
+  // handler does local-only cleanup; apiFetch already proved the
+  // refresh is dead, so calling the server again would just recurse.
+  useEffect(() => {
+    setOnAuthFailure(async () => {
+      await clearAuth();
+      setUser(null);
+      setTokenState(null);
+      setNeedsOnboarding(false);
+    });
+    return () => setOnAuthFailure(null);
+  }, []);
+
   // --- Internal: store auth result and check onboarding ---
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
     // 1. Store token to SecureStore
@@ -181,10 +198,27 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
+    // Snapshot the refresh token BEFORE clearing local state. We need
+    // it for the server-side family revocation call that follows.
+    let refreshTokenSnapshot: string | null = null;
+    try {
+      refreshTokenSnapshot = await getRefreshToken();
+    } catch {
+      // Continue without it; local cleanup runs regardless.
+    }
+
+    // Clear local state immediately. User-perceived sign-out is instant
+    // and does not depend on the network.
     await clearAuth();
     setUser(null);
     setTokenState(null);
     setNeedsOnboarding(false);
+
+    // Fire-and-forget server-side revocation. Background network call
+    // with 2s abort timeout. Local sign-out has already happened.
+    if (refreshTokenSnapshot) {
+      requestServerLogout(refreshTokenSnapshot);
+    }
   }, []);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
