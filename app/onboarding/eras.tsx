@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +10,7 @@ import { ERA_BLOCKS, type OnboardingBlock } from '../../src/data/onboardingCurat
 import { MosaicBlock } from '../../src/components/onboarding/MosaicBlock';
 import { OnboardingHeader } from '../../src/components/onboarding/OnboardingHeader';
 import { ContinueButton } from '../../src/components/onboarding/ContinueButton';
+import { trackEvent, EVENTS } from '../../src/lib/events';
 
 const ERA_CAP = 4;
 // Vertical space the absolute continue bar occupies above the safe-area inset.
@@ -28,6 +30,10 @@ export default function ErasScreen() {
   const ITEM_WIDTH =
     (screenWidth - HORIZONTAL_PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
+  useEffect(() => {
+    trackEvent(EVENTS.ONBOARDING_STEP_VIEW, { screen: 'eras' });
+  }, []);
+
   const atCap = eras.length >= ERA_CAP;
   const isAtCapForBlock = (id: string) => atCap && !eras.includes(id);
 
@@ -46,6 +52,7 @@ export default function ErasScreen() {
   };
 
   const handleSkip = () => {
+    trackEvent(EVENTS.ONBOARDING_SKIP, { screen: 'eras' });
     setEras([]);
     router.push('/onboarding/genres' as any);
   };

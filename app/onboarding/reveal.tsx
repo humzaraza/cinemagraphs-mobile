@@ -15,6 +15,7 @@ import { colors, fonts } from '../../src/constants/theme';
 import { useOnboarding } from '../../src/contexts/onboarding-context';
 import { fetchSelectBanner, type BannerSpec } from '../../src/lib/onboarding-api';
 import { savePendingBanner } from '../../src/lib/onboarding-persistence';
+import { trackEvent, EVENTS } from '../../src/lib/events';
 import { getBackdropUrl } from '../../src/lib/tmdb-image';
 import {
   isBannerPresetKey,
@@ -38,6 +39,10 @@ export default function RevealScreen() {
 
   const [bannerSpec, setBannerSpec] = useState<BannerSpec | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    trackEvent(EVENTS.ONBOARDING_STEP_VIEW, { screen: 'reveal' });
+  }, []);
 
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -73,6 +78,7 @@ export default function RevealScreen() {
     : 'Customize anything later in Settings.';
 
   const handleGetStarted = () => {
+    trackEvent(EVENTS.REVEAL_COMPLETE);
     router.replace('/(tabs)/explore' as any);
   };
 

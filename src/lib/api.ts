@@ -1,47 +1,235 @@
 import * as SecureStore from 'expo-secure-store';
 import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
 
-// TODO: This origin is also defined in src/lib/api-config.ts
-// (env-driven with fallback). Migrate this file to import
-// API_BASE_URL from there next time you touch this file.
-const API_BASE = 'https://cinemagraphs.ca/api';
+// Origin for the cinemagraphs.ca API. Override via EXPO_PUBLIC_API_BASE_URL
+// at build time (e.g., to point at a staging environment). API_BASE composes
+// the origin with the /api prefix used by every endpoint in this file.
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://cinemagraphs.ca';
+const API_BASE = `${API_BASE_URL}/api`;
 
-export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync('auth_token');
+// ---------------------------------------------------------------------------
+// Token pair storage
+//
+// Stored as a single JSON-encoded string under TOKENS_KEY for atomic writes.
+// SecureStore writes are not transactional across keys; encoding both tokens
+// in one value means a mid-write crash leaves either the full old pair or
+// the full new pair, never a half-updated state.
+// ---------------------------------------------------------------------------
+
+const TOKENS_KEY = 'auth_tokens';
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
 }
 
-export async function setToken(token: string): Promise<void> {
-  if (typeof token !== 'string' || !token) {
-    throw new Error('setToken requires a non-empty string');
+export async function getTokens(): Promise<TokenPair | null> {
+  const raw = await SecureStore.getItemAsync(TOKENS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<TokenPair>;
+    if (
+      typeof parsed.accessToken !== 'string' ||
+      !parsed.accessToken ||
+      typeof parsed.refreshToken !== 'string' ||
+      !parsed.refreshToken
+    ) {
+      return null;
+    }
+    return { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken };
+  } catch {
+    // Malformed JSON; treat as no stored tokens.
+    return null;
   }
-  await SecureStore.setItemAsync('auth_token', token);
 }
 
-export async function removeToken(): Promise<void> {
+export async function setTokens(pair: TokenPair): Promise<void> {
+  if (!pair.accessToken || typeof pair.accessToken !== 'string') {
+    throw new Error('setTokens requires a non-empty accessToken string');
+  }
+  if (!pair.refreshToken || typeof pair.refreshToken !== 'string') {
+    throw new Error('setTokens requires a non-empty refreshToken string');
+  }
+  await SecureStore.setItemAsync(TOKENS_KEY, JSON.stringify(pair));
+}
+
+export async function removeTokens(): Promise<void> {
+  await SecureStore.deleteItemAsync(TOKENS_KEY);
+}
+
+/**
+ * Convenience: read just the access token without forcing callers to
+ * destructure the pair. Returns null if no pair is stored.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const pair = await getTokens();
+  return pair?.accessToken ?? null;
+}
+
+/**
+ * Convenience: read just the refresh token. Used by the refresh flow
+ * and by signOut for server-side family revocation.
+ */
+export async function getRefreshToken(): Promise<string | null> {
+  const pair = await getTokens();
+  return pair?.refreshToken ?? null;
+}
+
+/**
+ * One-shot cleanup of the legacy 'auth_token' key from pre-PR-3b builds.
+ * Called from AuthProvider on mount. Idempotent: a no-op for fresh
+ * installs and for users who already cleaned up.
+ */
+export async function cleanupLegacyTokenKey(): Promise<void> {
   await SecureStore.deleteItemAsync('auth_token');
 }
 
-export async function apiFetch(
-  path: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const token = await getToken();
+// ---------------------------------------------------------------------------
+// Refresh flow (added in PR 3b Chunk B3)
+//
+// refreshPromise serializes concurrent refresh attempts. When multiple
+// requests hit 401 at the same time, all of them share one POST to
+// /api/auth/mobile/refresh instead of stampeding the endpoint.
+// ---------------------------------------------------------------------------
 
+let refreshPromise: Promise<TokenPair | null> | null = null;
+
+async function refreshTokensViaApi(): Promise<TokenPair | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return null;
+
+      const res = await fetch(`${API_BASE}/auth/mobile/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      if (
+        typeof data?.accessToken !== 'string' ||
+        !data.accessToken ||
+        typeof data?.refreshToken !== 'string' ||
+        !data.refreshToken
+      ) {
+        return null;
+      }
+
+      const newPair: TokenPair = {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      };
+      await setTokens(newPair);
+      return newPair;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+type SignOutHandler = () => void | Promise<void>;
+let onAuthFailure: SignOutHandler | null = null;
+
+export function setOnAuthFailure(handler: SignOutHandler | null): void {
+  onAuthFailure = handler;
+}
+
+/**
+ * Fire-and-forget server-side family revocation. Returns immediately;
+ * the network call runs in the background with a 2-second abort timeout.
+ *
+ * Used by AuthProvider.signOut. Does NOT throw on network failure.
+ * Worst case: server keeps the family alive until the refresh token
+ * expires naturally (30 days) or the family is invalidated by replay.
+ */
+export function requestServerLogout(refreshToken: string): void {
+  if (!refreshToken) return;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+  fetch(`${API_BASE}/auth/mobile/logout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+    signal: controller.signal,
+  })
+    .catch(() => {
+      // Swallow: network errors, timeouts, server 500s. Local cleanup
+      // already happened; this call was best-effort.
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
+}
+
+async function attachAuthAndFetch(
+  url: string,
+  options: RequestInit,
+  accessToken: string | null,
+): Promise<Response> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+  if (accessToken) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
+  }
+  if (__DEV__) {
+    console.log('[API]', options.method ?? 'GET', url);
+  }
+  return fetch(url, { ...options, headers });
+}
 
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const url = `${API_BASE}${path}`;
+
+  // Snapshot the access token from before the first attempt. If the
+  // first attempt comes back 401 and we DID send a token, that means
+  // the token was rejected and we should try to refresh. If we did NOT
+  // send a token, the 401 just means the endpoint requires auth and
+  // we don't have any. Skip the refresh attempt.
+  const initialToken = await getAccessToken();
+  const firstRes = await attachAuthAndFetch(url, options, initialToken);
+
+  if (firstRes.status !== 401 || !initialToken) {
+    return firstRes;
   }
 
-  const url = `${API_BASE}${path}`;
-  console.log('[API]', options.method ?? 'GET', url);
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+  // Try to refresh and retry once.
+  const newPair = await refreshTokensViaApi();
+  if (!newPair) {
+    // Refresh failed. Trigger auto-signout, return the original 401 so
+    // the caller can handle the response shape they expected.
+    if (onAuthFailure) {
+      try {
+        await onAuthFailure();
+      } catch {
+        // Don't let signout errors bubble into apiFetch's contract.
+      }
+    }
+    return firstRes;
+  }
+
+  // Refresh succeeded. Retry the original request once with the new
+  // access token. Return whatever this attempt produces, even if also
+  // 401 (don't re-refresh; that path means something deeper is wrong).
+  return attachAuthAndFetch(url, options, newPair.accessToken);
 }
 
 async function extractFilms(res: Response): Promise<Film[]> {
@@ -235,7 +423,8 @@ export interface AuthUser {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: AuthUser;
 }
 
@@ -388,10 +577,11 @@ export interface UserProfile {
 }
 
 export async function fetchUserProfile(): Promise<UserProfile | null> {
-  const token = await getToken();
   const res = await apiFetch('/user/profile');
   if (!res.ok) {
-    console.error('[API] fetchUserProfile failed:', res.status, 'token:', token?.slice(0, 20) ?? 'null');
+    if (__DEV__) {
+      console.error('[API] fetchUserProfile failed:', res.status);
+    }
     return null;
   }
   return res.json();
@@ -452,7 +642,9 @@ export async function fetchUserFilms(type?: string): Promise<any[]> {
   if (!res.ok) return [];
   const data = await res.json();
   const films = Array.isArray(data) ? data : data.films ?? [];
-  console.log(`[API] fetchUserFilms(${type}) returned ${films.length} films, sample keys:`, films[0] ? Object.keys(films[0]) : 'empty');
+  if (__DEV__) {
+    console.log(`[API] fetchUserFilms(${type}) returned ${films.length} films, sample keys:`, films[0] ? Object.keys(films[0]) : 'empty');
+  }
   return films;
 }
 
@@ -493,7 +685,9 @@ export async function fetchUserLists(): Promise<any[]> {
   }
   const data = await res.json();
   const lists = Array.isArray(data) ? data : data.lists ?? [];
-  console.log('[API] fetchUserLists returned', lists.length, 'lists, first:', JSON.stringify(lists[0])?.slice(0, 200));
+  if (__DEV__) {
+    console.log('[API] fetchUserLists returned', lists.length, 'lists, first:', JSON.stringify(lists[0])?.slice(0, 200));
+  }
   return lists;
 }
 
@@ -505,7 +699,9 @@ export async function fetchUserList(listId: string): Promise<any> {
 }
 
 export async function createUserList(name: string, genreTag: string, filmIds: string[], isPublic?: boolean): Promise<any> {
-  console.log('[API] createUserList called with:', { name, genreTag, filmIds, isPublic });
+  if (__DEV__) {
+    console.log('[API] createUserList called with:', { name, genreTag, filmIds, isPublic });
+  }
   const res = await apiFetch('/user/lists', {
     method: 'POST',
     body: JSON.stringify({ name, genreTag, filmIds, ...(isPublic !== undefined && { isPublic }) }),
@@ -516,7 +712,9 @@ export async function createUserList(name: string, genreTag: string, filmIds: st
     throw new Error(err.error || 'Failed to create list');
   }
   const data = await res.json();
-  console.log('[API] createUserList response:', JSON.stringify(data).slice(0, 300));
+  if (__DEV__) {
+    console.log('[API] createUserList response:', JSON.stringify(data).slice(0, 300));
+  }
   return data;
 }
 
@@ -589,7 +787,7 @@ export async function updateUserProfile(data: { name?: string; username?: string
 }
 
 export async function uploadAvatar(uri: string): Promise<{ url: string }> {
-  const token = await getToken();
+  const token = await getAccessToken();
   const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
   const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
   const fileName = ext === 'png' ? 'avatar.png' : 'avatar.jpg';

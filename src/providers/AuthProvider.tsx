@@ -7,13 +7,19 @@ import {
   verifyOTP,
   loginWithGoogle,
   loginWithApple,
-  getToken,
-  setToken,
-  removeToken,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  removeTokens,
+  cleanupLegacyTokenKey,
+  setOnAuthFailure,
+  requestServerLogout,
   apiFetch,
   type AuthUser,
   type AuthResponse,
 } from '../lib/api';
+import { consumePendingBanner } from '../lib/onboarding-persistence';
+import { trackEvent, EVENTS } from '../lib/events';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -60,16 +66,18 @@ export function useAuth() {
 // ---------------------------------------------------------------------------
 
 async function storeAuth(data: AuthResponse) {
-  const t = data.token;
-  if (typeof t !== 'string' || !t) {
-    throw new Error('Auth response missing token');
+  if (!data.accessToken || typeof data.accessToken !== 'string') {
+    throw new Error('Auth response missing accessToken');
   }
-  await setToken(t);
+  if (!data.refreshToken || typeof data.refreshToken !== 'string') {
+    throw new Error('Auth response missing refreshToken');
+  }
+  await setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
   await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user ?? {}));
 }
 
 async function clearAuth() {
-  await removeToken();
+  await removeTokens();
   await SecureStore.deleteItemAsync('auth_user');
 }
 
@@ -89,8 +97,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (didRestore.current) return;
     didRestore.current = true;
     (async () => {
+      // Clean up the pre-PR-3b 'auth_token' key if it exists. Idempotent.
+      await cleanupLegacyTokenKey();
+
       try {
-        const stored = await getToken();
+        const stored = await getAccessToken();
         if (!stored) return;
 
         const res = await apiFetch('/user/profile');
@@ -101,7 +112,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           setTokenState(stored);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
-          console.error('[Auth] Token rejected on mount, status:', res.status);
+          if (__DEV__) {
+            console.error('[Auth] Token rejected on mount, status:', res.status);
+          }
           await clearAuth();
         } else {
           // Other error (500, network hiccup) - try cached user as offline fallback
@@ -115,7 +128,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
       } catch {
         // Network error, fall back to cached user
-        const stored = await getToken();
+        const stored = await getAccessToken();
         const cached = await SecureStore.getItemAsync('auth_user');
         if (stored && cached) {
           setUser(JSON.parse(cached));
@@ -129,6 +142,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     })();
   }, []);
 
+  // --- Register the auth-failure handler with apiFetch ---
+  // apiFetch invokes this when a 401 + refresh attempt both fail. The
+  // handler does local-only cleanup; apiFetch already proved the
+  // refresh is dead, so calling the server again would just recurse.
+  useEffect(() => {
+    setOnAuthFailure(async () => {
+      await clearAuth();
+      setUser(null);
+      setTokenState(null);
+      setNeedsOnboarding(false);
+    });
+    return () => setOnAuthFailure(null);
+  }, []);
+
   // --- Internal: store auth result and check onboarding ---
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
     // 1. Store token to SecureStore
@@ -136,13 +163,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // 2. Check onboarding BEFORE setting user/token (which trigger navigation)
     const userId = data.user?.id ?? data.user?.email;
-    console.log('[Auth] handlePostAuth called, userId:', userId);
+    if (__DEV__) {
+      console.log('[Auth] handlePostAuth called, userId:', userId);
+    }
     if (userId) {
       const key = `has_seen_onboarding_${userId}`;
       const seen = await AsyncStorage.getItem(key);
-      console.log('[Auth] has_seen_onboarding key:', key);
-      console.log('[Auth] has_seen_onboarding value:', seen);
-      console.log('[Auth] setting needsOnboarding to:', seen !== 'true');
+      if (__DEV__) {
+        console.log('[Auth] has_seen_onboarding key:', key);
+        console.log('[Auth] has_seen_onboarding value:', seen);
+        console.log('[Auth] setting needsOnboarding to:', seen !== 'true');
+      }
       if (seen !== 'true') {
         setNeedsOnboarding(true);
       }
@@ -152,15 +183,25 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     // 3. Set user and token last so isAuthenticated flips after needsOnboarding is ready
     setUser(data.user);
-    setTokenState(data.token);
+    setTokenState(data.accessToken);
+
+    // 4. Consume pendingBanner if user is still on defaults. Runs after
+    //    setUser/setTokenState so any concurrent UI render shows the user
+    //    as authenticated immediately; banner application is async and
+    //    updates the server record but doesn't block sign-in completion.
+    await consumePendingBanner();
   }, []);
 
   // --- Public auth methods (no navigation, state only) ---
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.log('[Auth] signIn function called');
+    if (__DEV__) {
+      console.log('[Auth] signIn function called');
+    }
     const data = await loginWithEmail(email, password);
-    console.log('[Auth] signIn API response received, user:', data.user?.id ?? data.user?.email);
+    if (__DEV__) {
+      console.log('[Auth] signIn API response received, user:', data.user?.id ?? data.user?.email);
+    }
     await handlePostAuth(data);
   }, [handlePostAuth]);
 
@@ -172,13 +213,31 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const verifyOtp = useCallback(async (email: string, code: string) => {
     const data = await verifyOTP(email, code);
     await handlePostAuth(data);
+    trackEvent(EVENTS.SIGNUP_COMPLETE, { method: 'email' });
   }, [handlePostAuth]);
 
   const signOut = useCallback(async () => {
+    // Snapshot the refresh token BEFORE clearing local state. We need
+    // it for the server-side family revocation call that follows.
+    let refreshTokenSnapshot: string | null = null;
+    try {
+      refreshTokenSnapshot = await getRefreshToken();
+    } catch {
+      // Continue without it; local cleanup runs regardless.
+    }
+
+    // Clear local state immediately. User-perceived sign-out is instant
+    // and does not depend on the network.
     await clearAuth();
     setUser(null);
     setTokenState(null);
     setNeedsOnboarding(false);
+
+    // Fire-and-forget server-side revocation. Background network call
+    // with 2s abort timeout. Local sign-out has already happened.
+    if (refreshTokenSnapshot) {
+      requestServerLogout(refreshTokenSnapshot);
+    }
   }, []);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {

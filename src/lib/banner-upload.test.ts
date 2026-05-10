@@ -93,7 +93,10 @@ describe('uploadBannerPhoto', () => {
   });
 
   it('step A includes Authorization header from the user JWT', async () => {
-    tokenStore['auth_token'] = 'user-jwt-abc';
+    tokenStore['auth_tokens'] = JSON.stringify({
+      accessToken: 'user-jwt-abc',
+      refreshToken: 'user-refresh-abc',
+    });
     setupHappyPath();
     await uploadBannerPhoto({
       fileUri: 'file:///tmp/cropped.jpg',

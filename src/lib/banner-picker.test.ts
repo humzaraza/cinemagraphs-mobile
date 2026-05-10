@@ -625,7 +625,10 @@ describe('fetchBackdropFilms', () => {
   });
 
   it('sends Authorization header when a token is stored', async () => {
-    tokenStore['auth_token'] = 'token-abc';
+    tokenStore['auth_tokens'] = JSON.stringify({
+      accessToken: 'token-abc',
+      refreshToken: 'refresh-abc',
+    });
     mockFilmsResponse([]);
     await fetchBackdropFilms();
     const init = fetchSpy.mock.calls[0][1] as RequestInit;
