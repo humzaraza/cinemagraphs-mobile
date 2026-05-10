@@ -109,6 +109,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const profile = await res.json();
           const restoredUser = profile.user ?? profile;
           setUser(restoredUser);
+          // TODO(post-deploy): stale-token write. apiFetch may have refreshed
+          // tokens during this call (B3's 401 retry). If so, SecureStore now
+          // holds the new access token but `stored` here is the pre-refresh
+          // value. Subsequent API calls read from SecureStore via
+          // getAccessToken() so they get the current token, but `token` in
+          // React state is stale. Currently benign because isAuthenticated
+          // only uses !!token. Fix by reading getAccessToken() after the
+          // apiFetch resolves, or by accepting the new token via response
+          // header. Address when a real consumer needs token state to be
+          // live-accurate.
           setTokenState(stored);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
@@ -121,6 +131,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const cached = await SecureStore.getItemAsync('auth_user');
           if (cached) {
             setUser(JSON.parse(cached));
+            // TODO(post-deploy): same stale-token issue as the success branch
+            // above. `stored` is the pre-apiFetch read; if the request went
+            // 401 → refresh-success → retry-500, the token in storage is
+            // now newer than this value. Same fix applies.
             setTokenState(stored);
           } else {
             await clearAuth();
@@ -262,6 +276,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     <AuthContext.Provider
       value={{
         user,
+        // TODO(post-deploy): setUser exposure is an auth-boundary leak.
+        // Any consumer of useAuth() can bypass the provider's flow
+        // (storeAuth, handlePostAuth, consumePendingBanner) and mutate
+        // user state directly. Replace with a controlled refreshUser()
+        // helper that re-fetches the profile, or applyUserUpdate(patch)
+        // that goes through the appropriate validation. Audit consumers
+        // before removing — check `grep -rn "setUser" src/ app/` to find
+        // who currently relies on direct mutation.
         setUser,
         token,
         isLoading,
