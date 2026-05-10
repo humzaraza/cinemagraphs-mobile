@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 
 import { colors, fonts } from '../../src/constants/theme';
 import { useOnboarding } from '../../src/contexts/onboarding-context';
+import { useAuth } from '../../src/providers/AuthProvider';
 import { fetchSelectBanner, type BannerSpec } from '../../src/lib/onboarding-api';
 import { savePendingBanner } from '../../src/lib/onboarding-persistence';
 import { trackEvent, EVENTS } from '../../src/lib/events';
@@ -36,6 +37,7 @@ export default function RevealScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const { eras, genres, filmIds } = useOnboarding();
+  const { clearOnboarding } = useAuth();
 
   const [bannerSpec, setBannerSpec] = useState<BannerSpec | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,8 +79,9 @@ export default function RevealScreen() {
     ? 'You can set this up later in Settings.'
     : 'Customize anything later in Settings.';
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
     trackEvent(EVENTS.REVEAL_COMPLETE);
+    await clearOnboarding();
     router.replace('/(tabs)/explore' as any);
   };
 

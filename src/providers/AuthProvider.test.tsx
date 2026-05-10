@@ -7,11 +7,20 @@ vi.mock('expo-secure-store', () => ({
   deleteItemAsync: vi.fn(async () => undefined),
 }));
 
+// In-memory AsyncStorage mock so the persisted has_seen_onboarding
+// flag survives across signOut/signIn within a single test, which is
+// what we need to assert that a returning user with completed
+// onboarding skips the flow.
+const asyncStore = new Map<string, string>();
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
+    getItem: vi.fn(async (key: string) => asyncStore.get(key) ?? null),
+    setItem: vi.fn(async (key: string, value: string) => {
+      asyncStore.set(key, value);
+    }),
+    removeItem: vi.fn(async (key: string) => {
+      asyncStore.delete(key);
+    }),
   },
 }));
 
@@ -65,6 +74,7 @@ function setup() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  asyncStore.clear();
 });
 
 describe('AuthProvider.signOut', () => {
@@ -99,6 +109,49 @@ describe('AuthProvider.signOut', () => {
     expect(state().user).toBeNull();
     expect(state().token).toBeNull();
     expect(state().isAuthenticated).toBe(false);
+    expect(state().needsOnboarding).toBe(false);
+  });
+});
+
+describe('AuthProvider.clearOnboarding', () => {
+  it('returning user who completed onboarding (clearOnboarding called) signs in again with needsOnboarding=false', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+
+    // First sign-in: brand-new user. handlePostAuth finds no
+    // has_seen_onboarding flag, so needsOnboarding flips to true.
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    expect(state().needsOnboarding).toBe(true);
+
+    // Simulate the reveal screen's "Get Started" tap. This persists
+    // the per-user-id completion flag and clears the in-memory
+    // needsOnboarding state.
+    await TestRenderer.act(async () => {
+      await state().clearOnboarding();
+    });
+    expect(state().needsOnboarding).toBe(false);
+    expect(asyncStore.get('has_seen_onboarding_u1')).toBe('true');
+
+    // Sign out, then sign in again as the same returning user.
+    await TestRenderer.act(async () => {
+      await state().signOut();
+    });
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+
+    // handlePostAuth reads the persisted flag, sees 'true', and does
+    // NOT flip needsOnboarding back to true. This is what was broken
+    // before clearOnboarding got wired into reveal.tsx.
+    expect(state().isAuthenticated).toBe(true);
     expect(state().needsOnboarding).toBe(false);
   });
 });
