@@ -78,6 +78,34 @@ describe('parseBackdropBannerValue', () => {
       backdropPath: null,
     });
   });
+
+  // Regression: numeric filmId in the JSON shape used to fall through
+  // to the legacy branch and stuff the entire JSON-encoded string into
+  // filmId, yielding /api/films/{"filmId":...}/... and a 404 from
+  // fetchFilmDetail in the header picker.
+  it('parses JSON-encoded shape with a numeric filmId (coerced to string)', () => {
+    const raw = JSON.stringify({ filmId: 12345, backdropPath: '/abc.jpg' });
+    expect(parseBackdropBannerValue(raw)).toEqual({
+      filmId: '12345',
+      backdropPath: '/abc.jpg',
+    });
+  });
+
+  it('parses JSON-encoded shape with a numeric filmId and null backdropPath', () => {
+    const raw = JSON.stringify({ filmId: 67890, backdropPath: null });
+    expect(parseBackdropBannerValue(raw)).toEqual({
+      filmId: '67890',
+      backdropPath: null,
+    });
+  });
+
+  it('returns null for null input without throwing', () => {
+    expect(parseBackdropBannerValue(null)).toBeNull();
+  });
+
+  it('returns null for undefined input without throwing', () => {
+    expect(parseBackdropBannerValue(undefined)).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
