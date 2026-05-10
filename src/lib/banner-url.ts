@@ -58,19 +58,27 @@ export interface ParsedBackdropBannerValue {
 
 // Parse a BACKDROP bannerValue into the structured shape, tolerating
 // both the new JSON-encoded form ({"filmId":"...","backdropPath":"..."})
-// and the legacy plain filmId string. Returns null only for empty input;
-// any other input resolves to a usable filmId (legacy fallback) so the
-// caller doesn't need to special-case parse errors.
+// and the legacy plain filmId string. Returns null for empty / null /
+// undefined input; any other input resolves to a usable filmId (legacy
+// fallback) so the caller doesn't need to special-case parse errors.
+//
+// filmId in the JSON shape may be a number (Prisma autoincrement IDs
+// serialize as numbers) or a string. Both are coerced to string so
+// callers building `/api/films/<id>` URLs always get a usable id.
 export function parseBackdropBannerValue(
-  bannerValue: string,
+  bannerValue: string | null | undefined,
 ): ParsedBackdropBannerValue | null {
-  if (!bannerValue) return null;
+  if (!bannerValue || typeof bannerValue !== 'string') return null;
   try {
     const parsed = JSON.parse(bannerValue);
-    if (parsed && typeof parsed === 'object' && typeof parsed.filmId === 'string') {
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      (typeof parsed.filmId === 'string' || typeof parsed.filmId === 'number')
+    ) {
       const backdropPath =
         typeof parsed.backdropPath === 'string' ? parsed.backdropPath : null;
-      return { filmId: parsed.filmId, backdropPath };
+      return { filmId: String(parsed.filmId), backdropPath };
     }
   } catch {
     // Fall through to legacy treatment.
