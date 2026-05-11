@@ -13,7 +13,6 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from 'expo-secure-store';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../src/lib/api';
@@ -24,7 +23,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user: authUser, setUser } = useAuth();
+  const { user: authUser, refreshUser } = useAuth();
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -132,11 +131,7 @@ export default function EditProfileScreen() {
     try {
       const { url } = await uploadAvatar(asset.uri);
       setImageUrl(url);
-      if (authUser) {
-        const updated = { ...authUser, image: url };
-        setUser(updated);
-        await SecureStore.setItemAsync('auth_user', JSON.stringify(updated));
-      }
+      await refreshUser();
     } catch {
       setImageUrl(previousUrl);
       setErrors({ avatar: 'Failed to upload photo' });

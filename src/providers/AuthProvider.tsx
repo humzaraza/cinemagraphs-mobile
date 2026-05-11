@@ -27,7 +27,7 @@ import { trackEvent, EVENTS } from '../lib/events';
 
 interface AuthContextValue {
   user: AuthUser | null;
-  setUser: (u: AuthUser | null) => void;
+  refreshUser: () => Promise<void>;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -43,7 +43,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
-  setUser: () => {},
+  refreshUser: async () => {},
   token: null,
   isLoading: true,
   isAuthenticated: false,
@@ -258,11 +258,28 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
+  // Pull the latest user record from the server and sync both in-memory
+  // state and the SecureStore cache. Replaces the prior pattern of
+  // consumers calling setUser() directly from context, which leaked
+  // mutability and let callers desync the cache.
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await apiFetch('/user/profile');
+      if (!res.ok) return;
+      const profile = await res.json();
+      const refreshed = profile.user ?? profile;
+      setUser(refreshed);
+      await SecureStore.setItemAsync('auth_user', JSON.stringify(refreshed));
+    } catch {
+      // Network errors leave state unchanged; caller may retry.
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        refreshUser,
         token,
         isLoading,
         isAuthenticated: !!token,
