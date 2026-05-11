@@ -108,8 +108,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (res.ok) {
           const profile = await res.json();
           const restoredUser = profile.user ?? profile;
+          // Re-read after apiFetch; refresh may have rotated the token during the call.
+          const fresh = await getAccessToken();
           setUser(restoredUser);
-          setTokenState(stored);
+          setTokenState(fresh);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
           if (__DEV__) {
@@ -120,8 +122,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           // Other error (500, network hiccup) - try cached user as offline fallback
           const cached = await SecureStore.getItemAsync('auth_user');
           if (cached) {
+            // Re-read after apiFetch; refresh may have rotated the token during the call.
+            const fresh = await getAccessToken();
             setUser(JSON.parse(cached));
-            setTokenState(stored);
+            setTokenState(fresh);
           } else {
             await clearAuth();
           }
