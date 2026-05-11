@@ -1,4 +1,4 @@
-# VoiceOver QA Script — Auth Screens
+# VoiceOver QA Script - Auth Screens
 
 Run on a physical iOS device with VoiceOver enabled (Settings > Accessibility > VoiceOver). Right-swipe to advance focus. Every focus stop must announce a meaningful label, not just "button" or "image".
 
