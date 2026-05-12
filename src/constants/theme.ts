@@ -64,3 +64,26 @@ export const borderRadius = {
   pill: 16,
   full: 9999,
 } as const;
+
+// Button-state tokens. Consumed inline by auth screens (PR-B) and by any
+// future shared Button extraction. Three variants, each with its valid
+// states. Loading text is rendered invisible by the consumer; the spinner
+// color is provided so it lives over the (hidden) label area.
+export const buttonStates = {
+  primary: {
+    default: { bg: '#C8A951', text: '#0D0D1A' },
+    pressed: { bg: '#C8A951', text: '#0D0D1A', scale: 0.98 },
+    disabled: { bg: 'rgba(200,169,81,0.3)', text: 'rgba(245,240,225,0.5)' },
+    loading: { bg: 'rgba(200,169,81,0.3)', spinner: '#F5F0E1' },
+  },
+  secondary: {
+    default: { bg: 'transparent', border: 'rgba(245,240,225,0.3)', text: '#F5F0E1' },
+    pressed: { bg: 'rgba(245,240,225,0.05)', border: 'rgba(245,240,225,0.5)', text: '#F5F0E1' },
+    disabled: { bg: 'transparent', border: 'rgba(245,240,225,0.1)', text: 'rgba(245,240,225,0.3)' },
+  },
+  tertiary: {
+    default: { text: '#C8A951' },
+    pressed: { text: 'rgba(200,169,81,0.7)' },
+    disabled: { text: 'rgba(200,169,81,0.3)' },
+  },
+} as const;

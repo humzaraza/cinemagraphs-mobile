@@ -49,7 +49,13 @@ vi.mock('../lib/events', () => ({
   EVENTS: { SIGNUP_COMPLETE: 'signup_complete' },
 }));
 
-import { loginWithEmail } from '../lib/api';
+import {
+  loginWithEmail,
+  getAccessToken,
+  apiFetch,
+  setOnAuthFailure,
+} from '../lib/api';
+import * as SecureStore from 'expo-secure-store';
 import AuthProvider, { useAuth } from './AuthProvider';
 
 type AuthState = ReturnType<typeof useAuth>;
@@ -153,5 +159,128 @@ describe('AuthProvider.clearOnboarding', () => {
     // before clearOnboarding got wired into reveal.tsx.
     expect(state().isAuthenticated).toBe(true);
     expect(state().needsOnboarding).toBe(false);
+  });
+});
+
+describe('AuthProvider mount restore', () => {
+  it('stores the rotated access token when apiFetch refreshes during /user/profile (stale-token bug fold)', async () => {
+    // Before the fix, mount restore wrote the pre-apiFetch token snapshot
+    // into state, leaving the rotated token in storage but a stale token
+    // in memory. After the fix, the success branch re-reads via
+    // getAccessToken() before writing to setTokenState.
+    vi.mocked(getAccessToken)
+      .mockResolvedValueOnce('old-token')
+      .mockResolvedValueOnce('new-token');
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+      }),
+    } as unknown as Response);
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+
+    expect(state().isAuthenticated).toBe(true);
+    expect(state().token).toBe('new-token');
+    expect(state().user?.id).toBe('u1');
+  });
+});
+
+describe('AuthProvider auth-failure handler', () => {
+  it('invoking the registered handler clears user, token, and onboarding state (apiFetch 401 + refresh failure path)', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    expect(state().isAuthenticated).toBe(true);
+    expect(state().needsOnboarding).toBe(true);
+
+    // Grab the handler the provider registered with apiFetch and invoke
+    // it directly, which is what apiFetch does internally when a 401 +
+    // refresh attempt both fail.
+    const handler = vi.mocked(setOnAuthFailure).mock.calls.at(-1)?.[0];
+    expect(typeof handler).toBe('function');
+
+    await TestRenderer.act(async () => {
+      await handler!();
+    });
+
+    expect(state().user).toBeNull();
+    expect(state().token).toBeNull();
+    expect(state().isAuthenticated).toBe(false);
+    expect(state().needsOnboarding).toBe(false);
+  });
+});
+
+describe('AuthProvider.refreshUser', () => {
+  it('pulls the latest user from /user/profile, updates context state, and writes the SecureStore cache', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    expect(state().user?.name).toBe('User One');
+
+    const updatedUser = {
+      id: 'u1',
+      email: 'u1@example.com',
+      name: 'User One Updated',
+    };
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ user: updatedUser }),
+    } as unknown as Response);
+
+    await TestRenderer.act(async () => {
+      await state().refreshUser();
+    });
+
+    expect(state().user).toEqual(updatedUser);
+    expect(vi.mocked(SecureStore.setItemAsync)).toHaveBeenCalledWith(
+      'auth_user',
+      JSON.stringify(updatedUser),
+    );
+  });
+
+  it('network error during refreshUser leaves context state unchanged', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    const beforeUser = state().user;
+    expect(beforeUser).not.toBeNull();
+
+    vi.mocked(apiFetch).mockRejectedValueOnce(new Error('network down'));
+
+    // Should not throw despite apiFetch rejecting.
+    await TestRenderer.act(async () => {
+      await state().refreshUser();
+    });
+
+    expect(state().user).toEqual(beforeUser);
+    expect(state().isAuthenticated).toBe(true);
   });
 });

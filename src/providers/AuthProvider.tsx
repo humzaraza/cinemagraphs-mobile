@@ -27,7 +27,7 @@ import { trackEvent, EVENTS } from '../lib/events';
 
 interface AuthContextValue {
   user: AuthUser | null;
-  setUser: (u: AuthUser | null) => void;
+  refreshUser: () => Promise<void>;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -43,7 +43,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
-  setUser: () => {},
+  refreshUser: async () => {},
   token: null,
   isLoading: true,
   isAuthenticated: false,
@@ -108,8 +108,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (res.ok) {
           const profile = await res.json();
           const restoredUser = profile.user ?? profile;
+          // Re-read after apiFetch; refresh may have rotated the token during the call.
+          const fresh = await getAccessToken();
           setUser(restoredUser);
-          setTokenState(stored);
+          setTokenState(fresh);
         } else if (res.status === 401 || res.status === 403 || res.status === 404) {
           // Token invalid or user deleted - sign out
           if (__DEV__) {
@@ -120,8 +122,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           // Other error (500, network hiccup) - try cached user as offline fallback
           const cached = await SecureStore.getItemAsync('auth_user');
           if (cached) {
+            // Re-read after apiFetch; refresh may have rotated the token during the call.
+            const fresh = await getAccessToken();
             setUser(JSON.parse(cached));
-            setTokenState(stored);
+            setTokenState(fresh);
           } else {
             await clearAuth();
           }
@@ -258,11 +262,28 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
+  // Pull the latest user record from the server and sync both in-memory
+  // state and the SecureStore cache. Replaces the prior pattern of
+  // consumers calling setUser() directly from context, which leaked
+  // mutability and let callers desync the cache.
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await apiFetch('/user/profile');
+      if (!res.ok) return;
+      const profile = await res.json();
+      const refreshed = profile.user ?? profile;
+      setUser(refreshed);
+      await SecureStore.setItemAsync('auth_user', JSON.stringify(refreshed));
+    } catch {
+      // Network errors leave state unchanged; caller may retry.
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        refreshUser,
         token,
         isLoading,
         isAuthenticated: !!token,
