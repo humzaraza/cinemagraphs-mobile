@@ -126,6 +126,7 @@ export default function AuthScreen() {
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField('')}
                 autoCapitalize="words"
+                textContentType="name"
               />
             </View>
           </View>
@@ -145,6 +146,7 @@ export default function AuthScreen() {
               autoCorrect={false}
               onFocus={() => setFocusedField('email')}
               onBlur={() => setFocusedField('')}
+              textContentType="emailAddress"
             />
           </View>
         </View>
@@ -161,6 +163,7 @@ export default function AuthScreen() {
               secureTextEntry
               onFocus={() => setFocusedField('password')}
               onBlur={() => setFocusedField('')}
+              textContentType={tab === 'create' ? 'newPassword' : 'password'}
             />
           </View>
         </View>

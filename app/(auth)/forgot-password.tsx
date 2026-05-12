@@ -80,6 +80,7 @@ export default function ForgotPasswordScreen() {
                   autoCorrect={false}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
+                  textContentType="emailAddress"
                 />
               </View>
             </View>

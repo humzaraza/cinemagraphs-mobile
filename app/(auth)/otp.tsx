@@ -138,6 +138,7 @@ export default function OTPScreen() {
               onChangeText={(t) => handleChange(t, i)}
               onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
               keyboardType="number-pad"
+              textContentType="oneTimeCode"
               style={[
                 styles.otpBox,
                 d ? styles.otpBoxFilled : null,
