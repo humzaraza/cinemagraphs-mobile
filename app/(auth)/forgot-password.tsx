@@ -81,6 +81,8 @@ export default function ForgotPasswordScreen() {
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
                   textContentType="emailAddress"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSend}
                 />
               </View>
             </View>

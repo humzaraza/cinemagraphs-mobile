@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,9 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState('');
+
+  const emailRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) return;
@@ -127,6 +130,9 @@ export default function AuthScreen() {
                 onBlur={() => setFocusedField('')}
                 autoCapitalize="words"
                 textContentType="name"
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
           </View>
@@ -136,6 +142,7 @@ export default function AuthScreen() {
           <Text style={styles.label}>Email</Text>
           <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
             <TextInput
+              ref={emailRef}
               value={email}
               onChangeText={setEmail}
               placeholder="you@email.com"
@@ -147,6 +154,9 @@ export default function AuthScreen() {
               onFocus={() => setFocusedField('email')}
               onBlur={() => setFocusedField('')}
               textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
             />
           </View>
         </View>
@@ -155,6 +165,7 @@ export default function AuthScreen() {
           <Text style={styles.label}>Password</Text>
           <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
             <TextInput
+              ref={passwordRef}
               value={password}
               onChangeText={setPassword}
               placeholder={tab === 'signin' ? 'Enter your password' : 'Create a password'}
@@ -164,6 +175,8 @@ export default function AuthScreen() {
               onFocus={() => setFocusedField('password')}
               onBlur={() => setFocusedField('')}
               textContentType={tab === 'create' ? 'newPassword' : 'password'}
+              returnKeyType="done"
+              onSubmitEditing={tab === 'signin' ? handleSignIn : handleCreate}
             />
           </View>
         </View>
