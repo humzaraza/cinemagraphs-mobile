@@ -93,7 +93,7 @@ export default function AuthScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.heading}>
+          <Text accessibilityRole="header" style={styles.heading}>
             {tab === 'signin' ? 'Welcome back' : 'Create your account'}
           </Text>
           <Text style={styles.subtitle}>
@@ -106,6 +106,9 @@ export default function AuthScreen() {
           <Pressable
             onPress={() => { setTab('signin'); setError(''); }}
             style={[styles.tabBtn, tab === 'signin' && styles.tabBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            accessibilityState={{ selected: tab === 'signin' }}
           >
             <Text style={[styles.tabText, tab === 'signin' && styles.tabTextActive]}>
               Sign in
@@ -114,6 +117,9 @@ export default function AuthScreen() {
           <Pressable
             onPress={() => { setTab('create'); setError(''); }}
             style={[styles.tabBtn, tab === 'create' && styles.tabBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+            accessibilityState={{ selected: tab === 'create' }}
           >
             <Text style={[styles.tabText, tab === 'create' && styles.tabTextActive]}>
               Create account
@@ -146,6 +152,7 @@ export default function AuthScreen() {
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
                 blurOnSubmit={false}
+                accessibilityLabel="Profile name"
               />
             </View>
           </View>
@@ -170,6 +177,7 @@ export default function AuthScreen() {
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
               blurOnSubmit={false}
+              accessibilityLabel="Email address"
             />
           </View>
         </View>
@@ -190,6 +198,7 @@ export default function AuthScreen() {
               textContentType={tab === 'create' ? 'newPassword' : 'password'}
               returnKeyType="done"
               onSubmitEditing={tab === 'signin' ? handleSignIn : handleCreate}
+              accessibilityLabel="Password"
             />
           </View>
         </View>
@@ -198,6 +207,8 @@ export default function AuthScreen() {
           <Pressable
             onPress={() => router.push('/(auth)/forgot-password' as any)}
             style={styles.forgotWrap}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
           >
             {({ pressed }) => (
               <Text
@@ -213,6 +224,8 @@ export default function AuthScreen() {
         <Pressable
           onPress={tab === 'signin' ? handleSignIn : handleCreate}
           disabled={isSubmitDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={tab === 'signin' ? 'Sign in' : 'Create account'}
           accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
           style={({ pressed }) => [
             styles.submitBtn,

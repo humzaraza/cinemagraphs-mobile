@@ -59,7 +59,9 @@ export default function ForgotPasswordScreen() {
       </Pressable>
 
       <View style={styles.content}>
-        <Text style={styles.heading}>Reset password</Text>
+        <Text accessibilityRole="header" style={styles.heading}>
+          Reset password
+        </Text>
         <Text style={styles.subtitle}>
           Enter your email and we'll send you a reset link
         </Text>
@@ -89,6 +91,7 @@ export default function ForgotPasswordScreen() {
                   textContentType="emailAddress"
                   returnKeyType="done"
                   onSubmitEditing={handleSend}
+                  accessibilityLabel="Email address"
                 />
               </View>
             </View>
@@ -98,6 +101,8 @@ export default function ForgotPasswordScreen() {
             <Pressable
               onPress={handleSend}
               disabled={isSubmitDisabled}
+              accessibilityRole="button"
+              accessibilityLabel="Send reset link"
               accessibilityState={{
                 disabled: isSubmitDisabled,
                 busy: isSubmitting,

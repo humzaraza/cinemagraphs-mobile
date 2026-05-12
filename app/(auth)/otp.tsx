@@ -127,14 +127,20 @@ export default function OTPScreen() {
           </Svg>
         </View>
 
-        <Text style={styles.heading}>Check your email</Text>
+        <Text accessibilityRole="header" style={styles.heading}>
+          Check your email
+        </Text>
         <Text style={styles.subtitle}>
           We sent a verification code to{'\n'}
           <Text style={styles.emailHighlight}>{email}</Text>
         </Text>
 
         {/* OTP digits */}
-        <View style={styles.otpRow}>
+        <View
+          style={styles.otpRow}
+          accessibilityLabel="Verification code, 6 digits"
+          accessibilityHint="Enter the 6-digit code sent to your email"
+        >
           {digits.map((d, i) => (
             <TextInput
               key={i}
@@ -160,6 +166,8 @@ export default function OTPScreen() {
         <Pressable
           onPress={handleVerify}
           disabled={isSubmitDisabled}
+          accessibilityRole="button"
+          accessibilityLabel="Verify"
           accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
           style={({ pressed }) => [
             styles.verifyBtn,
@@ -190,7 +198,11 @@ export default function OTPScreen() {
             {resent ? 'Code sent! ' : "Didn't receive a code? "}
           </Text>
           {!resent && (
-            <Pressable onPress={handleResend}>
+            <Pressable
+              onPress={handleResend}
+              accessibilityRole="button"
+              accessibilityLabel="Resend code"
+            >
               {({ pressed }) => (
                 <Text
                   style={[
