@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,14 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { buttonStates, colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
+import { authError, authSuccess } from '../../src/lib/haptics';
+import FieldError from '../../src/components/ui/FieldError';
+import { useToast } from '../../src/components/ui/Toast';
+
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+const MIN_PASSWORD_LENGTH = 8;
 
 type Tab = 'signin' | 'create';
 
@@ -24,38 +30,99 @@ export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signIn, signUp } = useAuth();
+  const { showError, showSuccess } = useToast();
 
   const [tab, setTab] = useState<Tab>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState('');
 
+  const emailRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
+
+  const canSubmit =
+    tab === 'signin'
+      ? email.trim().length > 0 && password.length > 0
+      : name.trim().length > 0 &&
+        email.trim().length > 0 &&
+        password.length >= MIN_PASSWORD_LENGTH;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
+
+  // Tab switch clears any field-level errors from the previous tab so
+  // the user does not see stale "Profile name is required" carrying
+  // over into the Sign in flow.
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    setNameError(null);
+    setEmailError(null);
+    setPasswordError(null);
+  };
+
+  const validate = (mode: Tab) => {
+    const trimmedEmail = email.trim();
+    const trimmedName = name.trim();
+    const result = {
+      name: null as string | null,
+      email: null as string | null,
+      password: null as string | null,
+    };
+    if (mode === 'create' && !trimmedName) {
+      result.name = 'Profile name is required';
+    }
+    if (!trimmedEmail) {
+      result.email = 'Email is required';
+    } else if (!EMAIL_REGEX.test(trimmedEmail)) {
+      result.email = 'Enter a valid email address';
+    }
+    if (!password) {
+      result.password = 'Password is required';
+    } else if (mode === 'create' && password.length < MIN_PASSWORD_LENGTH) {
+      result.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    }
+    return result;
+  };
+
   const handleSignIn = async () => {
-    if (!email.trim() || !password) return;
-    setError('');
-    setLoading(true);
+    const errs = validate('signin');
+    setEmailError(errs.email);
+    setPasswordError(errs.password);
+    if (errs.email || errs.password) return;
+
+    setIsSubmitting(true);
     try {
       await signIn(email.trim(), password);
+      authSuccess();
+      showSuccess('Signed in');
     } catch (e: any) {
-      setError(e.message || 'Sign in failed');
+      authError();
+      showError(e.message || 'Sign in failed. Please check your credentials.');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleCreate = async () => {
-    if (!name.trim() || !email.trim() || !password) return;
-    setError('');
-    setLoading(true);
+    const errs = validate('create');
+    setNameError(errs.name);
+    setEmailError(errs.email);
+    setPasswordError(errs.password);
+    if (errs.name || errs.email || errs.password) return;
+
+    setIsSubmitting(true);
     try {
       await signUp(email.trim(), password, name.trim());
+      authSuccess();
+      showSuccess('Account created');
       router.push({ pathname: '/(auth)/otp', params: { email: email.trim() } } as any);
     } catch (e: any) {
-      setError(e.message || 'Registration failed');
+      authError();
+      showError(e.message || 'Account creation failed. Please try again.');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -77,7 +144,7 @@ export default function AuthScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.heading}>
+          <Text accessibilityRole="header" style={styles.heading}>
             {tab === 'signin' ? 'Welcome back' : 'Create your account'}
           </Text>
           <Text style={styles.subtitle}>
@@ -88,29 +155,28 @@ export default function AuthScreen() {
         {/* Tab toggle */}
         <View style={styles.tabToggle}>
           <Pressable
-            onPress={() => { setTab('signin'); setError(''); }}
+            onPress={() => switchTab('signin')}
             style={[styles.tabBtn, tab === 'signin' && styles.tabBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            accessibilityState={{ selected: tab === 'signin' }}
           >
             <Text style={[styles.tabText, tab === 'signin' && styles.tabTextActive]}>
               Sign in
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => { setTab('create'); setError(''); }}
+            onPress={() => switchTab('create')}
             style={[styles.tabBtn, tab === 'create' && styles.tabBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+            accessibilityState={{ selected: tab === 'create' }}
           >
             <Text style={[styles.tabText, tab === 'create' && styles.tabTextActive]}>
               Create account
             </Text>
           </Pressable>
         </View>
-
-        {/* Error banner */}
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
 
         {/* Fields */}
         {tab === 'create' && (
@@ -119,15 +185,21 @@ export default function AuthScreen() {
             <View style={[styles.inputBox, focusedField === 'name' && styles.inputBoxFocused]}>
               <TextInput
                 value={name}
-                onChangeText={setName}
+                onChangeText={(t) => { setName(t); setNameError(null); }}
                 placeholder="Your display name"
                 placeholderTextColor="rgba(245,240,225,0.2)"
                 style={styles.input}
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField('')}
                 autoCapitalize="words"
+                textContentType="name"
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                blurOnSubmit={false}
+                accessibilityLabel="Profile name"
               />
             </View>
+            <FieldError message={nameError} />
           </View>
         )}
 
@@ -135,8 +207,9 @@ export default function AuthScreen() {
           <Text style={styles.label}>Email</Text>
           <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
             <TextInput
+              ref={emailRef}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { setEmail(t); setEmailError(null); }}
               placeholder="you@email.com"
               placeholderTextColor="rgba(245,240,225,0.2)"
               style={styles.input}
@@ -145,45 +218,80 @@ export default function AuthScreen() {
               autoCorrect={false}
               onFocus={() => setFocusedField('email')}
               onBlur={() => setFocusedField('')}
+              textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="Email address"
             />
           </View>
+          <FieldError message={emailError} />
         </View>
 
         <View style={[styles.fieldWrap, { marginBottom: tab === 'signin' ? 8 : 20 }]}>
           <Text style={styles.label}>Password</Text>
           <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
             <TextInput
+              ref={passwordRef}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => { setPassword(t); setPasswordError(null); }}
               placeholder={tab === 'signin' ? 'Enter your password' : 'Create a password'}
               placeholderTextColor="rgba(245,240,225,0.2)"
               style={styles.input}
               secureTextEntry
               onFocus={() => setFocusedField('password')}
               onBlur={() => setFocusedField('')}
+              textContentType={tab === 'create' ? 'newPassword' : 'password'}
+              returnKeyType="done"
+              onSubmitEditing={tab === 'signin' ? handleSignIn : handleCreate}
+              accessibilityLabel="Password"
             />
           </View>
+          <FieldError message={passwordError} />
         </View>
 
         {tab === 'signin' && (
           <Pressable
             onPress={() => router.push('/(auth)/forgot-password' as any)}
             style={styles.forgotWrap}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
           >
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            {({ pressed }) => (
+              <Text
+                style={[styles.forgotText, pressed && styles.forgotTextPressed]}
+              >
+                Forgot password?
+              </Text>
+            )}
           </Pressable>
         )}
 
         {/* Submit */}
         <Pressable
           onPress={tab === 'signin' ? handleSignIn : handleCreate}
-          style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-          disabled={loading}
+          disabled={isSubmitDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={tab === 'signin' ? 'Sign in' : 'Create account'}
+          accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
+          style={({ pressed }) => [
+            styles.submitBtn,
+            isSubmitDisabled && styles.submitBtnDisabled,
+            pressed && !isSubmitDisabled && styles.submitBtnPressed,
+          ]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.background} />
+          {isSubmitting ? (
+            <ActivityIndicator
+              size="small"
+              color={buttonStates.primary.loading.spinner}
+            />
           ) : (
-            <Text style={styles.submitText}>
+            <Text
+              style={[
+                styles.submitText,
+                isSubmitDisabled && styles.submitTextDisabled,
+              ]}
+            >
               {tab === 'signin' ? 'Sign in' : 'Create account'}
             </Text>
           )}
@@ -246,22 +354,6 @@ const styles = StyleSheet.create({
     color: colors.background,
   },
 
-  // Error
-  errorBanner: {
-    backgroundColor: 'rgba(226,75,74,0.1)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(226,75,74,0.3)',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 14,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    textAlign: 'center',
-  },
-
   // Fields
   fieldWrap: {
     marginBottom: 14,
@@ -306,11 +398,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnDisabled: {
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  submitBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   submitText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.background,
+  },
+  submitTextDisabled: {
+    color: buttonStates.primary.disabled.text,
+  },
+  forgotTextPressed: {
+    color: buttonStates.tertiary.pressed.text,
   },
 });

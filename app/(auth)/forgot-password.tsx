@@ -14,30 +14,50 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '../../src/constants/theme';
+import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { forgotPassword } from '../../src/lib/api';
+import { authError, authSuccess } from '../../src/lib/haptics';
+import FieldError from '../../src/components/ui/FieldError';
+import { useToast } from '../../src/components/ui/Toast';
+
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { showError, showSuccess } = useToast();
 
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
 
+  const canSubmit = email.trim().length > 0;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
+
   const handleSend = async () => {
-    if (!email.trim()) return;
-    setError('');
-    setLoading(true);
+    const trimmed = email.trim();
+    let emailErr: string | null = null;
+    if (!trimmed) {
+      emailErr = 'Email is required';
+    } else if (!EMAIL_REGEX.test(trimmed)) {
+      emailErr = 'Enter a valid email address';
+    }
+    setEmailError(emailErr);
+    if (emailErr) return;
+
+    setIsSubmitting(true);
     try {
-      await forgotPassword(email.trim());
+      await forgotPassword(trimmed);
+      authSuccess();
+      showSuccess('Check your email');
       setSent(true);
     } catch (e: any) {
-      setError(e.message || 'Could not send reset link');
+      authError();
+      showError(e.message || 'Could not send code. Please try again.');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -53,7 +73,9 @@ export default function ForgotPasswordScreen() {
       </Pressable>
 
       <View style={styles.content}>
-        <Text style={styles.heading}>Reset password</Text>
+        <Text accessibilityRole="header" style={styles.heading}>
+          Reset password
+        </Text>
         <Text style={styles.subtitle}>
           Enter your email and we'll send you a reset link
         </Text>
@@ -71,7 +93,7 @@ export default function ForgotPasswordScreen() {
               <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
                 <TextInput
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(t) => { setEmail(t); setEmailError(null); }}
                   placeholder="you@email.com"
                   placeholderTextColor="rgba(245,240,225,0.2)"
                   style={styles.input}
@@ -80,21 +102,44 @@ export default function ForgotPasswordScreen() {
                   autoCorrect={false}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
+                  textContentType="emailAddress"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSend}
+                  accessibilityLabel="Email address"
                 />
               </View>
+              <FieldError message={emailError} />
             </View>
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <Pressable
               onPress={handleSend}
-              style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-              disabled={loading}
+              disabled={isSubmitDisabled}
+              accessibilityRole="button"
+              accessibilityLabel="Send reset link"
+              accessibilityState={{
+                disabled: isSubmitDisabled,
+                busy: isSubmitting,
+              }}
+              style={({ pressed }) => [
+                styles.submitBtn,
+                isSubmitDisabled && styles.submitBtnDisabled,
+                pressed && !isSubmitDisabled && styles.submitBtnPressed,
+              ]}
             >
-              {loading ? (
-                <ActivityIndicator size="small" color={colors.background} />
+              {isSubmitting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={buttonStates.primary.loading.spinner}
+                />
               ) : (
-                <Text style={styles.submitText}>Send reset link</Text>
+                <Text
+                  style={[
+                    styles.submitText,
+                    isSubmitDisabled && styles.submitTextDisabled,
+                  ]}
+                >
+                  Send reset link
+                </Text>
               )}
             </Pressable>
           </>
@@ -157,22 +202,27 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     padding: 0,
   },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    marginBottom: 12,
-  },
   submitBtn: {
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnDisabled: {
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  submitBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   submitText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.background,
+  },
+  submitTextDisabled: {
+    color: buttonStates.primary.disabled.text,
   },
   successBox: {
     backgroundColor: 'rgba(45,212,168,0.1)',

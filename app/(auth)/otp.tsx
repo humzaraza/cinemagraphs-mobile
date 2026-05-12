@@ -14,9 +14,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '../../src/constants/theme';
+import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { resendOTP } from '../../src/lib/api';
+import { authError, authSuccess } from '../../src/lib/haptics';
+import { useToast } from '../../src/components/ui/Toast';
 
 const CODE_LENGTH = 6;
 
@@ -25,22 +27,44 @@ export default function OTPScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { verifyOtp } = useAuth();
+  const { showError, showSuccess } = useToast();
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [resent, setResent] = useState(false);
   const refs = useRef<(TextInput | null)[]>([]);
 
   const allFilled = digits.every((d) => d.length === 1);
+  const canSubmit = allFilled;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
 
   const handleChange = (text: string, index: number) => {
-    const digit = text.replace(/[^0-9]/g, '').slice(-1);
+    const sanitized = text.replace(/[^0-9]/g, '');
+
+    // Paste or iOS one-time-code autofill. Distribute the first CODE_LENGTH
+    // digits across cells 0..5 regardless of which cell received the input;
+    // a paste is treated as the full code, not as input local to one cell.
+    if (sanitized.length > 1) {
+      const chars = sanitized.slice(0, CODE_LENGTH).split('');
+      const next = Array<string>(CODE_LENGTH).fill('');
+      for (let i = 0; i < chars.length; i++) {
+        next[i] = chars[i];
+      }
+      setDigits(next);
+      if (chars.length >= CODE_LENGTH) {
+        refs.current[CODE_LENGTH - 1]?.blur();
+        Keyboard.dismiss();
+      } else {
+        refs.current[chars.length - 1]?.focus();
+      }
+      return;
+    }
+
+    // Single-digit typing path.
     const next = [...digits];
-    next[index] = digit;
+    next[index] = sanitized;
     setDigits(next);
-    setError('');
-    if (digit && index < CODE_LENGTH - 1) {
+    if (sanitized && index < CODE_LENGTH - 1) {
       refs.current[index + 1]?.focus();
     }
   };
@@ -53,14 +77,16 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     if (!allFilled || !email) return;
-    setError('');
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await verifyOtp(email, digits.join(''));
+      authSuccess();
+      showSuccess('Verified');
     } catch (e: any) {
-      setError(e.message || 'Verification failed');
+      authError();
+      showError(e.message || 'Invalid or expired code. Please try again.');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleResend = async () => {
@@ -100,14 +126,20 @@ export default function OTPScreen() {
           </Svg>
         </View>
 
-        <Text style={styles.heading}>Check your email</Text>
+        <Text accessibilityRole="header" style={styles.heading}>
+          Check your email
+        </Text>
         <Text style={styles.subtitle}>
           We sent a verification code to{'\n'}
           <Text style={styles.emailHighlight}>{email}</Text>
         </Text>
 
         {/* OTP digits */}
-        <View style={styles.otpRow}>
+        <View
+          style={styles.otpRow}
+          accessibilityLabel="Verification code, 6 digits"
+          accessibilityHint="Enter the 6-digit code sent to your email"
+        >
           {digits.map((d, i) => (
             <TextInput
               key={i}
@@ -116,7 +148,7 @@ export default function OTPScreen() {
               onChangeText={(t) => handleChange(t, i)}
               onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
               keyboardType="number-pad"
-              maxLength={1}
+              textContentType="oneTimeCode"
               style={[
                 styles.otpBox,
                 d ? styles.otpBoxFilled : null,
@@ -127,19 +159,30 @@ export default function OTPScreen() {
           ))}
         </View>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
         {/* Verify */}
         <Pressable
           onPress={handleVerify}
-          style={[styles.verifyBtn, !allFilled && styles.verifyBtnDisabled]}
-          disabled={!allFilled || loading}
+          disabled={isSubmitDisabled}
+          accessibilityRole="button"
+          accessibilityLabel="Verify"
+          accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
+          style={({ pressed }) => [
+            styles.verifyBtn,
+            isSubmitDisabled && styles.verifyBtnDisabled,
+            pressed && !isSubmitDisabled && styles.verifyBtnPressed,
+          ]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.background} />
+          {isSubmitting ? (
+            <ActivityIndicator
+              size="small"
+              color={buttonStates.primary.loading.spinner}
+            />
           ) : (
             <Text
-              style={[styles.verifyText, !allFilled && styles.verifyTextDisabled]}
+              style={[
+                styles.verifyText,
+                isSubmitDisabled && styles.verifyTextDisabled,
+              ]}
             >
               Verify
             </Text>
@@ -152,8 +195,21 @@ export default function OTPScreen() {
             {resent ? 'Code sent! ' : "Didn't receive a code? "}
           </Text>
           {!resent && (
-            <Pressable onPress={handleResend}>
-              <Text style={styles.resendLink}>Resend</Text>
+            <Pressable
+              onPress={handleResend}
+              accessibilityRole="button"
+              accessibilityLabel="Resend code"
+            >
+              {({ pressed }) => (
+                <Text
+                  style={[
+                    styles.resendLink,
+                    pressed && styles.resendLinkPressed,
+                  ]}
+                >
+                  Resend
+                </Text>
+              )}
             </Pressable>
           )}
         </View>
@@ -228,24 +284,22 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,169,81,0.3)',
   },
 
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    marginBottom: 12,
-  },
-
   // Verify
   verifyBtn: {
     width: '100%',
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   verifyBtnDisabled: {
-    backgroundColor: 'rgba(200,169,81,0.3)',
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  verifyBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   verifyText: {
     fontFamily: fonts.bodyMedium,
@@ -253,7 +307,7 @@ const styles = StyleSheet.create({
     color: colors.background,
   },
   verifyTextDisabled: {
-    color: 'rgba(13,13,26,0.5)',
+    color: buttonStates.primary.disabled.text,
   },
 
   // Resend
@@ -270,5 +324,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.gold,
+  },
+  resendLinkPressed: {
+    color: buttonStates.tertiary.pressed.text,
   },
 });
