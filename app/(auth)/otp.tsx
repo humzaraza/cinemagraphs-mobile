@@ -35,12 +35,34 @@ export default function OTPScreen() {
   const allFilled = digits.every((d) => d.length === 1);
 
   const handleChange = (text: string, index: number) => {
-    const digit = text.replace(/[^0-9]/g, '').slice(-1);
+    const sanitized = text.replace(/[^0-9]/g, '');
+
+    // Paste or iOS one-time-code autofill. Distribute the first CODE_LENGTH
+    // digits across cells 0..5 regardless of which cell received the input;
+    // a paste is treated as the full code, not as input local to one cell.
+    if (sanitized.length > 1) {
+      const chars = sanitized.slice(0, CODE_LENGTH).split('');
+      const next = Array<string>(CODE_LENGTH).fill('');
+      for (let i = 0; i < chars.length; i++) {
+        next[i] = chars[i];
+      }
+      setDigits(next);
+      setError('');
+      if (chars.length >= CODE_LENGTH) {
+        refs.current[CODE_LENGTH - 1]?.blur();
+        Keyboard.dismiss();
+      } else {
+        refs.current[chars.length - 1]?.focus();
+      }
+      return;
+    }
+
+    // Single-digit typing path.
     const next = [...digits];
-    next[index] = digit;
+    next[index] = sanitized;
     setDigits(next);
     setError('');
-    if (digit && index < CODE_LENGTH - 1) {
+    if (sanitized && index < CODE_LENGTH - 1) {
       refs.current[index + 1]?.focus();
     }
   };
@@ -116,7 +138,6 @@ export default function OTPScreen() {
               onChangeText={(t) => handleChange(t, i)}
               onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
               keyboardType="number-pad"
-              maxLength={1}
               style={[
                 styles.otpBox,
                 d ? styles.otpBoxFilled : null,
