@@ -318,6 +318,61 @@ describe('apiFetch refresh flow', () => {
       'Bearer new-a-token',
     ]);
   });
+
+  it('a request arriving during an in-flight refresh shares the same refresh promise (slow-refresh window)', async () => {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(storedPair);
+    vi.mocked(SecureStore.setItemAsync).mockResolvedValue(undefined);
+
+    let resolveRefresh: ((response: Response) => void) | null = null;
+    const refreshPending = new Promise<Response>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockReturnValueOnce(refreshPending)
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    // Fire the first two requests, then yield so they both reach
+    // refreshTokensViaApi and the refresh fetch goes out.
+    const p1 = apiFetch('/films');
+    const p2 = apiFetch('/user/profile');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Fire the third request mid-refresh-window. With dedup it should
+    // attach to the same refresh promise instead of triggering a
+    // second /auth/mobile/refresh call.
+    const p3 = apiFetch('/user/lists');
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Resolve the refresh and let all three retries fan out.
+    resolveRefresh!(jsonResponse(refreshSuccessBody, 200));
+
+    const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    expect(r3.status).toBe(200);
+
+    const refreshCalls = fetchSpy.mock.calls.filter((c) =>
+      String(c[0]).includes('/auth/mobile/refresh'),
+    );
+    expect(refreshCalls).toHaveLength(1);
+
+    // All three retries must carry the rotated access token.
+    const retryHeaders = fetchSpy.mock.calls
+      .slice(4)
+      .map((c) => (c[1] as RequestInit).headers as Record<string, string>);
+    for (const h of retryHeaders) {
+      expect(h['Authorization']).toBe('Bearer new-a-token');
+    }
+  });
 });
 
 describe('requestServerLogout', () => {
