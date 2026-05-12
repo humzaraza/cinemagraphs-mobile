@@ -17,13 +17,18 @@ import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { forgotPassword } from '../../src/lib/api';
 import { authError, authSuccess } from '../../src/lib/haptics';
+import FieldError from '../../src/components/ui/FieldError';
+import { useToast } from '../../src/components/ui/Toast';
+
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { showError, showSuccess } = useToast();
 
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -32,16 +37,25 @@ export default function ForgotPasswordScreen() {
   const isSubmitDisabled = !canSubmit || isSubmitting;
 
   const handleSend = async () => {
-    if (!email.trim()) return;
-    setError('');
+    const trimmed = email.trim();
+    let emailErr: string | null = null;
+    if (!trimmed) {
+      emailErr = 'Email is required';
+    } else if (!EMAIL_REGEX.test(trimmed)) {
+      emailErr = 'Enter a valid email address';
+    }
+    setEmailError(emailErr);
+    if (emailErr) return;
+
     setIsSubmitting(true);
     try {
-      await forgotPassword(email.trim());
+      await forgotPassword(trimmed);
       authSuccess();
+      showSuccess('Check your email');
       setSent(true);
     } catch (e: any) {
       authError();
-      setError(e.message || 'Could not send reset link');
+      showError(e.message || 'Could not send code. Please try again.');
     }
     setIsSubmitting(false);
   };
@@ -79,7 +93,7 @@ export default function ForgotPasswordScreen() {
               <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
                 <TextInput
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(t) => { setEmail(t); setEmailError(null); }}
                   placeholder="you@email.com"
                   placeholderTextColor="rgba(245,240,225,0.2)"
                   style={styles.input}
@@ -94,9 +108,8 @@ export default function ForgotPasswordScreen() {
                   accessibilityLabel="Email address"
                 />
               </View>
+              <FieldError message={emailError} />
             </View>
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <Pressable
               onPress={handleSend}
@@ -188,12 +201,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.ivory,
     padding: 0,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    marginBottom: 12,
   },
   submitBtn: {
     backgroundColor: colors.gold,

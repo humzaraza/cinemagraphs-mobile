@@ -18,6 +18,11 @@ import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { authError, authSuccess } from '../../src/lib/haptics';
+import FieldError from '../../src/components/ui/FieldError';
+import { useToast } from '../../src/components/ui/Toast';
+
+const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
+const MIN_PASSWORD_LENGTH = 8;
 
 type Tab = 'signin' | 'create';
 
@@ -25,12 +30,15 @@ export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signIn, signUp } = useAuth();
+  const { showError, showSuccess } = useToast();
 
   const [tab, setTab] = useState<Tab>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState('');
 
@@ -42,34 +50,77 @@ export default function AuthScreen() {
       ? email.trim().length > 0 && password.length > 0
       : name.trim().length > 0 &&
         email.trim().length > 0 &&
-        password.length >= 8;
+        password.length >= MIN_PASSWORD_LENGTH;
   const isSubmitDisabled = !canSubmit || isSubmitting;
 
+  // Tab switch clears any field-level errors from the previous tab so
+  // the user does not see stale "Profile name is required" carrying
+  // over into the Sign in flow.
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    setNameError(null);
+    setEmailError(null);
+    setPasswordError(null);
+  };
+
+  const validate = (mode: Tab) => {
+    const trimmedEmail = email.trim();
+    const trimmedName = name.trim();
+    const result = {
+      name: null as string | null,
+      email: null as string | null,
+      password: null as string | null,
+    };
+    if (mode === 'create' && !trimmedName) {
+      result.name = 'Profile name is required';
+    }
+    if (!trimmedEmail) {
+      result.email = 'Email is required';
+    } else if (!EMAIL_REGEX.test(trimmedEmail)) {
+      result.email = 'Enter a valid email address';
+    }
+    if (!password) {
+      result.password = 'Password is required';
+    } else if (mode === 'create' && password.length < MIN_PASSWORD_LENGTH) {
+      result.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    }
+    return result;
+  };
+
   const handleSignIn = async () => {
-    if (!email.trim() || !password) return;
-    setError('');
+    const errs = validate('signin');
+    setEmailError(errs.email);
+    setPasswordError(errs.password);
+    if (errs.email || errs.password) return;
+
     setIsSubmitting(true);
     try {
       await signIn(email.trim(), password);
       authSuccess();
+      showSuccess('Signed in');
     } catch (e: any) {
       authError();
-      setError(e.message || 'Sign in failed');
+      showError(e.message || 'Sign in failed. Please check your credentials.');
     }
     setIsSubmitting(false);
   };
 
   const handleCreate = async () => {
-    if (!name.trim() || !email.trim() || !password) return;
-    setError('');
+    const errs = validate('create');
+    setNameError(errs.name);
+    setEmailError(errs.email);
+    setPasswordError(errs.password);
+    if (errs.name || errs.email || errs.password) return;
+
     setIsSubmitting(true);
     try {
       await signUp(email.trim(), password, name.trim());
       authSuccess();
+      showSuccess('Account created');
       router.push({ pathname: '/(auth)/otp', params: { email: email.trim() } } as any);
     } catch (e: any) {
       authError();
-      setError(e.message || 'Registration failed');
+      showError(e.message || 'Account creation failed. Please try again.');
     }
     setIsSubmitting(false);
   };
@@ -104,7 +155,7 @@ export default function AuthScreen() {
         {/* Tab toggle */}
         <View style={styles.tabToggle}>
           <Pressable
-            onPress={() => { setTab('signin'); setError(''); }}
+            onPress={() => switchTab('signin')}
             style={[styles.tabBtn, tab === 'signin' && styles.tabBtnActive]}
             accessibilityRole="button"
             accessibilityLabel="Sign in"
@@ -115,7 +166,7 @@ export default function AuthScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => { setTab('create'); setError(''); }}
+            onPress={() => switchTab('create')}
             style={[styles.tabBtn, tab === 'create' && styles.tabBtnActive]}
             accessibilityRole="button"
             accessibilityLabel="Create account"
@@ -127,13 +178,6 @@ export default function AuthScreen() {
           </Pressable>
         </View>
 
-        {/* Error banner */}
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
         {/* Fields */}
         {tab === 'create' && (
           <View style={styles.fieldWrap}>
@@ -141,7 +185,7 @@ export default function AuthScreen() {
             <View style={[styles.inputBox, focusedField === 'name' && styles.inputBoxFocused]}>
               <TextInput
                 value={name}
-                onChangeText={setName}
+                onChangeText={(t) => { setName(t); setNameError(null); }}
                 placeholder="Your display name"
                 placeholderTextColor="rgba(245,240,225,0.2)"
                 style={styles.input}
@@ -155,6 +199,7 @@ export default function AuthScreen() {
                 accessibilityLabel="Profile name"
               />
             </View>
+            <FieldError message={nameError} />
           </View>
         )}
 
@@ -164,7 +209,7 @@ export default function AuthScreen() {
             <TextInput
               ref={emailRef}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { setEmail(t); setEmailError(null); }}
               placeholder="you@email.com"
               placeholderTextColor="rgba(245,240,225,0.2)"
               style={styles.input}
@@ -180,6 +225,7 @@ export default function AuthScreen() {
               accessibilityLabel="Email address"
             />
           </View>
+          <FieldError message={emailError} />
         </View>
 
         <View style={[styles.fieldWrap, { marginBottom: tab === 'signin' ? 8 : 20 }]}>
@@ -188,7 +234,7 @@ export default function AuthScreen() {
             <TextInput
               ref={passwordRef}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => { setPassword(t); setPasswordError(null); }}
               placeholder={tab === 'signin' ? 'Enter your password' : 'Create a password'}
               placeholderTextColor="rgba(245,240,225,0.2)"
               style={styles.input}
@@ -201,6 +247,7 @@ export default function AuthScreen() {
               accessibilityLabel="Password"
             />
           </View>
+          <FieldError message={passwordError} />
         </View>
 
         {tab === 'signin' && (
@@ -305,22 +352,6 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: colors.background,
-  },
-
-  // Error
-  errorBanner: {
-    backgroundColor: 'rgba(226,75,74,0.1)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(226,75,74,0.3)',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 14,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    textAlign: 'center',
   },
 
   // Fields

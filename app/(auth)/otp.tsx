@@ -18,6 +18,7 @@ import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { resendOTP } from '../../src/lib/api';
 import { authError, authSuccess } from '../../src/lib/haptics';
+import { useToast } from '../../src/components/ui/Toast';
 
 const CODE_LENGTH = 6;
 
@@ -26,9 +27,9 @@ export default function OTPScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { verifyOtp } = useAuth();
+  const { showError, showSuccess } = useToast();
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
-  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resent, setResent] = useState(false);
   const refs = useRef<(TextInput | null)[]>([]);
@@ -50,7 +51,6 @@ export default function OTPScreen() {
         next[i] = chars[i];
       }
       setDigits(next);
-      setError('');
       if (chars.length >= CODE_LENGTH) {
         refs.current[CODE_LENGTH - 1]?.blur();
         Keyboard.dismiss();
@@ -64,7 +64,6 @@ export default function OTPScreen() {
     const next = [...digits];
     next[index] = sanitized;
     setDigits(next);
-    setError('');
     if (sanitized && index < CODE_LENGTH - 1) {
       refs.current[index + 1]?.focus();
     }
@@ -78,14 +77,14 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     if (!allFilled || !email) return;
-    setError('');
     setIsSubmitting(true);
     try {
       await verifyOtp(email, digits.join(''));
       authSuccess();
+      showSuccess('Verified');
     } catch (e: any) {
       authError();
-      setError(e.message || 'Verification failed');
+      showError(e.message || 'Invalid or expired code. Please try again.');
     }
     setIsSubmitting(false);
   };
@@ -159,8 +158,6 @@ export default function OTPScreen() {
             />
           ))}
         </View>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         {/* Verify */}
         <Pressable
@@ -285,13 +282,6 @@ const styles = StyleSheet.create({
   },
   otpBoxFilled: {
     borderColor: 'rgba(200,169,81,0.3)',
-  },
-
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: '#E24B4A',
-    marginBottom: 12,
   },
 
   // Verify
