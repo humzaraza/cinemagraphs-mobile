@@ -58,6 +58,8 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import AuthProvider, { useAuth } from './AuthProvider';
 
+const flushPromises = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 type AuthState = ReturnType<typeof useAuth>;
 
 function setup() {
@@ -181,6 +183,7 @@ describe('AuthProvider mount restore', () => {
 
     const { state } = setup();
     await TestRenderer.act(async () => {});
+    await flushPromises();
 
     expect(state().isAuthenticated).toBe(true);
     expect(state().token).toBe('new-token');
@@ -198,9 +201,11 @@ describe('AuthProvider auth-failure handler', () => {
 
     const { state } = setup();
     await TestRenderer.act(async () => {});
+    await flushPromises();
     await TestRenderer.act(async () => {
       await state().signIn('u1@example.com', 'pw');
     });
+    await flushPromises();
     expect(state().isAuthenticated).toBe(true);
     expect(state().needsOnboarding).toBe(true);
 
@@ -213,6 +218,7 @@ describe('AuthProvider auth-failure handler', () => {
     await TestRenderer.act(async () => {
       await handler!();
     });
+    await flushPromises();
 
     expect(state().user).toBeNull();
     expect(state().token).toBeNull();
@@ -231,9 +237,11 @@ describe('AuthProvider.refreshUser', () => {
 
     const { state } = setup();
     await TestRenderer.act(async () => {});
+    await flushPromises();
     await TestRenderer.act(async () => {
       await state().signIn('u1@example.com', 'pw');
     });
+    await flushPromises();
     expect(state().user?.name).toBe('User One');
 
     const updatedUser = {
@@ -250,6 +258,7 @@ describe('AuthProvider.refreshUser', () => {
     await TestRenderer.act(async () => {
       await state().refreshUser();
     });
+    await flushPromises();
 
     expect(state().user).toEqual(updatedUser);
     expect(vi.mocked(SecureStore.setItemAsync)).toHaveBeenCalledWith(
@@ -267,9 +276,11 @@ describe('AuthProvider.refreshUser', () => {
 
     const { state } = setup();
     await TestRenderer.act(async () => {});
+    await flushPromises();
     await TestRenderer.act(async () => {
       await state().signIn('u1@example.com', 'pw');
     });
+    await flushPromises();
     const beforeUser = state().user;
     expect(beforeUser).not.toBeNull();
 
@@ -279,6 +290,7 @@ describe('AuthProvider.refreshUser', () => {
     await TestRenderer.act(async () => {
       await state().refreshUser();
     });
+    await flushPromises();
 
     expect(state().user).toEqual(beforeUser);
     expect(state().isAuthenticated).toBe(true);

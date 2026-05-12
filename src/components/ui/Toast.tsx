@@ -7,113 +7,146 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AccessibilityInfo } from 'react-native';
 
-import { fonts } from '../../constants/theme';
-
-type ToastVariant = 'error' | 'success';
+import { ToastView, type ToastVariant } from './ToastView';
 
 interface ToastState {
+  id: number;
   variant: ToastVariant;
   message: string;
+  duration: number;
+}
+
+interface ShowOptions {
+  duration?: number;
 }
 
 interface ToastContextValue {
-  showError: (message: string) => void;
-  showSuccess: (message: string) => void;
+  showError: (message: string, options?: ShowOptions) => number;
+  showSuccess: (message: string, options?: ShowOptions) => number;
+  dismiss: (id: number) => void;
+  dismissAll: () => void;
 }
 
 const ToastContext = createContext<ToastContextValue>({
-  showError: () => {},
-  showSuccess: () => {},
+  showError: () => -1,
+  showSuccess: () => -1,
+  dismiss: () => {},
+  dismissAll: () => {},
 });
 
 export function useToast() {
   return useContext(ToastContext);
 }
 
-const AUTO_DISMISS_MS = 4000;
+const DEFAULT_DURATION_MS = 4000;
+const MAX_QUEUE = 3;
+const GAP_MS = 100;
+
+let nextId = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [queue, setQueue] = useState<ToastState[]>([]);
+  const [exitingId, setExitingId] = useState<number | null>(null);
+  const [gapping, setGapping] = useState(false);
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const dismiss = useCallback(() => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    setToast(null);
-  }, []);
+  const visibleToast = queue[0] ?? null;
+  const isExiting = visibleToast != null && exitingId === visibleToast.id;
 
-  const show = useCallback((variant: ToastVariant, message: string) => {
-    if (timer.current) clearTimeout(timer.current);
-    setToast({ variant, message });
-    AccessibilityInfo.announceForAccessibility(message);
-    timer.current = setTimeout(() => setToast(null), AUTO_DISMISS_MS);
-  }, []);
-
-  const showError = useCallback((m: string) => show('error', m), [show]);
-  const showSuccess = useCallback((m: string) => show('success', m), [show]);
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
+  const show = useCallback(
+    (variant: ToastVariant, message: string, options?: ShowOptions): number => {
+      const id = ++nextId;
+      const duration = options?.duration ?? DEFAULT_DURATION_MS;
+      setQueue((q) => {
+        const withNew = [...q, { id, variant, message, duration }];
+        if (withNew.length > MAX_QUEUE) {
+          return [withNew[0], ...withNew.slice(2)];
+        }
+        return withNew;
+      });
+      AccessibilityInfo.announceForAccessibility(message);
+      return id;
     },
     [],
   );
 
+  const showError = useCallback(
+    (m: string, o?: ShowOptions) => show('error', m, o),
+    [show],
+  );
+  const showSuccess = useCallback(
+    (m: string, o?: ShowOptions) => show('success', m, o),
+    [show],
+  );
+
+  const dismiss = useCallback((id: number) => {
+    setQueue((q) => {
+      if (q[0]?.id === id) {
+        setExitingId(id);
+        return q;
+      }
+      return q.filter((t) => t.id !== id);
+    });
+  }, []);
+
+  const dismissAll = useCallback(() => {
+    setQueue((q) => {
+      if (q[0]) {
+        setExitingId(q[0].id);
+        return [q[0]];
+      }
+      return [];
+    });
+  }, []);
+
+  // Auto-dismiss timer for the visible (not-exiting) toast. Skipped when
+  // duration is 0 (manual-only) or the queue is mid-gap.
+  useEffect(() => {
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    if (!visibleToast || gapping || isExiting) return;
+    if (visibleToast.duration === 0) return;
+    autoTimer.current = setTimeout(() => {
+      setExitingId(visibleToast.id);
+    }, visibleToast.duration);
+    return () => {
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+    };
+  }, [visibleToast?.id, visibleToast?.duration, gapping, isExiting]);
+
+  useEffect(
+    () => () => {
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+      if (gapTimer.current) clearTimeout(gapTimer.current);
+    },
+    [],
+  );
+
+  const handleExitComplete = useCallback(() => {
+    setExitingId(null);
+    setQueue((q) => q.slice(1));
+    setGapping(true);
+    if (gapTimer.current) clearTimeout(gapTimer.current);
+    gapTimer.current = setTimeout(() => setGapping(false), GAP_MS);
+  }, []);
+
   return (
-    <ToastContext.Provider value={{ showError, showSuccess }}>
+    <ToastContext.Provider
+      value={{ showError, showSuccess, dismiss, dismissAll }}
+    >
       {children}
-      {toast && <ToastView toast={toast} onDismiss={dismiss} />}
+      {visibleToast && !gapping && (
+        <ToastView
+          key={visibleToast.id}
+          variant={visibleToast.variant}
+          message={visibleToast.message}
+          exiting={isExiting}
+          onDismiss={() => dismiss(visibleToast.id)}
+          onExitComplete={handleExitComplete}
+        />
+      )}
     </ToastContext.Provider>
   );
 }
-
-function ToastView({
-  toast,
-  onDismiss,
-}: {
-  toast: ToastState;
-  onDismiss: () => void;
-}) {
-  const insets = useSafeAreaInsets();
-  const isError = toast.variant === 'error';
-  return (
-    <Pressable
-      accessibilityRole="alert"
-      accessibilityLabel={toast.message}
-      onPress={onDismiss}
-      style={[
-        styles.toast,
-        {
-          top: insets.top + 8,
-          backgroundColor: isError ? '#E05555' : '#2DD4A8',
-        },
-      ]}
-    >
-      <Text style={[styles.text, { color: isError ? '#F5F0E1' : '#0D0D1A' }]}>
-        {toast.message}
-      </Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  toast: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    zIndex: 1000,
-  },
-  text: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});

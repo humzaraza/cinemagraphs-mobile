@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -13,6 +14,7 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import AuthProvider, { useAuth } from '../src/providers/AuthProvider';
+import { ToastProvider } from '../src/components/ui/Toast';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -74,9 +76,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
-      <AuthProvider>
-        <RootNav />
-      </AuthProvider>
+      <SafeAreaProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <RootNav />
+          </AuthProvider>
+        </ToastProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
