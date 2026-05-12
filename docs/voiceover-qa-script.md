@@ -2,7 +2,7 @@
 
 Run on a physical iOS device with VoiceOver enabled (Settings > Accessibility > VoiceOver). Right-swipe to advance focus. Every focus stop must announce a meaningful label, not just "button" or "image".
 
-Last updated: 2026-05-12
+Last updated: 2026-05-12 (revised: VoiceOver activation fix + per-cell OTP labels)
 Last run on device: <fill on each test run>
 
 ## Sign in screen
@@ -58,8 +58,7 @@ Reach this screen by completing Create account. Right-swipe:
 - [ ] Back button -> "Back, button"
 - [ ] Header -> "Check your email, heading"
 - [ ] Subtitle (includes email address inline) -> "We sent a verification code to <email>"
-- [ ] OTP row container -> "Verification code, 6 digits" followed by the hint "Enter the 6-digit code sent to your email"
-- [ ] OTP cells (6 stops) -> each cell announces as "text field". Individual cells intentionally have no label so VoiceOver does not read "Digit 1 of 6" through "Digit 6 of 6" on every navigation.
+- [ ] OTP cells (6 stops) -> "Digit 1 of 6, text field" through "Digit 6 of 6, text field". The row container is intentionally NOT an accessibility element; each cell stands alone so VoiceOver double-tap activates the focused cell directly (an earlier attempt to label the container as a single logical input dropped the per-cell labels and turned out to be dead code because the wrapper was not accessibility-enabled; the per-cell pattern also matches Apple's HIG guidance for segmented entry).
 - [ ] Verify button (idle, < 6 digits) -> "Verify, button, dimmed"
 - [ ] Verify button (all 6 filled) -> "Verify, button"
 - [ ] Verify button (mid-submit) -> "Verify, button, dimmed, busy"
