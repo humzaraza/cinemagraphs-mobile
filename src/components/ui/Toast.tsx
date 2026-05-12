@@ -10,7 +10,7 @@ import {
 import { AccessibilityInfo, Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { fonts } from '../../constants/theme';
+import { colors, fonts } from '../../constants/theme';
 
 type ToastVariant = 'error' | 'success';
 
@@ -90,11 +90,11 @@ function ToastView({
         styles.toast,
         {
           top: insets.top + 8,
-          backgroundColor: isError ? '#E05555' : '#2DD4A8',
+          backgroundColor: isError ? colors.negativeRed : colors.teal,
         },
       ]}
     >
-      <Text style={[styles.text, { color: isError ? '#F5F0E1' : '#0D0D1A' }]}>
+      <Text style={[styles.text, { color: isError ? colors.ivory : colors.background }]}>
         {toast.message}
       </Text>
     </Pressable>
