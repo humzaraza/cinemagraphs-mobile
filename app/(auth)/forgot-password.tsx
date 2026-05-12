@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '../../src/constants/theme';
+import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { forgotPassword } from '../../src/lib/api';
 
 export default function ForgotPasswordScreen() {
@@ -24,20 +24,23 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [focused, setFocused] = useState(false);
+
+  const canSubmit = email.trim().length > 0;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
 
   const handleSend = async () => {
     if (!email.trim()) return;
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await forgotPassword(email.trim());
       setSent(true);
     } catch (e: any) {
       setError(e.message || 'Could not send reset link');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -91,13 +94,31 @@ export default function ForgotPasswordScreen() {
 
             <Pressable
               onPress={handleSend}
-              style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-              disabled={loading}
+              disabled={isSubmitDisabled}
+              accessibilityState={{
+                disabled: isSubmitDisabled,
+                busy: isSubmitting,
+              }}
+              style={({ pressed }) => [
+                styles.submitBtn,
+                isSubmitDisabled && styles.submitBtnDisabled,
+                pressed && !isSubmitDisabled && styles.submitBtnPressed,
+              ]}
             >
-              {loading ? (
-                <ActivityIndicator size="small" color={colors.background} />
+              {isSubmitting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={buttonStates.primary.loading.spinner}
+                />
               ) : (
-                <Text style={styles.submitText}>Send reset link</Text>
+                <Text
+                  style={[
+                    styles.submitText,
+                    isSubmitDisabled && styles.submitTextDisabled,
+                  ]}
+                >
+                  Send reset link
+                </Text>
               )}
             </Pressable>
           </>
@@ -170,12 +191,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnDisabled: {
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  submitBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   submitText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.background,
+  },
+  submitTextDisabled: {
+    color: buttonStates.primary.disabled.text,
   },
   successBox: {
     backgroundColor: 'rgba(45,212,168,0.1)',

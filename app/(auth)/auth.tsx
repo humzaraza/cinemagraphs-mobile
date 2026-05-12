@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { buttonStates, colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 type Tab = 'signin' | 'create';
@@ -30,35 +30,43 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState('');
 
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
+  const canSubmit =
+    tab === 'signin'
+      ? email.trim().length > 0 && password.length > 0
+      : name.trim().length > 0 &&
+        email.trim().length > 0 &&
+        password.length >= 8;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
+
   const handleSignIn = async () => {
     if (!email.trim() || !password) return;
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await signIn(email.trim(), password);
     } catch (e: any) {
       setError(e.message || 'Sign in failed');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleCreate = async () => {
     if (!name.trim() || !email.trim() || !password) return;
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await signUp(email.trim(), password, name.trim());
       router.push({ pathname: '/(auth)/otp', params: { email: email.trim() } } as any);
     } catch (e: any) {
       setError(e.message || 'Registration failed');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -186,20 +194,39 @@ export default function AuthScreen() {
             onPress={() => router.push('/(auth)/forgot-password' as any)}
             style={styles.forgotWrap}
           >
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            {({ pressed }) => (
+              <Text
+                style={[styles.forgotText, pressed && styles.forgotTextPressed]}
+              >
+                Forgot password?
+              </Text>
+            )}
           </Pressable>
         )}
 
         {/* Submit */}
         <Pressable
           onPress={tab === 'signin' ? handleSignIn : handleCreate}
-          style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-          disabled={loading}
+          disabled={isSubmitDisabled}
+          accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
+          style={({ pressed }) => [
+            styles.submitBtn,
+            isSubmitDisabled && styles.submitBtnDisabled,
+            pressed && !isSubmitDisabled && styles.submitBtnPressed,
+          ]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.background} />
+          {isSubmitting ? (
+            <ActivityIndicator
+              size="small"
+              color={buttonStates.primary.loading.spinner}
+            />
           ) : (
-            <Text style={styles.submitText}>
+            <Text
+              style={[
+                styles.submitText,
+                isSubmitDisabled && styles.submitTextDisabled,
+              ]}
+            >
               {tab === 'signin' ? 'Sign in' : 'Create account'}
             </Text>
           )}
@@ -322,11 +349,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnDisabled: {
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  submitBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   submitText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.background,
+  },
+  submitTextDisabled: {
+    color: buttonStates.primary.disabled.text,
+  },
+  forgotTextPressed: {
+    color: buttonStates.tertiary.pressed.text,
   },
 });

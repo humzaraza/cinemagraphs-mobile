@@ -14,7 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '../../src/constants/theme';
+import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { resendOTP } from '../../src/lib/api';
 
@@ -28,11 +28,13 @@ export default function OTPScreen() {
 
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [resent, setResent] = useState(false);
   const refs = useRef<(TextInput | null)[]>([]);
 
   const allFilled = digits.every((d) => d.length === 1);
+  const canSubmit = allFilled;
+  const isSubmitDisabled = !canSubmit || isSubmitting;
 
   const handleChange = (text: string, index: number) => {
     const sanitized = text.replace(/[^0-9]/g, '');
@@ -76,13 +78,13 @@ export default function OTPScreen() {
   const handleVerify = async () => {
     if (!allFilled || !email) return;
     setError('');
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await verifyOtp(email, digits.join(''));
     } catch (e: any) {
       setError(e.message || 'Verification failed');
     }
-    setLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleResend = async () => {
@@ -154,14 +156,25 @@ export default function OTPScreen() {
         {/* Verify */}
         <Pressable
           onPress={handleVerify}
-          style={[styles.verifyBtn, !allFilled && styles.verifyBtnDisabled]}
-          disabled={!allFilled || loading}
+          disabled={isSubmitDisabled}
+          accessibilityState={{ disabled: isSubmitDisabled, busy: isSubmitting }}
+          style={({ pressed }) => [
+            styles.verifyBtn,
+            isSubmitDisabled && styles.verifyBtnDisabled,
+            pressed && !isSubmitDisabled && styles.verifyBtnPressed,
+          ]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.background} />
+          {isSubmitting ? (
+            <ActivityIndicator
+              size="small"
+              color={buttonStates.primary.loading.spinner}
+            />
           ) : (
             <Text
-              style={[styles.verifyText, !allFilled && styles.verifyTextDisabled]}
+              style={[
+                styles.verifyText,
+                isSubmitDisabled && styles.verifyTextDisabled,
+              ]}
             >
               Verify
             </Text>
@@ -175,7 +188,16 @@ export default function OTPScreen() {
           </Text>
           {!resent && (
             <Pressable onPress={handleResend}>
-              <Text style={styles.resendLink}>Resend</Text>
+              {({ pressed }) => (
+                <Text
+                  style={[
+                    styles.resendLink,
+                    pressed && styles.resendLinkPressed,
+                  ]}
+                >
+                  Resend
+                </Text>
+              )}
             </Pressable>
           )}
         </View>
@@ -263,11 +285,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     borderRadius: 8,
     paddingVertical: 12,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   verifyBtnDisabled: {
-    backgroundColor: 'rgba(200,169,81,0.3)',
+    backgroundColor: buttonStates.primary.disabled.bg,
+  },
+  verifyBtnPressed: {
+    transform: [{ scale: 0.98 }],
   },
   verifyText: {
     fontFamily: fonts.bodyMedium,
@@ -275,7 +302,7 @@ const styles = StyleSheet.create({
     color: colors.background,
   },
   verifyTextDisabled: {
-    color: 'rgba(13,13,26,0.5)',
+    color: buttonStates.primary.disabled.text,
   },
 
   // Resend
@@ -292,5 +319,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.gold,
+  },
+  resendLinkPressed: {
+    color: buttonStates.tertiary.pressed.text,
   },
 });
