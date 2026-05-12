@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { forgotPassword } from '../../src/lib/api';
+import { authError, authSuccess } from '../../src/lib/haptics';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -36,8 +37,10 @@ export default function ForgotPasswordScreen() {
     setIsSubmitting(true);
     try {
       await forgotPassword(email.trim());
+      authSuccess();
       setSent(true);
     } catch (e: any) {
+      authError();
       setError(e.message || 'Could not send reset link');
     }
     setIsSubmitting(false);

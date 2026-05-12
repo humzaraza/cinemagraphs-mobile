@@ -17,6 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { resendOTP } from '../../src/lib/api';
+import { authError, authSuccess } from '../../src/lib/haptics';
 
 const CODE_LENGTH = 6;
 
@@ -81,7 +82,9 @@ export default function OTPScreen() {
     setIsSubmitting(true);
     try {
       await verifyOtp(email, digits.join(''));
+      authSuccess();
     } catch (e: any) {
+      authError();
       setError(e.message || 'Verification failed');
     }
     setIsSubmitting(false);

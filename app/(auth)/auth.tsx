@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
+import { authError, authSuccess } from '../../src/lib/haptics';
 
 type Tab = 'signin' | 'create';
 
@@ -50,7 +51,9 @@ export default function AuthScreen() {
     setIsSubmitting(true);
     try {
       await signIn(email.trim(), password);
+      authSuccess();
     } catch (e: any) {
+      authError();
       setError(e.message || 'Sign in failed');
     }
     setIsSubmitting(false);
@@ -62,8 +65,10 @@ export default function AuthScreen() {
     setIsSubmitting(true);
     try {
       await signUp(email.trim(), password, name.trim());
+      authSuccess();
       router.push({ pathname: '/(auth)/otp', params: { email: email.trim() } } as any);
     } catch (e: any) {
+      authError();
       setError(e.message || 'Registration failed');
     }
     setIsSubmitting(false);
