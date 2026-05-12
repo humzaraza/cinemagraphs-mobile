@@ -101,13 +101,18 @@ export default function OTPScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Back */}
-      <Pressable onPress={() => router.back()} style={styles.backBtn}>
+      <Pressable
+        onPress={() => router.back()}
+        style={styles.backBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+      >
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
         </Svg>
@@ -135,11 +140,7 @@ export default function OTPScreen() {
         </Text>
 
         {/* OTP digits */}
-        <View
-          style={styles.otpRow}
-          accessibilityLabel="Verification code, 6 digits"
-          accessibilityHint="Enter the 6-digit code sent to your email"
-        >
+        <View style={styles.otpRow}>
           {digits.map((d, i) => (
             <TextInput
               key={i}
@@ -155,6 +156,7 @@ export default function OTPScreen() {
               ]}
               textAlign="center"
               selectTextOnFocus
+              accessibilityLabel={`Digit ${i + 1} of ${CODE_LENGTH}`}
             />
           ))}
         </View>

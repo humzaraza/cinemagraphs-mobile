@@ -61,12 +61,17 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Pressable onPress={() => router.back()} style={styles.backBtn}>
+      <Pressable
+        onPress={() => router.back()}
+        style={styles.backBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+      >
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Path d="M15 18l-6-6 6-6" stroke={colors.ivory} strokeWidth={2} />
         </Svg>
