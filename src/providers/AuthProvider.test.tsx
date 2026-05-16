@@ -37,6 +37,7 @@ vi.mock('../lib/api', () => ({
   cleanupLegacyTokenKey: vi.fn(async () => undefined),
   setOnAuthFailure: vi.fn(),
   requestServerLogout: vi.fn(),
+  deleteAccount: vi.fn(async () => undefined),
   apiFetch: vi.fn(),
 }));
 
@@ -54,7 +55,11 @@ import {
   getAccessToken,
   apiFetch,
   setOnAuthFailure,
+  requestServerLogout,
+  removeTokens,
+  deleteAccount as deleteAccountApi,
 } from '../lib/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import AuthProvider, { useAuth } from './AuthProvider';
 
@@ -294,5 +299,136 @@ describe('AuthProvider.refreshUser', () => {
 
     expect(state().user).toEqual(beforeUser);
     expect(state().isAuthenticated).toBe(true);
+  });
+});
+
+describe('AuthProvider.deleteAccount', () => {
+  // Shared helper: sign in as user u1 so the provider has an
+  // authenticated state to tear down. Mirrors the signOut test's setup.
+  async function signInAsU1(state: () => AuthState) {
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+    await TestRenderer.act(async () => {});
+    await flushPromises();
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    await flushPromises();
+  }
+
+  it('happy path: calls the api deleteAccount exactly once', async () => {
+    vi.mocked(deleteAccountApi).mockResolvedValueOnce(undefined);
+
+    const { state } = setup();
+    await signInAsU1(state);
+    expect(state().isAuthenticated).toBe(true);
+
+    await TestRenderer.act(async () => {
+      await state().deleteAccount();
+    });
+
+    expect(vi.mocked(deleteAccountApi)).toHaveBeenCalledTimes(1);
+  });
+
+  it('happy path: clears user and token so isAuthenticated flips to false', async () => {
+    vi.mocked(deleteAccountApi).mockResolvedValueOnce(undefined);
+
+    const { state } = setup();
+    await signInAsU1(state);
+    expect(state().isAuthenticated).toBe(true);
+    expect(state().user).not.toBeNull();
+
+    await TestRenderer.act(async () => {
+      await state().deleteAccount();
+    });
+
+    expect(state().user).toBeNull();
+    expect(state().token).toBeNull();
+    expect(state().isAuthenticated).toBe(false);
+  });
+
+  it('happy path: removes the per-user has_seen_onboarding flag from AsyncStorage', async () => {
+    vi.mocked(deleteAccountApi).mockResolvedValueOnce(undefined);
+
+    const { state } = setup();
+    await signInAsU1(state);
+
+    await TestRenderer.act(async () => {
+      await state().deleteAccount();
+    });
+
+    expect(vi.mocked(AsyncStorage.removeItem)).toHaveBeenCalledWith(
+      'has_seen_onboarding_u1',
+    );
+  });
+
+  it('happy path: does NOT call requestServerLogout (server cascade already revoked the family)', async () => {
+    vi.mocked(deleteAccountApi).mockResolvedValueOnce(undefined);
+
+    const { state } = setup();
+    await signInAsU1(state);
+
+    await TestRenderer.act(async () => {
+      await state().deleteAccount();
+    });
+
+    expect(vi.mocked(requestServerLogout)).not.toHaveBeenCalled();
+  });
+
+  it('failure path: api rejection propagates, local state stays authenticated, local cleanup did not run', async () => {
+    vi.mocked(deleteAccountApi).mockRejectedValueOnce(
+      new Error('Failed to delete account'),
+    );
+
+    const { state } = setup();
+    await signInAsU1(state);
+    const beforeUser = state().user;
+    expect(beforeUser).not.toBeNull();
+
+    // removeTokens (called by clearAuth) was already invoked once during
+    // the mount-time clearAuth fallback, but signInAsU1 resets nothing,
+    // so capture the count and assert no NEW calls land after the failed
+    // delete.
+    const removeTokensCountBefore = vi.mocked(removeTokens).mock.calls.length;
+    const removeItemCountBefore = vi.mocked(AsyncStorage.removeItem).mock.calls
+      .length;
+
+    await TestRenderer.act(async () => {
+      await expect(state().deleteAccount()).rejects.toThrow(
+        'Failed to delete account',
+      );
+    });
+
+    expect(state().user).toEqual(beforeUser);
+    expect(state().isAuthenticated).toBe(true);
+    expect(vi.mocked(removeTokens).mock.calls.length).toBe(
+      removeTokensCountBefore,
+    );
+    expect(vi.mocked(AsyncStorage.removeItem).mock.calls.length).toBe(
+      removeItemCountBefore,
+    );
+  });
+
+  it('AsyncStorage failure resilience: removeItem rejection does not block local cleanup or surface as an error', async () => {
+    vi.mocked(deleteAccountApi).mockResolvedValueOnce(undefined);
+    vi.mocked(AsyncStorage.removeItem).mockRejectedValueOnce(
+      new Error('AsyncStorage offline'),
+    );
+
+    const { state } = setup();
+    await signInAsU1(state);
+    expect(state().isAuthenticated).toBe(true);
+
+    // Must not throw despite the AsyncStorage rejection.
+    await TestRenderer.act(async () => {
+      await state().deleteAccount();
+    });
+
+    expect(state().user).toBeNull();
+    expect(state().token).toBeNull();
+    expect(state().isAuthenticated).toBe(false);
   });
 });

@@ -827,6 +827,19 @@ export async function changePassword(currentPassword: string, newPassword: strin
   }
 }
 
+// Permanently delete the authenticated user. Server cascade-removes the
+// user row plus all owned content (reviews, lists, watchlist, follows,
+// banner/avatar blobs) and invalidates the refresh-token family, so
+// callers don't need to fire requestServerLogout afterwards. Local
+// token + cached-user cleanup is the caller's responsibility.
+export async function deleteAccount(): Promise<void> {
+  const res = await apiFetch('/user', { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete account');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // User search & social
 // ---------------------------------------------------------------------------

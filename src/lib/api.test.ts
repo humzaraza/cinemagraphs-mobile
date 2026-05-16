@@ -20,6 +20,7 @@ import {
   registerWithEmail,
   loginWithApple,
   loginWithGoogle,
+  deleteAccount,
 } from './api';
 
 const TOKENS_KEY = 'auth_tokens';
@@ -496,5 +497,82 @@ describe('signup endpoints send terms acceptance fields', () => {
       termsAccepted: true,
       termsVersion: '2026-05-15',
     });
+  });
+});
+
+describe('deleteAccount', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    // Stored access token so apiFetch attaches Authorization and treats
+    // the request as authenticated. Without this, a 401 would bypass the
+    // refresh path (no stored token) and shape the error semantics
+    // differently than the production call site.
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(
+      JSON.stringify({ accessToken: 'a-token', refreshToken: 'r-token' }),
+    );
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('calls apiFetch with DELETE on /user, carrying the Bearer access token', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Account deleted' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await deleteAccount();
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/user$/);
+    expect(init.method).toBe('DELETE');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer a-token');
+  });
+
+  it('resolves with no return value on a 200 ok response', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Account deleted' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    const result = await deleteAccount();
+    expect(result).toBeUndefined();
+  });
+
+  it('throws with the server-provided error message on a non-ok response', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: 'Too many attempts. Please try again later.' }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await expect(deleteAccount()).rejects.toThrow(
+      'Too many attempts. Please try again later.',
+    );
+  });
+
+  it('throws the default "Failed to delete account" message when the body is not JSON', async () => {
+    // Empty body + a status that does not trigger apiFetch's refresh path.
+    // res.json() rejects, so the .catch(() => ({})) branch fires and the
+    // fallback error message is used.
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 500 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await expect(deleteAccount()).rejects.toThrow('Failed to delete account');
   });
 });
