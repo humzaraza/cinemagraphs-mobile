@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Platform, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -13,6 +13,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
 import { colors, fonts } from '../../src/constants/theme';
+import { TERMS_URL, PRIVACY_URL } from '../../src/constants/legal';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 const screenWidth = Dimensions.get('window').width;
@@ -207,6 +208,18 @@ export default function LandingScreen() {
           </Svg>
           <Text style={styles.emailButtonText}>Continue with email</Text>
         </Pressable>
+
+        <Text style={styles.disclosure}>
+          By signing in, you agree to our{' '}
+          <Text style={styles.disclosureLink} onPress={() => Linking.openURL(TERMS_URL)}>
+            Terms of Service
+          </Text>
+          {' '}and{' '}
+          <Text style={styles.disclosureLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+            Privacy Policy
+          </Text>
+          .
+        </Text>
       </Animated.View>
     </View>
   );
@@ -306,6 +319,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 14,
     color: colors.gold,
+  },
+  disclosure: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 8,
+  },
+  disclosureLink: {
+    color: colors.gold,
+    textDecorationLine: 'underline',
   },
   buttonPressed: {
     opacity: 0.7,

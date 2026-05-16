@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { TERMS_VERSION } from '../constants/legal';
 import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
 
 // Origin for the cinemagraphs.ca API. Override via EXPO_PUBLIC_API_BASE_URL
@@ -445,7 +446,7 @@ export async function registerWithEmail(email: string, password: string, name: s
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, name, termsAccepted: true, termsVersion: TERMS_VERSION }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -507,7 +508,7 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/mobile/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ idToken, termsAccepted: true, termsVersion: TERMS_VERSION }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -520,7 +521,7 @@ export async function loginWithApple(identityToken: string, fullName?: string | 
   const res = await fetch(`${API_BASE}/auth/mobile/apple`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identityToken, fullName }),
+    body: JSON.stringify({ identityToken, fullName, termsAccepted: true, termsVersion: TERMS_VERSION }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

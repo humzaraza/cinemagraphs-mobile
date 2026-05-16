@@ -11,11 +11,13 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { buttonStates, colors, fonts, borderRadius } from '../../src/constants/theme';
+import { TERMS_URL, PRIVACY_URL } from '../../src/constants/legal';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { authError, authSuccess } from '../../src/lib/haptics';
 import FieldError from '../../src/components/ui/FieldError';
@@ -41,6 +43,7 @@ export default function AuthScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const emailRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
@@ -50,7 +53,8 @@ export default function AuthScreen() {
       ? email.trim().length > 0 && password.length > 0
       : name.trim().length > 0 &&
         email.trim().length > 0 &&
-        password.length >= MIN_PASSWORD_LENGTH;
+        password.length >= MIN_PASSWORD_LENGTH &&
+        termsAccepted;
   const isSubmitDisabled = !canSubmit || isSubmitting;
 
   // Tab switch clears any field-level errors from the previous tab so
@@ -255,6 +259,43 @@ export default function AuthScreen() {
           <FieldError message={passwordError} />
         </View>
 
+        {tab === 'create' && (
+          <View style={styles.termsRow}>
+            <Pressable
+              onPress={() => setTermsAccepted((v) => !v)}
+              style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: termsAccepted }}
+              accessibilityLabel="I agree to the Terms of Service and Privacy Policy"
+              hitSlop={8}
+            >
+              {termsAccepted && (
+                <Svg width={12} height={12} viewBox="0 0 24 24">
+                  <Path
+                    d="M5 13l4 4L19 7"
+                    stroke={colors.background}
+                    strokeWidth={3}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              )}
+            </Pressable>
+            <Text style={styles.termsLabel}>
+              I agree to the{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(TERMS_URL)}>
+                Terms of Service
+              </Text>
+              {' '}and{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+          </View>
+        )}
+
         {tab === 'signin' && (
           <Pressable
             onPress={() => router.push('/(auth)/forgot-password' as any)}
@@ -423,5 +464,38 @@ const styles = StyleSheet.create({
   },
   forgotTextPressed: {
     color: buttonStates.tertiary.pressed.text,
+  },
+
+  // Terms checkbox (Create tab only)
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 20,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderRadius: 4,
+    borderColor: colors.inputBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    borderColor: colors.gold,
+    backgroundColor: colors.gold,
+  },
+  termsLabel: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: colors.gold,
+    textDecorationLine: 'underline',
   },
 });
