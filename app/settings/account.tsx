@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,28 +22,43 @@ const DELETE_CONFIRM_PHRASE = 'DELETE';
 export default function AccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user: authUser } = useAuth();
+  const { user: authUser, deleteAccount } = useAuth();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const canConfirm = confirmText === DELETE_CONFIRM_PHRASE && !isDeleting;
 
-  const openModal = () => setModalVisible(true);
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setConfirmText('');
+  const openModal = () => {
+    setError(null);
+    setModalVisible(true);
   };
 
-  const handleConfirmDelete = () => {
+  const closeModal = () => {
+    if (isDeleting) return;
+    setModalVisible(false);
+    setConfirmText('');
+    setError(null);
+  };
+
+  const handleConfirmDelete = async () => {
     if (!canConfirm) return;
-    // Phase 3 will replace this stub with the real delete flow.
-    if (__DEV__) {
-      console.log('[Account] Delete confirmed (stub). Phase 3 will wire the API call.');
+    setError(null);
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      // Local state is already cleared by AuthProvider.deleteAccount;
+      // navigate to the landing route. The auth gate will render the
+      // unauthenticated stack.
+      setModalVisible(false);
+      setConfirmText('');
+      router.replace('/' as any);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+      setIsDeleting(false);
     }
-    closeModal();
   };
 
   return (
@@ -109,6 +125,7 @@ export default function AccountScreen() {
               <TextInput
                 value={confirmText}
                 onChangeText={setConfirmText}
+                editable={!isDeleting}
                 style={styles.input}
                 placeholder="DELETE"
                 placeholderTextColor="rgba(245,240,225,0.2)"
@@ -120,9 +137,11 @@ export default function AccountScreen() {
               <View style={styles.actions}>
                 <Pressable
                   onPress={closeModal}
-                  style={styles.cancelBtn}
+                  disabled={isDeleting}
+                  style={[styles.cancelBtn, isDeleting && styles.cancelBtnDisabled]}
                   accessibilityRole="button"
                   accessibilityLabel="Cancel"
+                  accessibilityState={{ disabled: isDeleting }}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </Pressable>
@@ -135,18 +154,24 @@ export default function AccountScreen() {
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Delete account"
-                  accessibilityState={{ disabled: !canConfirm }}
+                  accessibilityState={{ disabled: !canConfirm, busy: isDeleting }}
                 >
-                  <Text
-                    style={[
-                      styles.confirmBtnText,
-                      !canConfirm && styles.confirmBtnTextDisabled,
-                    ]}
-                  >
-                    Delete account
-                  </Text>
+                  {isDeleting ? (
+                    <ActivityIndicator color={colors.ivory} size="small" />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.confirmBtnText,
+                        !canConfirm && styles.confirmBtnTextDisabled,
+                      ]}
+                    >
+                      Delete account
+                    </Text>
+                  )}
                 </Pressable>
               </View>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
@@ -262,6 +287,9 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(245,240,225,0.2)',
   },
+  cancelBtnDisabled: {
+    opacity: 0.5,
+  },
   cancelBtnText: {
     fontFamily: fonts.bodyMedium,
     fontSize: 13,
@@ -284,5 +312,12 @@ const styles = StyleSheet.create({
   },
   confirmBtnTextDisabled: {
     color: 'rgba(245,240,225,0.5)',
+  },
+  errorText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.negativeRed,
+    marginTop: 12,
+    textAlign: 'center',
   },
 });

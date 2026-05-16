@@ -14,6 +14,7 @@ import {
   cleanupLegacyTokenKey,
   setOnAuthFailure,
   requestServerLogout,
+  deleteAccount as deleteAccountApi,
   apiFetch,
   type AuthUser,
   type AuthResponse,
@@ -37,6 +38,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   verifyOtp: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
   signInWithApple: (identityToken: string, fullName?: string | null) => Promise<void>;
 }
@@ -53,6 +55,7 @@ const AuthContext = createContext<AuthContextValue>({
   signUp: async () => {},
   verifyOtp: async () => {},
   signOut: async () => {},
+  deleteAccount: async () => {},
   signInWithGoogle: async () => {},
   signInWithApple: async () => {},
 });
@@ -244,6 +247,40 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  // Permanently delete the authenticated account. Mirrors signOut's
+  // local-cleanup ordering, with two differences: it awaits the server
+  // delete BEFORE wiping local state (so a server failure leaves the
+  // user signed in to retry), and it skips requestServerLogout because
+  // the server cascade-deletes the refresh-token family. Also nukes the
+  // per-user onboarding flag so a re-signup with a recycled email gets
+  // the first-run experience again.
+  const deleteAccount = useCallback(async () => {
+    const currentUserId = user?.id;
+
+    // Throws on failure; caller (modal) handles the error UI. Local
+    // state is untouched if this throws, so the user can retry.
+    await deleteAccountApi();
+
+    // Best-effort onboarding-flag cleanup. AsyncStorage failures here
+    // are cosmetic (worst case: returning user skips onboarding) and
+    // must not block the rest of the sign-out cleanup.
+    if (currentUserId) {
+      try {
+        await AsyncStorage.removeItem(`has_seen_onboarding_${currentUserId}`);
+      } catch {
+        // Best-effort.
+      }
+    }
+
+    // Same local cleanup as signOut. No requestServerLogout: the server
+    // has already invalidated the refresh-token family as part of the
+    // account-delete cascade.
+    await clearAuth();
+    setUser(null);
+    setTokenState(null);
+    setNeedsOnboarding(false);
+  }, [user?.id]);
+
   const signInWithGoogleFn = useCallback(async (idToken: string) => {
     const data = await loginWithGoogle(idToken);
     await handlePostAuth(data);
@@ -293,6 +330,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         signUp,
         verifyOtp,
         signOut,
+        deleteAccount,
         signInWithGoogle: signInWithGoogleFn,
         signInWithApple: signInWithAppleFn,
       }}
