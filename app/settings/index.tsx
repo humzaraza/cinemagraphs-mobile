@@ -140,6 +140,11 @@ export default function SettingsScreen() {
         <SectionLabel label="ACCOUNT" />
         <View style={styles.section}>
           <Row
+            label="Account"
+            onPress={() => router.push('/settings/account' as any)}
+          />
+          <View style={styles.divider} />
+          <Row
             label="Change password"
             onPress={() => router.push('/settings/change-password' as any)}
           />
