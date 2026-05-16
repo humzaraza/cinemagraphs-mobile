@@ -17,6 +17,9 @@ import {
   apiFetch,
   setOnAuthFailure,
   requestServerLogout,
+  registerWithEmail,
+  loginWithApple,
+  loginWithGoogle,
 } from './api';
 
 const TOKENS_KEY = 'auth_tokens';
@@ -417,5 +420,81 @@ describe('requestServerLogout', () => {
     requestServerLogout('');
 
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('signup endpoints send terms acceptance fields', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  // The three signup functions call res.json() at the end, so the mocked
+  // Response must carry a JSON body. The tests don't inspect the returned
+  // value; an empty object is enough to keep res.json() from throwing.
+  function okJsonResponse(): Response {
+    return new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  it('registerWithEmail POSTs to /auth/register with termsAccepted and termsVersion in the body', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(okJsonResponse());
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await registerWithEmail('test@example.com', 'password123', 'Test User');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/auth/register');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      email: 'test@example.com',
+      password: 'password123',
+      name: 'Test User',
+      termsAccepted: true,
+      termsVersion: '2026-05-15',
+    });
+  });
+
+  it('loginWithApple POSTs to /auth/mobile/apple with termsAccepted and termsVersion in the body', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(okJsonResponse());
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await loginWithApple('fake-identity-token', 'Test User');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/auth/mobile/apple');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      identityToken: 'fake-identity-token',
+      fullName: 'Test User',
+      termsAccepted: true,
+      termsVersion: '2026-05-15',
+    });
+  });
+
+  it('loginWithGoogle POSTs to /auth/mobile/google with termsAccepted and termsVersion in the body', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(okJsonResponse());
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await loginWithGoogle('fake-id-token');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/auth/mobile/google');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      idToken: 'fake-id-token',
+      termsAccepted: true,
+      termsVersion: '2026-05-15',
+    });
   });
 });
