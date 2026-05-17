@@ -70,7 +70,7 @@ vi.mock('react-native-safe-area-context', () => ({
 
 vi.mock('../lib/api', () => ({
   fetchFilmDetail: vi.fn(),
-  fetchSimilarFilms: vi.fn(),
+  fetchFilmReviews: vi.fn(),
   fetchUserLists: vi.fn(),
   fetchUserWatchlist: vi.fn(),
   addToWatchlist: vi.fn(),
@@ -85,6 +85,25 @@ vi.mock('../components/BottomSheet', () => ({ default: () => null }));
 vi.mock('../components/AuthGate', () => ({ useAuthGate: () => ({}) }));
 vi.mock('../lib/recentlyViewed', () => ({ addRecentlyViewed: vi.fn() }));
 vi.mock('../lib/tmdb-image', () => ({ getPosterUrl: () => null }));
+// PR 4b adds these. Stub them out so the file's top-level imports resolve
+// under Node without dragging in reanimated/worklets via the Toast chain.
+vi.mock('../components/ui/Toast', () => ({
+  useToast: () => ({ show: vi.fn(), hide: vi.fn() }),
+}));
+vi.mock('../components/BlindModeTooltip', () => ({ BlindModeTooltip: () => null }));
+vi.mock('../components/film-detail/BlindModeToggle', () => ({ BlindModeToggle: () => null }));
+vi.mock('../components/film-detail/SimilarFilmCard', () => ({ SimilarFilmCard: () => null }));
+vi.mock('../components/film-detail/useBlindToggle', () => ({ useBlindToggle: () => ({}) }));
+vi.mock('../components/icons/EyeIcons', () => ({
+  EyeIcon: () => null,
+  EyeOffIcon: () => null,
+}));
+vi.mock('../lib/score-format', () => ({ formatScore: (n: number) => n.toFixed(1) }));
+vi.mock('../lib/blind-mode', () => ({
+  resolveBlindForFilm: () => false,
+  setBlindForFilm: vi.fn(),
+  fetchBlindModeState: vi.fn(),
+}));
 
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { SentimentArc } from '../../app/film/[id]';
@@ -135,6 +154,7 @@ function props(film: FilmDetail) {
     audienceData: null,
     graphMode: 'critics' as const,
     setGraphMode: () => {},
+    blind: false,
   };
 }
 
@@ -175,18 +195,20 @@ describe('SentimentArc hook stability', () => {
     expect(hookErrors).toEqual([]);
   });
 
-  it('renders null when sentimentGraph is empty on first render and then populates', () => {
+  it('renders empty-state card first, then the graph, without hook-order errors', () => {
     let tree: ReactTestRenderer | undefined;
 
     TestRenderer.act(() => {
       tree = TestRenderer.create(<SentimentArc {...props(makeFilm(false))} />);
     });
-    expect(tree!.toJSON()).toBeNull();
+    const emptyJson = tree!.toJSON();
+    expect(emptyJson).not.toBeNull();
+    expect(JSON.stringify(emptyJson)).toContain('Not enough critic data yet');
 
     TestRenderer.act(() => {
       tree!.update(<SentimentArc {...props(makeFilm(true))} />);
     });
-    expect(tree!.toJSON()).not.toBeNull();
+    expect(JSON.stringify(tree!.toJSON())).not.toContain('Not enough critic data yet');
 
     const hookErrors = errorSpy.mock.calls.filter((args: unknown[]) =>
       args.some(
