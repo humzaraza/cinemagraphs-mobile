@@ -30,13 +30,4 @@ module.exports = defineConfig([
       "@typescript-eslint/no-require-imports": "off",
     },
   },
-  // Pre-existing bug on main, tracked separately. Demoted to warn so this
-  // setup PR can land without bundling the fix.
-  // (Square brackets in the path are glob character classes, so escape them.)
-  {
-    files: ["app/film/\\[id\\].tsx"],
-    rules: {
-      "react-hooks/rules-of-hooks": "warn",
-    },
-  },
 ]);
