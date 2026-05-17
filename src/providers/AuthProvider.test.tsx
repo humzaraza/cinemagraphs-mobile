@@ -50,6 +50,10 @@ vi.mock('../lib/events', () => ({
   EVENTS: { SIGNUP_COMPLETE: 'signup_complete' },
 }));
 
+vi.mock('../lib/blind-mode', () => ({
+  clearBlindModeCache: vi.fn(),
+}));
+
 import {
   loginWithEmail,
   getAccessToken,
@@ -61,6 +65,7 @@ import {
 } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { clearBlindModeCache } from '../lib/blind-mode';
 import AuthProvider, { useAuth } from './AuthProvider';
 
 const flushPromises = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -123,6 +128,33 @@ describe('AuthProvider.signOut', () => {
     expect(state().token).toBeNull();
     expect(state().isAuthenticated).toBe(false);
     expect(state().needsOnboarding).toBe(false);
+  });
+
+  it('drops the in-memory blind-mode cache so the next user does not inherit the previous user’s perFilm overrides', async () => {
+    // Cross-account leak fix: clearBlindModeCache is a module-level
+    // function (not React state), so a stale cached state would
+    // otherwise survive sign-out and be returned to the next user
+    // who lands on a film detail screen before the next /user/blind-mode
+    // fetch resolves.
+    vi.mocked(loginWithEmail).mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+
+    vi.mocked(clearBlindModeCache).mockClear();
+
+    await TestRenderer.act(async () => {
+      await state().signOut();
+    });
+
+    expect(vi.mocked(clearBlindModeCache)).toHaveBeenCalledTimes(1);
   });
 });
 

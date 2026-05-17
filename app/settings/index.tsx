@@ -11,14 +11,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import * as Haptics from 'expo-haptics';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { fetchUserSettings, updateUserSettings } from '../../src/lib/api';
-import {
-  getBlindModeState,
-  setBlindModeDefaults,
-} from '../../src/lib/blind-mode';
+import { getBlindModeState } from '../../src/lib/blind-mode';
+import { useBlindDefaultsToggle } from '../../src/components/settings/useBlindDefaultsToggle';
+import { useToast } from '../../src/components/ui/Toast';
 
 function ChevronRight() {
   return (
@@ -110,15 +108,10 @@ export default function SettingsScreen() {
     updateUserSettings({ [key]: value }).catch(() => setter(!value));
   };
 
-  const toggleBlindDefault = (
-    key: 'blindUnwatchedDefault' | 'blindReviewedDefault',
-    value: boolean,
-    setter: (v: boolean) => void,
-  ) => {
-    setter(value);
-    Haptics.selectionAsync().catch(() => {});
-    setBlindModeDefaults({ [key]: value }).catch(() => setter(!value));
-  };
+  const { showError } = useToast();
+  // useBlindDefaultsToggle owns: selection haptic, optimistic flip,
+  // PATCH /user/blind-mode/defaults, and revert + toast on failure.
+  const toggleBlindDefault = useBlindDefaultsToggle({ showError });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

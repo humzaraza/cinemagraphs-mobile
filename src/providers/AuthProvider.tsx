@@ -21,6 +21,7 @@ import {
 } from '../lib/api';
 import { consumePendingBanner } from '../lib/onboarding-persistence';
 import { trackEvent, EVENTS } from '../lib/events';
+import { clearBlindModeCache } from '../lib/blind-mode';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -240,6 +241,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setTokenState(null);
     setNeedsOnboarding(false);
 
+    // Drop the in-memory blind-mode cache so the next user on this
+    // device starts with a fresh fetch instead of inheriting the
+    // previous user's perFilm overrides and tooltip-seen flag.
+    clearBlindModeCache();
+
     // Fire-and-forget server-side revocation. Background network call
     // with 2s abort timeout. Local sign-out has already happened.
     if (refreshTokenSnapshot) {
@@ -279,6 +285,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setUser(null);
     setTokenState(null);
     setNeedsOnboarding(false);
+    clearBlindModeCache();
   }, [user?.id]);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {

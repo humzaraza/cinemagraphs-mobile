@@ -38,11 +38,12 @@ import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
 import { BlindModeTooltip } from '../../src/components/BlindModeTooltip';
 import { BlindModeToggle } from '../../src/components/film-detail/BlindModeToggle';
 import { SimilarFilmCard } from '../../src/components/film-detail/SimilarFilmCard';
+import { useBlindToggle } from '../../src/components/film-detail/useBlindToggle';
+import { useToast } from '../../src/components/ui/Toast';
 import { formatScore } from '../../src/lib/score-format';
 import {
   getBlindModeState,
   resolveBlindForFilm,
-  setBlindForFilm,
   markTooltipSeen,
   type BlindModeState,
 } from '../../src/lib/blind-mode';
@@ -1277,27 +1278,21 @@ export default function FilmDetailScreen() {
     return resolveBlindForFilm(blindState, film.id, !!film.userHasReviewed);
   }, [blindOverride, blindState, film]);
 
-  const handleToggleBlind = useCallback(() => {
-    if (!film) return;
-    // Haptic is fired inside BlindModeToggle; parent owns server PUT
-    // + optimistic flip only.
-    const next = !blind;
-    setBlindOverride(next);
+  const { showError } = useToast();
 
-    // First-encounter tooltip: shown the very first time blind mode
-    // becomes active on any film for this user. Anchored to the toggle
-    // (top-right of the backdrop). markTooltipSeen fires the server
-    // PATCH so it never re-appears on subsequent activations.
-    if (next && blindState && !blindState.hasSeenBlindModeTooltip) {
-      setTooltipVisible(true);
-      setBlindState({ ...blindState, hasSeenBlindModeTooltip: true });
-    }
-
-    setBlindForFilm(film.id, next).catch(() => {
-      // Revert on failure so UI matches server state.
-      setBlindOverride(!next);
-    });
-  }, [film, blind, blindState]);
+  // useBlindToggle owns: optimistic flip, server PUT, revert + toast on
+  // failure, and first-encounter tooltip gating (flag only flips after
+  // a successful PUT so a failed activation doesn't burn the user's
+  // single chance to see the tooltip).
+  const handleToggleBlind = useBlindToggle({
+    filmId: film?.id,
+    currentBlind: blind,
+    blindState,
+    setBlindOverride,
+    setBlindState,
+    setTooltipVisible,
+    showError,
+  });
 
   const handleDismissTooltip = useCallback(() => {
     setTooltipVisible(false);
