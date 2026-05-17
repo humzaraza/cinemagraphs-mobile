@@ -2,7 +2,7 @@ import Svg, { Polyline, Line, Circle, Text as SvgText } from 'react-native-svg';
 import { colors } from '../constants/theme';
 
 interface SparklineProps {
-  dataPoints: Array<{ score: number }>;
+  dataPoints: { score: number }[];
   width: number;
   height: number;
   strokeColor?: string;

@@ -30,7 +30,7 @@ const POSTER_WIDTH = 90;
 const POSTER_HEIGHT = 130;
 const TICKER_SPEED = 44800;
 
-function calcDelta(dataPoints: Array<{ score: number }>): number | null {
+function calcDelta(dataPoints: { score: number }[]): number | null {
   if (dataPoints.length < 4) return null;
   const sampleSize = Math.max(2, Math.floor(dataPoints.length * 0.25));
   const firstAvg =
