@@ -2,11 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { View, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import ImageColors from 'react-native-image-colors';
 import { colors, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
 import { getPosterUrl } from '../lib/tmdb-image';
 import type { MockFilm } from '../data/mockProfile';
+
+let ImageColors: any = null;
+try {
+  // Dynamic require so Expo Go (no native module) does not crash on import.
+  ImageColors = require('react-native-image-colors').default;
+} catch {
+  ImageColors = null;
+}
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -18,6 +25,29 @@ function hashColor(str: string): string {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return PALETTE[Math.abs(hash) % PALETTE.length];
+}
+
+async function getPosterColor(
+  posterUri: string,
+  filmId: string,
+): Promise<string> {
+  const fallback = hashColor(filmId);
+
+  if (!ImageColors) return fallback;
+
+  try {
+    const result = await ImageColors.getColors(posterUri, {
+      fallback,
+      cache: true,
+      key: filmId,
+    });
+
+    if (result.platform === 'ios') return result.primary ?? fallback;
+    if (result.platform === 'android') return result.dominant ?? fallback;
+    return fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function hexToRgba(hex: string, alpha: number): string {
@@ -38,8 +68,8 @@ export default function ArcCard({
 }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
-  const fallback = hashColor(film.title ?? film.id ?? 'film');
-  const [bgColor, setBgColor] = useState(fallback);
+  const hashKey = film.title ?? film.id ?? 'film';
+  const [bgColor, setBgColor] = useState(hashColor(hashKey));
   const cw = cardWidth ?? SCREEN_WIDTH - 32;
   const sparklineWidth = cw - 94;
 
@@ -49,26 +79,13 @@ export default function ArcCard({
     if (!posterUri) return;
     let cancelled = false;
     (async () => {
-      try {
-        const result = await ImageColors.getColors(posterUri, {
-          fallback,
-          cache: true,
-          key: film.id,
-        });
-        if (cancelled) return;
-        if (result.platform === 'ios') {
-          setBgColor(result.primary ?? fallback);
-        } else if (result.platform === 'android') {
-          setBgColor(result.dominant ?? fallback);
-        }
-      } catch {
-        // Silent fallback. Hash color already in state; UI never breaks on extraction failure.
-      }
+      const color = await getPosterColor(posterUri, hashKey);
+      if (!cancelled) setBgColor(color);
     })();
     return () => {
       cancelled = true;
     };
-  }, [posterUri, film.id, fallback]);
+  }, [posterUri, hashKey]);
 
   return (
     <Pressable
