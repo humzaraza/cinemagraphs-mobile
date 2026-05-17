@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Image, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import ImageColors from 'react-native-image-colors';
 import { colors, borderRadius } from '../constants/theme';
 import Sparkline from './Sparkline';
 import { getPosterUrl } from '../lib/tmdb-image';
@@ -43,6 +44,31 @@ export default function ArcCard({
   const sparklineWidth = cw - 94;
 
   const posterUri = getPosterUrl(film, 'card');
+
+  useEffect(() => {
+    if (!posterUri) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await ImageColors.getColors(posterUri, {
+          fallback,
+          cache: true,
+          key: film.id,
+        });
+        if (cancelled) return;
+        if (result.platform === 'ios') {
+          setBgColor(result.primary ?? fallback);
+        } else if (result.platform === 'android') {
+          setBgColor(result.dominant ?? fallback);
+        }
+      } catch {
+        // Silent fallback. Hash color already in state; UI never breaks on extraction failure.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [posterUri, film.id, fallback]);
 
   return (
     <Pressable

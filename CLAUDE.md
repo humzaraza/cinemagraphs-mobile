@@ -6,7 +6,7 @@ This is the React Native/Expo mobile app. It is a standalone project (separate r
 
 ## STACK
 
-- React Native with Expo (SDK 52)
+- React Native with Expo (SDK 54)
 - Expo Router (file-based routing)
 - TypeScript throughout
 - react-native-svg for graph rendering
