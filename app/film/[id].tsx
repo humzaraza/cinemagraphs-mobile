@@ -279,7 +279,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched, audienceData, graphMode, setGraphMode }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void; audienceData: AudienceData | null; graphMode: GraphMode; setGraphMode: (m: GraphMode) => void }) {
+export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched, audienceData, graphMode, setGraphMode }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void; audienceData: AudienceData | null; graphMode: GraphMode; setGraphMode: (m: GraphMode) => void }) {
   const router = useRouter();
 
   // Touch interaction hooks (must be before early return)
@@ -360,16 +360,16 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
   ).current;
 
   const sg = film.sentimentGraph;
-  if (!sg?.dataPoints?.length) return null;
 
   const graphWidth = SCREEN_WIDTH - CONTENT_PADDING * 2 - 20; // 20 = card padding
   const plotW = graphWidth - GRAPH_PAD_LEFT - GRAPH_PAD_RIGHT;
   const plotH = GRAPH_HEIGHT - GRAPH_PAD_TOP - GRAPH_PAD_BOTTOM;
-  const n = sg.dataPoints.length;
+  const n = sg?.dataPoints?.length ?? 0;
 
-  // Memoize expensive graph computations
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- known bug, tracked separately for fix in upcoming rules-of-hooks PR
+  // Memoize expensive graph computations. Must run unconditionally before any
+  // early return so hook order stays stable across renders.
   const graphData = useMemo(() => {
+    if (!sg?.dataPoints?.length) return null;
     const audMap = audienceData?.beatAverages ?? {};
     const audBeats = sg.dataPoints.map((dp) => audMap[dp.label] ?? dp.score);
     const hasAud = audienceData !== null && Object.keys(audMap).length > 0;
@@ -449,6 +449,8 @@ function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTou
       buildPath,
     };
   }, [sg, graphMode, audienceData, n, plotW, plotH]);
+
+  if (!sg?.dataPoints?.length || !graphData) return null;
 
   const {
     hasAudience, audBeats, mergedBeats,
