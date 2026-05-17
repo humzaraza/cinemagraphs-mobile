@@ -25,7 +25,7 @@ const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -51,7 +51,6 @@ export default function ForgotPasswordScreen() {
     try {
       await forgotPassword(trimmed);
       authSuccess();
-      showSuccess('Check your email');
       setSent(true);
     } catch (e: any) {
       authError();
@@ -78,17 +77,61 @@ export default function ForgotPasswordScreen() {
       </Pressable>
 
       <View style={styles.content}>
-        <Text accessibilityRole="header" style={styles.heading}>
-          Reset password
-        </Text>
-        <Text style={styles.subtitle}>
-          Enter your email and we'll send you a reset link
-        </Text>
+        {!sent && (
+          <>
+            <Text accessibilityRole="header" style={styles.heading}>
+              Reset password
+            </Text>
+            <Text style={styles.subtitle}>
+              Enter your email and we'll send you a reset link
+            </Text>
+          </>
+        )}
 
         {sent ? (
-          <View style={styles.successBox}>
-            <Text style={styles.successText}>
-              Check your email for the reset link
+          <View style={styles.successWrap}>
+            <View style={styles.successIconRing}>
+              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M22 11.08V12a10 10 0 1 1-5.93-9.14"
+                  stroke={colors.teal}
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Path
+                  d="M22 4 12 14.01 9 11.01"
+                  stroke={colors.teal}
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </View>
+            <Text accessibilityRole="header" style={styles.successTitle}>
+              Check your email
+            </Text>
+            <Text style={styles.successSubtitle}>
+              We sent a password reset link to{'\n'}
+              <Text style={styles.successEmail}>{email.trim()}</Text>
+            </Text>
+            <Text style={[styles.successSubtitle, styles.successSubtitleSecond]}>
+              Tap the link in the email to set a new password.
+            </Text>
+            <Pressable
+              onPress={() => router.replace('/(auth)/auth' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Back to sign in"
+              style={({ pressed }) => [
+                styles.submitBtn,
+                styles.successCta,
+                pressed && styles.submitBtnPressed,
+              ]}
+            >
+              <Text style={styles.submitText}>Back to sign in</Text>
+            </Pressable>
+            <Text style={styles.successHint}>
+              Didn't get it? Check your spam folder, or go back and try a different email.
             </Text>
           </View>
         ) : (
@@ -229,17 +272,51 @@ const styles = StyleSheet.create({
   submitTextDisabled: {
     color: buttonStates.primary.disabled.text,
   },
-  successBox: {
+  successWrap: {
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  successIconRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(45,212,168,0.1)',
     borderWidth: 0.5,
-    borderColor: 'rgba(45,212,168,0.2)',
-    borderRadius: 8,
-    padding: 14,
+    borderColor: 'rgba(45,212,168,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  successText: {
+  successTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 20,
+    color: colors.ivory,
+    marginBottom: 10,
+  },
+  successSubtitle: {
     fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.teal,
+    fontSize: 12,
+    color: 'rgba(245,240,225,0.4)',
+    lineHeight: 19,
     textAlign: 'center',
+  },
+  successSubtitleSecond: {
+    marginTop: 8,
+  },
+  successEmail: {
+    color: colors.gold,
+  },
+  successCta: {
+    alignSelf: 'stretch',
+    marginTop: 24,
+  },
+  successHint: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(245,240,225,0.35)',
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 14,
+    paddingHorizontal: 12,
   },
 });

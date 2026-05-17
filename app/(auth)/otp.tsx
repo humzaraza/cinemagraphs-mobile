@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,23 @@ import {
   Keyboard,
   Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { buttonStates, colors, fonts } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { resendOTP } from '../../src/lib/api';
 import { authError, authSuccess } from '../../src/lib/haptics';
 import { useToast } from '../../src/components/ui/Toast';
+
+const ERROR_RED = '#E05555';
+const GENERIC_OTP_ERROR = 'Incorrect code. Check your email and try again.';
 
 const CODE_LENGTH = 6;
 
@@ -32,7 +41,25 @@ export default function OTPScreen() {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resent, setResent] = useState(false);
+  const [verifyError, setVerifyError] = useState(false);
   const refs = useRef<(TextInput | null)[]>([]);
+
+  const shakeX = useSharedValue(0);
+  const animatedRowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
+
+  useEffect(() => {
+    if (verifyError) {
+      shakeX.value = withSequence(
+        withTiming(-4, { duration: 50 }),
+        withTiming(4, { duration: 50 }),
+        withTiming(-4, { duration: 50 }),
+        withTiming(4, { duration: 50 }),
+        withTiming(0, { duration: 50 }),
+      );
+    }
+  }, [verifyError, shakeX]);
 
   const allFilled = digits.every((d) => d.length === 1);
   const canSubmit = allFilled;
@@ -40,6 +67,8 @@ export default function OTPScreen() {
 
   const handleChange = (text: string, index: number) => {
     const sanitized = text.replace(/[^0-9]/g, '');
+
+    if (sanitized) setVerifyError(false);
 
     // Paste or iOS one-time-code autofill. Distribute the first CODE_LENGTH
     // digits across cells 0..5 regardless of which cell received the input;
@@ -82,9 +111,10 @@ export default function OTPScreen() {
       await verifyOtp(email, digits.join(''));
       authSuccess();
       showSuccess('Verified');
-    } catch (e: any) {
+    } catch {
       authError();
-      showError(e.message || 'Invalid or expired code. Please try again.');
+      setVerifyError(true);
+      showError(GENERIC_OTP_ERROR);
     }
     setIsSubmitting(false);
   };
@@ -120,14 +150,18 @@ export default function OTPScreen() {
 
       <View style={styles.content}>
         {/* Icon */}
-        <View style={styles.iconCircle}>
+        <View style={[styles.iconCircle, verifyError && styles.iconCircleError]}>
           <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
             <Path
               d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
-              stroke={colors.gold}
+              stroke={verifyError ? ERROR_RED : colors.gold}
               strokeWidth={1.5}
             />
-            <Path d="M22 6l-10 7L2 6" stroke={colors.gold} strokeWidth={1.5} />
+            <Path
+              d="M22 6l-10 7L2 6"
+              stroke={verifyError ? ERROR_RED : colors.gold}
+              strokeWidth={1.5}
+            />
           </Svg>
         </View>
 
@@ -140,7 +174,7 @@ export default function OTPScreen() {
         </Text>
 
         {/* OTP digits */}
-        <View style={styles.otpRow}>
+        <Animated.View style={[styles.otpRow, animatedRowStyle]}>
           {digits.map((d, i) => (
             <TextInput
               key={i}
@@ -153,13 +187,41 @@ export default function OTPScreen() {
               style={[
                 styles.otpBox,
                 d ? styles.otpBoxFilled : null,
+                verifyError && styles.otpBoxError,
               ]}
               textAlign="center"
               selectTextOnFocus
               accessibilityLabel={`Digit ${i + 1} of ${CODE_LENGTH}`}
             />
           ))}
-        </View>
+        </Animated.View>
+
+        {verifyError && (
+          <View style={styles.inlineErrorRow}>
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+              <Circle cx={12} cy={12} r={10} stroke={ERROR_RED} strokeWidth={2} />
+              <Line
+                x1={12}
+                y1={8}
+                x2={12}
+                y2={12}
+                stroke={ERROR_RED}
+                strokeWidth={2}
+                strokeLinecap="round"
+              />
+              <Line
+                x1={12}
+                y1={16}
+                x2={12.01}
+                y2={16}
+                stroke={ERROR_RED}
+                strokeWidth={2}
+                strokeLinecap="round"
+              />
+            </Svg>
+            <Text style={styles.inlineErrorText}>{GENERIC_OTP_ERROR}</Text>
+          </View>
+        )}
 
         {/* Verify */}
         <Pressable
@@ -246,6 +308,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
+  iconCircleError: {
+    backgroundColor: 'rgba(224,85,85,0.1)',
+    borderColor: 'rgba(224,85,85,0.3)',
+  },
   heading: {
     fontFamily: fonts.bodyBold,
     fontSize: 20,
@@ -284,6 +350,26 @@ const styles = StyleSheet.create({
   },
   otpBoxFilled: {
     borderColor: 'rgba(200,169,81,0.3)',
+  },
+  otpBoxError: {
+    borderWidth: 1,
+    borderColor: 'rgba(224,85,85,0.7)',
+    backgroundColor: 'rgba(224,85,85,0.08)',
+    color: ERROR_RED,
+  },
+  inlineErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: -12,
+    marginBottom: 20,
+  },
+  inlineErrorText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: ERROR_RED,
+    textAlign: 'center',
   },
 
   // Verify

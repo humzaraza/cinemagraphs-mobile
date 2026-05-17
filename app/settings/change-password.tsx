@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  TextInput,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -13,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { changePassword } from '../../src/lib/api';
+import { PasswordInput } from '../../src/components/PasswordInput';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -73,37 +73,30 @@ export default function ChangePasswordScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.label}>CURRENT PASSWORD</Text>
-        <TextInput
+        <PasswordInput
           value={current}
           onChangeText={(t) => { setCurrent(t); setErrors((e) => ({ ...e, current: '' })); }}
-          secureTextEntry
-          style={[styles.input, errors.current ? styles.inputError : null]}
-          placeholderTextColor="rgba(245,240,225,0.2)"
           placeholder="Enter current password"
+          error={errors.current || undefined}
         />
-        {!!errors.current && <Text style={styles.error}>{errors.current}</Text>}
 
         <Text style={styles.label}>NEW PASSWORD</Text>
-        <TextInput
+        <PasswordInput
           value={newPw}
           onChangeText={(t) => { setNewPw(t); setErrors((e) => ({ ...e, newPw: '' })); }}
-          secureTextEntry
-          style={[styles.input, errors.newPw ? styles.inputError : null]}
-          placeholderTextColor="rgba(245,240,225,0.2)"
           placeholder="At least 8 characters"
+          textContentType="newPassword"
+          error={errors.newPw || undefined}
         />
-        {!!errors.newPw && <Text style={styles.error}>{errors.newPw}</Text>}
 
         <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-        <TextInput
+        <PasswordInput
           value={confirm}
           onChangeText={(t) => { setConfirm(t); setErrors((e) => ({ ...e, confirm: '' })); }}
-          secureTextEntry
-          style={[styles.input, errors.confirm ? styles.inputError : null]}
-          placeholderTextColor="rgba(245,240,225,0.2)"
           placeholder="Re-enter new password"
+          textContentType="newPassword"
+          error={errors.confirm || undefined}
         />
-        {!!errors.confirm && <Text style={styles.error}>{errors.confirm}</Text>}
 
         {!!errors.general && <Text style={[styles.error, { marginTop: 12 }]}>{errors.general}</Text>}
 
@@ -153,24 +146,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginTop: 16,
   },
-  input: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.ivory,
-    backgroundColor: 'rgba(245,240,225,0.06)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.15)',
-    borderRadius: borderRadius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  inputError: {
-    borderColor: '#E24B4A',
-  },
   error: {
     fontFamily: fonts.body,
     fontSize: 11,
-    color: '#E24B4A',
+    color: '#E05555',
     marginTop: 4,
   },
   successText: {
