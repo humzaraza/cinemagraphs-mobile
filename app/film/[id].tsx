@@ -24,7 +24,7 @@ import Svg, {
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
-import { fetchFilmDetail, fetchSimilarFilms, fetchUserLists, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList, fetchAudienceData } from '../../src/lib/api';
+import { fetchFilmDetail, fetchFilmReviews, fetchUserLists, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList, fetchAudienceData } from '../../src/lib/api';
 import FilmPicker from '../../src/components/FilmPicker';
 import type { AudienceData } from '../../src/lib/api';
 import GraphToggle from '../../src/components/GraphToggle';
@@ -34,7 +34,19 @@ import BottomSheet from '../../src/components/BottomSheet';
 import { useAuthGate } from '../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
-import type { Film, FilmDetail, FilmReview, FilmDataPoint } from '../../src/types/film';
+import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
+import { BlindModeTooltip } from '../../src/components/BlindModeTooltip';
+import { BlindModeToggle } from '../../src/components/film-detail/BlindModeToggle';
+import { SimilarFilmCard } from '../../src/components/film-detail/SimilarFilmCard';
+import { formatScore } from '../../src/lib/score-format';
+import {
+  getBlindModeState,
+  resolveBlindForFilm,
+  setBlindForFilm,
+  markTooltipSeen,
+  type BlindModeState,
+} from '../../src/lib/blind-mode';
+import type { Film, FilmDetail, FilmReview, FilmDataPoint, SimilarFilm } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
@@ -154,7 +166,21 @@ function DetailSkeleton() {
 // Backdrop with gradient, back button, watched badge
 // ---------------------------------------------------------------------------
 
-function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film: FilmDetail; onAddToList?: () => void; inWatchlist: boolean; onToggleWatchlist?: () => void }) {
+function Backdrop({
+  film,
+  onAddToList,
+  inWatchlist,
+  onToggleWatchlist,
+  blind,
+  onToggleBlind,
+}: {
+  film: FilmDetail;
+  onAddToList?: () => void;
+  inWatchlist: boolean;
+  onToggleWatchlist?: () => void;
+  blind: boolean;
+  onToggleBlind: () => void;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const backdropUri = getBackdropUri(film.backdropUrl);
@@ -182,7 +208,7 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
         </Svg>
       </Pressable>
 
-      {/* Watched badge + add-to-list button */}
+      {/* Watched badge + action circles row (bookmark, add-to-list, blind toggle) */}
       <View style={styles.badgeRow}>
         {/* TODO: unhide ticket stub when watched feature is ready */}
         {false && (
@@ -200,9 +226,13 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
         )}
         <Pressable
           onPress={() => onToggleWatchlist?.()}
-          style={styles.addToListBtn}
+          style={styles.actionCircle}
+          accessibilityRole="button"
+          accessibilityLabel={
+            inWatchlist ? 'Remove from watchlist' : 'Add to watchlist'
+          }
         >
-          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
             <Path
               d="M5 3a2 2 0 00-2 2v16l9-4 9 4V5a2 2 0 00-2-2H5z"
               stroke={colors.gold}
@@ -213,10 +243,13 @@ function Backdrop({ film, onAddToList, inWatchlist, onToggleWatchlist }: { film:
         </Pressable>
         <Pressable
           onPress={() => onAddToList?.()}
-          style={styles.addToListBtn}
+          style={styles.actionCircle}
+          accessibilityRole="button"
+          accessibilityLabel="Add to list"
         >
-          <Text style={styles.addToListPlus}>+</Text>
+          <Text style={styles.actionPlus}>+</Text>
         </Pressable>
+        <BlindModeToggle blind={blind} onToggle={onToggleBlind} />
       </View>
     </View>
   );
@@ -258,9 +291,11 @@ function CTAButtons({ filmId }: { filmId: string }) {
     <View style={styles.ctaRow}>
       <Pressable
         onPress={() => router.push({ pathname: '/review', params: { filmId } } as any)}
-        style={styles.ctaPrimary}
+        style={styles.ctaSecondary}
+        accessibilityRole="button"
+        accessibilityLabel="Write review"
       >
-        <Text style={styles.ctaPrimaryText}>Write review</Text>
+        <Text style={styles.ctaSecondaryText}>Write review</Text>
       </Pressable>
       {/* TODO: Unhide when live reactions are ready */}
       {false && (
@@ -279,7 +314,7 @@ function CTAButtons({ filmId }: { filmId: string }) {
 // Sentiment arc graph
 // ---------------------------------------------------------------------------
 
-export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched, audienceData, graphMode, setGraphMode }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void; audienceData: AudienceData | null; graphMode: GraphMode; setGraphMode: (m: GraphMode) => void }) {
+export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsGraphTouched, audienceData, graphMode, setGraphMode, blind }: { film: FilmDetail; activeBeatIndex: number | null; setActiveBeatIndex: (idx: number | null) => void; setIsGraphTouched: (v: boolean) => void; audienceData: AudienceData | null; graphMode: GraphMode; setGraphMode: (m: GraphMode) => void; blind: boolean }) {
   const router = useRouter();
 
   // Touch interaction hooks (must be before early return)
@@ -450,7 +485,18 @@ export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsG
     };
   }, [sg, graphMode, audienceData, n, plotW, plotH]);
 
-  if (!sg?.dataPoints?.length || !graphData) return null;
+  if (!sg?.dataPoints?.length || !graphData) {
+    return (
+      <View style={{ marginBottom: 14 }}>
+        <View style={styles.sentimentHeader}>
+          <Text style={styles.sentimentLabel}>Sentiment arc</Text>
+        </View>
+        <View style={[styles.graphCard, styles.arcEmptyCard]}>
+          <Text style={styles.arcEmptyText}>Not enough critic data yet</Text>
+        </View>
+      </View>
+    );
+  }
 
   const {
     hasAudience, audBeats, mergedBeats,
@@ -497,52 +543,72 @@ export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsG
     }
   }
 
-  // Score header display per mode
+  // Score header display per mode. The outer View has a fixed minWidth
+  // so the header row doesn't reflow horizontally when blind mode flips
+  // between a number ("8.4") and an EyeOff icon. Width was chosen to fit
+  // the widest single-line variant ("Audience 10.0").
   function renderScoreHeader() {
     const rowStyle = { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 6 };
     const labelStyle = { fontFamily: fonts.body, fontWeight: '400' as const, fontSize: 15 };
     const numStyle = { fontFamily: fonts.bodySemiBold, fontWeight: '600' as const, fontSize: 18, fontVariant: ['lining-nums' as const, 'tabular-nums' as const] };
 
+    function renderScore(value: number | null, color: string, smallerFont?: boolean) {
+      if (blind) {
+        return <EyeOffIcon color="rgba(245,240,225,0.3)" size={18} />;
+      }
+      return (
+        <Text
+          style={[
+            numStyle,
+            { color },
+            smallerFont ? { fontSize: 15 } : null,
+          ]}
+        >
+          {value !== null ? formatScore(value) : '--'}
+        </Text>
+      );
+    }
+
     if (graphMode === 'critics') {
       return (
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={styles.scoreHeaderContainer}>
           <View style={rowStyle}>
             <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
-            <Text style={[numStyle, { color: colors.gold }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
+            {renderScore(criticsOverall, colors.gold)}
           </View>
         </View>
       );
     }
     if (graphMode === 'audience') {
       return (
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={styles.scoreHeaderContainer}>
           <View style={rowStyle}>
             <Text style={[labelStyle, { color: colors.teal }]}>Audience</Text>
-            <Text style={[numStyle, { color: colors.teal }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
+            {renderScore(audienceOverall, colors.teal)}
           </View>
         </View>
       );
     }
     if (graphMode === 'both') {
       return (
-        <View style={{ alignItems: 'flex-end' }}>
+        <View style={styles.scoreHeaderContainer}>
           <View style={rowStyle}>
             <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
-            <Text style={[numStyle, { color: colors.gold, fontSize: 15 }]}>{criticsOverall?.toFixed(1) ?? '--'}</Text>
+            {renderScore(criticsOverall, colors.gold, true)}
           </View>
           <View style={[rowStyle, { marginTop: -2 }]}>
             <Text style={[labelStyle, { color: colors.teal }]}>Audience</Text>
-            <Text style={[numStyle, { color: colors.teal, fontSize: 15 }]}>{audienceOverall?.toFixed(1) ?? '--'}</Text>
+            {renderScore(audienceOverall, colors.teal, true)}
           </View>
         </View>
       );
     }
     // merged
     return (
-      <View style={{ alignItems: 'flex-end' }}>
+      <View style={styles.scoreHeaderContainer}>
         <View style={rowStyle}>
           <Text style={[labelStyle, { color: colors.ivory }]}>Merged</Text>
-          <Text style={[numStyle, { color: colors.ivory }]}>{mergedOverall?.toFixed(1) ?? '--'}</Text>
+          {renderScore(mergedOverall, colors.ivory)}
         </View>
       </View>
     );
@@ -932,7 +998,7 @@ function StoryBeatPills({ film, activeBeatIndex }: { film: FilmDetail; activeBea
 // Peak / Low cards
 // ---------------------------------------------------------------------------
 
-function PeakLowCards({ film }: { film: FilmDetail }) {
+function PeakLowCards({ film, blind }: { film: FilmDetail; blind: boolean }) {
   const sg = film.sentimentGraph;
   if (!sg?.peakMoment || !sg?.lowestMoment) return null;
 
@@ -945,14 +1011,18 @@ function PeakLowCards({ film }: { film: FilmDetail }) {
         <Text style={styles.peakLabel}>Peak moment</Text>
         <Text style={styles.peakTitle}>{peak.label}</Text>
         <Text style={styles.peakMeta}>
-          {formatTimestamp(peak.time)} {'\u00B7'} {peak.score}/10
+          {blind
+            ? formatTimestamp(peak.time)
+            : `${formatTimestamp(peak.time)} \u00B7 ${formatScore(peak.score)}/10`}
         </Text>
       </View>
       <View style={styles.lowCard}>
         <Text style={styles.lowLabel}>Lowest point</Text>
         <Text style={styles.lowTitle}>{low.label}</Text>
         <Text style={styles.lowMeta}>
-          {formatTimestamp(low.time)} {'\u00B7'} {low.score}/10
+          {blind
+            ? formatTimestamp(low.time)
+            : `${formatTimestamp(low.time)} \u00B7 ${formatScore(low.score)}/10`}
         </Text>
       </View>
     </View>
@@ -978,7 +1048,7 @@ function AISummary({ summary }: { summary: string }) {
 // User reviews
 // ---------------------------------------------------------------------------
 
-function ReviewCard({ review }: { review: FilmReview }) {
+function ReviewCard({ review, blind }: { review: FilmReview; blind: boolean }) {
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
@@ -989,7 +1059,9 @@ function ReviewCard({ review }: { review: FilmReview }) {
           <Text style={styles.reviewUsername}>{review.user.name}</Text>
           <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
         </View>
-        <Text style={styles.reviewScore}>{review.score.toFixed(1)}</Text>
+        {!blind && (
+          <Text style={styles.reviewScore}>{formatScore(review.score)}</Text>
+        )}
       </View>
       <Text style={styles.reviewContent} numberOfLines={3}>
         {review.content}
@@ -998,22 +1070,73 @@ function ReviewCard({ review }: { review: FilmReview }) {
   );
 }
 
-function UserReviews({ reviews }: { reviews: FilmReview[] }) {
+function UserReviews({ reviews, blind }: { reviews: FilmReview[]; blind: boolean }) {
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.reviewsHeader}>
         <Text style={styles.reviewsTitle}>User reviews</Text>
-        <Text style={styles.reviewsSeeAll}>See all</Text>
+        {reviews && reviews.length > 0 && (
+          <Text style={styles.reviewsSeeAll}>See all</Text>
+        )}
       </View>
       {reviews && reviews.length > 0 ? (
         <View style={{ gap: 6 }}>
           {reviews.slice(0, 2).map((r) => (
-            <ReviewCard key={r.id} review={r} />
+            <ReviewCard key={r.id} review={r} blind={blind} />
           ))}
         </View>
       ) : (
-        <Text style={styles.noReviews}>No reviews yet</Text>
+        <Text style={styles.noReviews}>Be the first to review.</Text>
       )}
+    </View>
+  );
+}
+
+function YourReview({
+  review,
+  filmId,
+  blind,
+}: {
+  review: FilmReview;
+  filmId: string;
+  blind: boolean;
+}) {
+  const router = useRouter();
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <View style={styles.reviewsHeader}>
+        <Text style={styles.reviewsTitle}>Your review</Text>
+      </View>
+      <View style={styles.reviewCard}>
+        <View style={styles.reviewHeader}>
+          <View style={styles.reviewAvatar}>
+            <Text style={styles.reviewAvatarText}>
+              {getInitials(review.user.name)}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewUsername}>{review.user.name}</Text>
+            <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
+          </View>
+          {!blind && (
+            <Text style={styles.reviewScore}>{formatScore(review.score)}</Text>
+          )}
+        </View>
+        <Text style={styles.reviewContent} numberOfLines={3}>
+          {review.content}
+        </Text>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/review', params: { filmId } } as any)
+          }
+          style={styles.editReviewLink}
+          accessibilityRole="button"
+          accessibilityLabel="Edit your review"
+        >
+          <Text style={styles.editReviewLinkText}>Edit your review</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -1022,34 +1145,7 @@ function UserReviews({ reviews }: { reviews: FilmReview[] }) {
 // Similar films
 // ---------------------------------------------------------------------------
 
-function SimilarFilmCard({ film: f }: { film: Film }) {
-  const router = useRouter();
-  const posterUri = getPosterUrl(f, 'card');
-
-  return (
-    <Pressable onPress={() => router.push(`/film/${f.id}` as any)} style={styles.similarCard}>
-      {posterUri ? (
-        <Image source={{ uri: posterUri }} style={styles.similarPoster} resizeMode="cover" />
-      ) : (
-        <View style={[styles.similarPoster, { backgroundColor: 'rgba(30,30,60,0.6)' }]} />
-      )}
-      <Text style={styles.similarTitle} numberOfLines={1}>
-        {f.title}
-      </Text>
-      <Text style={styles.similarScore}>
-        {f.sentimentGraph?.overallScore?.toFixed(1) ?? '--'}
-      </Text>
-    </Pressable>
-  );
-}
-
-function SimilarFilms({ filmId, genre }: { filmId: string; genre: string }) {
-  const [films, setFilms] = useState<Film[]>([]);
-
-  useEffect(() => {
-    fetchSimilarFilms(filmId, genre).then(setFilms).catch(() => {});
-  }, [filmId, genre]);
-
+function SimilarFilms({ films }: { films: SimilarFilm[] }) {
   if (films.length === 0) return null;
 
   return (
@@ -1061,6 +1157,8 @@ function SimilarFilms({ filmId, genre }: { filmId: string; genre: string }) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 6 }}
+        snapToInterval={76}
+        decelerationRate="fast"
         renderItem={({ item }) => <SimilarFilmCard film={item} />}
       />
     </View>
@@ -1085,6 +1183,16 @@ export default function FilmDetailScreen() {
   const [isGraphTouched, setIsGraphTouched] = useState(false);
   const [audienceData, setAudienceData] = useState<AudienceData | null>(null);
   const [graphMode, setGraphMode] = useState<GraphMode>('critics');
+
+  // Blind mode + reviews state. blindState is the full server payload;
+  // blind is the resolved boolean for this film. myReview / reviews come
+  // from fetchFilmReviews (the reviews list already excludes my own
+  // review server-side when myReview is non-null).
+  const [blindState, setBlindState] = useState<BlindModeState | null>(null);
+  const [blindOverride, setBlindOverride] = useState<boolean | null>(null);
+  const [myReview, setMyReview] = useState<FilmReview | null>(null);
+  const [reviews, setReviews] = useState<FilmReview[]>([]);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
 
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
@@ -1129,6 +1237,72 @@ export default function FilmDetailScreen() {
       .then((films) => setInWatchlist(films.some((f: any) => f.id === id)))
       .catch(() => {});
   }, [load]);
+
+  // Blind mode: fetch the session-cached state once on mount.
+  useEffect(() => {
+    getBlindModeState().then(setBlindState).catch(() => {});
+  }, []);
+
+  // Once we have a film, fetch its reviews. When the user has reviewed
+  // it (userHasReviewed === true), pass excludeCurrentUser=true so the
+  // "User reviews" list excludes the user's own row server-side and we
+  // can render it in the "Your review" section instead.
+  useEffect(() => {
+    if (!id || !film) return;
+    const exclude = !!film.userHasReviewed;
+    fetchFilmReviews(id, { excludeCurrentUser: exclude })
+      .then((res) => {
+        if (res) {
+          setReviews(res.reviews ?? []);
+          setMyReview(res.myReview ?? null);
+        } else {
+          // Fall back to whatever the film-detail endpoint included so
+          // we still show *something* when the dedicated reviews fetch
+          // fails (e.g. unauthenticated).
+          setReviews(film.reviews ?? []);
+          setMyReview(null);
+        }
+      })
+      .catch(() => {
+        setReviews(film.reviews ?? []);
+        setMyReview(null);
+      });
+  }, [id, film]);
+
+  // Resolved blind state for this film: server state + local optimistic
+  // override (so the toggle feels instant while the PUT is in flight).
+  const blind = useMemo(() => {
+    if (blindOverride !== null) return blindOverride;
+    if (!film) return false;
+    return resolveBlindForFilm(blindState, film.id, !!film.userHasReviewed);
+  }, [blindOverride, blindState, film]);
+
+  const handleToggleBlind = useCallback(() => {
+    if (!film) return;
+    // Haptic is fired inside BlindModeToggle; parent owns server PUT
+    // + optimistic flip only.
+    const next = !blind;
+    setBlindOverride(next);
+
+    // First-encounter tooltip: shown the very first time blind mode
+    // becomes active on any film for this user. Anchored to the toggle
+    // (top-right of the backdrop). markTooltipSeen fires the server
+    // PATCH so it never re-appears on subsequent activations.
+    if (next && blindState && !blindState.hasSeenBlindModeTooltip) {
+      setTooltipVisible(true);
+      setBlindState({ ...blindState, hasSeenBlindModeTooltip: true });
+    }
+
+    setBlindForFilm(film.id, next).catch(() => {
+      // Revert on failure so UI matches server state.
+      setBlindOverride(!next);
+    });
+  }, [film, blind, blindState]);
+
+  const handleDismissTooltip = useCallback(() => {
+    setTooltipVisible(false);
+    markTooltipSeen();
+  }, []);
 
   const GENRE_TAGS = ['Drama', 'Action', 'Horror', 'Sci-Fi', 'Comedy', 'Thriller'];
 
@@ -1211,22 +1385,37 @@ export default function FilmDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
       >
-        <Backdrop film={film} onAddToList={() => authGate(() => setShowListSheet(true))} inWatchlist={inWatchlist} onToggleWatchlist={() => authGate(handleToggleWatchlist)} />
+        <Backdrop
+          film={film}
+          onAddToList={() => authGate(() => setShowListSheet(true))}
+          inWatchlist={inWatchlist}
+          onToggleWatchlist={() => authGate(handleToggleWatchlist)}
+          blind={blind}
+          onToggleBlind={() => authGate(handleToggleBlind)}
+        />
 
         <View style={styles.content}>
           <MetadataRow film={film} />
-          <CTAButtons filmId={film.id} />
-          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} audienceData={audienceData} graphMode={graphMode} setGraphMode={setGraphMode} />
+          <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} audienceData={audienceData} graphMode={graphMode} setGraphMode={setGraphMode} blind={blind} />
           <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
-          <PeakLowCards film={film} />
+          <PeakLowCards film={film} blind={blind} />
           <AISummary summary={film.sentimentGraph?.summary} />
-          <UserReviews reviews={film.reviews} />
-          <SimilarFilms
-            filmId={film.id}
-            genre={film.genres?.[0] ?? ''}
-          />
+          {myReview ? (
+            <YourReview review={myReview} filmId={film.id} blind={blind} />
+          ) : (
+            <CTAButtons filmId={film.id} />
+          )}
+          <UserReviews reviews={reviews} blind={blind} />
+          <SimilarFilms films={film.similarFilms ?? []} />
         </View>
       </ScrollView>
+
+      <BlindModeTooltip
+        visible={tooltipVisible}
+        onDismiss={handleDismissTooltip}
+        topInset={insets.top + BACKDROP_HEIGHT - 40}
+        rightInset={14}
+      />
 
       {/* Add to List bottom sheet */}
       <BottomSheet
@@ -1402,7 +1591,7 @@ const styles = StyleSheet.create({
     zIndex: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   watchedBadge: {
     flexDirection: 'row',
@@ -1464,18 +1653,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 14,
   },
-  ctaPrimary: {
-    flex: 1,
-    paddingVertical: 10,
-    backgroundColor: colors.gold,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  ctaPrimaryText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.background,
-  },
   ctaSecondary: {
     flex: 1,
     paddingVertical: 10,
@@ -1514,6 +1691,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,169,81,0.10)',
     borderRadius: 10,
     padding: 10,
+  },
+  arcEmptyCard: {
+    minHeight: GRAPH_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arcEmptyText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: 'rgba(245,240,225,0.4)',
   },
   expandRow: {
     flexDirection: 'row',
@@ -1688,28 +1875,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: -0.1,
   },
-  similarCard: {
-    width: 70,
-  },
-  similarPoster: {
-    width: 70,
-    height: 105,
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.1)',
-    marginBottom: 4,
-  },
-  similarTitle: {
-    fontSize: 10,
-    color: colors.ivory,
-    fontFamily: fonts.body,
-  },
-  similarScore: {
-    fontSize: 9,
-    color: colors.gold,
-    fontFamily: fonts.body,
-  },
-
   // Error state
   errorContainer: {
     flex: 1,
@@ -1737,22 +1902,50 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
   },
 
-  // ---- Add to list button ----
-  addToListBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  // ---- Backdrop action circles (bookmark, add-to-list, blind toggle) ----
+  // 44x44 meets the Apple HIG minimum tap target. Used for all three
+  // circular buttons in the badge row so they're visually consistent
+  // and individually tappable without overlap.
+  actionCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(200,169,81,0.15)',
     borderWidth: 0.5,
     borderColor: 'rgba(200,169,81,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addToListPlus: {
-    fontSize: 14,
+  actionPlus: {
+    fontSize: 20,
     color: colors.gold,
     fontFamily: fonts.bodyMedium,
-    marginTop: -1,
+    marginTop: -2,
+  },
+
+  // ---- Sentiment arc score header ----
+  // Fixed minWidth so toggling blind mode (number ↔ EyeOff icon) does
+  // not reflow the row horizontally. 92pt fits the widest live string,
+  // "Audience 10.0".
+  scoreHeaderContainer: {
+    minWidth: 92,
+    alignItems: 'flex-end',
+  },
+
+  // ---- "Your review" edit link ----
+  editReviewLink: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.3)',
+    borderRadius: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  editReviewLinkText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.gold,
   },
 
   // ---- List sheet ----

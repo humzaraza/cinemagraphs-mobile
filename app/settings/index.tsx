@@ -11,9 +11,14 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { fetchUserSettings, updateUserSettings } from '../../src/lib/api';
+import {
+  getBlindModeState,
+  setBlindModeDefaults,
+} from '../../src/lib/blind-mode';
 
 function ChevronRight() {
   return (
@@ -76,6 +81,10 @@ export default function SettingsScreen() {
   const [publicProfile, setPublicProfile] = useState(true);
   const [allowFollowers, setAllowFollowers] = useState(true);
   const [privateGraphs, setPrivateGraphs] = useState(false);
+  // Blind-mode defaults. Both off by default per spec; the server state
+  // overrides on mount if the user has previously set them.
+  const [blindUnwatched, setBlindUnwatched] = useState(false);
+  const [blindReviewed, setBlindReviewed] = useState(false);
 
   useEffect(() => {
     fetchUserSettings()
@@ -86,11 +95,29 @@ export default function SettingsScreen() {
         if (s.privateGraphs !== undefined) setPrivateGraphs(s.privateGraphs);
       })
       .catch(() => {});
+
+    getBlindModeState()
+      .then((s) => {
+        if (!s) return;
+        setBlindUnwatched(s.blindUnwatchedDefault);
+        setBlindReviewed(s.blindReviewedDefault);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleSetting = (key: string, value: boolean, setter: (v: boolean) => void) => {
     setter(value);
     updateUserSettings({ [key]: value }).catch(() => setter(!value));
+  };
+
+  const toggleBlindDefault = (
+    key: 'blindUnwatchedDefault' | 'blindReviewedDefault',
+    value: boolean,
+    setter: (v: boolean) => void,
+  ) => {
+    setter(value);
+    Haptics.selectionAsync().catch(() => {});
+    setBlindModeDefaults({ [key]: value }).catch(() => setter(!value));
   };
 
   return (
@@ -174,6 +201,22 @@ export default function SettingsScreen() {
             label="Private graphs"
             value={privateGraphs}
             onToggle={(v) => toggleSetting('privateGraphs', v, setPrivateGraphs)}
+          />
+          <View style={styles.divider} />
+          <ToggleRow
+            label="Always blind for unwatched films"
+            value={blindUnwatched}
+            onToggle={(v) =>
+              toggleBlindDefault('blindUnwatchedDefault', v, setBlindUnwatched)
+            }
+          />
+          <View style={styles.divider} />
+          <ToggleRow
+            label="Always blind for films I've reviewed"
+            value={blindReviewed}
+            onToggle={(v) =>
+              toggleBlindDefault('blindReviewedDefault', v, setBlindReviewed)
+            }
           />
         </View>
 

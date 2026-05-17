@@ -395,13 +395,6 @@ export async function fetchAudienceData(
   }
 }
 
-export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
-  // TODO: If the API doesn't support genre filtering, fall back to /films?limit=6
-  return extractFilms(
-    await apiFetch(`/films?genre=${encodeURIComponent(genre)}&limit=6&exclude=${filmId}`)
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Live Reactions
 // ---------------------------------------------------------------------------
