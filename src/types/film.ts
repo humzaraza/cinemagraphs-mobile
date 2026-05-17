@@ -102,4 +102,23 @@ export interface FilmDetail extends Film {
   genres: string[];
   runtime: number;
   backdropUrl: string;
+  // Added in PR 4a (server) and consumed by PR 4b (mobile). Optional
+  // because older API responses or unauthenticated requests may omit it.
+  userHasReviewed?: boolean;
+  similarFilms?: SimilarFilm[];
+}
+
+export interface SimilarFilm {
+  id: string;
+  title: string;
+  year: number;
+  posterUrl: string | null;
+  score: number | null;
+  userHasReviewed: boolean;
+}
+
+export interface ReviewsResponse {
+  reviews: FilmReview[];
+  total: number;
+  myReview: FilmReview | null;
 }

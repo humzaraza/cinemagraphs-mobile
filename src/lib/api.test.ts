@@ -21,6 +21,7 @@ import {
   loginWithApple,
   loginWithGoogle,
   deleteAccount,
+  fetchFilmReviews,
 } from './api';
 
 const TOKENS_KEY = 'auth_tokens';
@@ -497,6 +498,93 @@ describe('signup endpoints send terms acceptance fields', () => {
       termsAccepted: true,
       termsVersion: '2026-05-15',
     });
+  });
+});
+
+describe('fetchFilmReviews', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const sampleResponse = {
+    reviews: [
+      {
+        id: 'r1',
+        user: { id: 'u1', name: 'Other User' },
+        score: 8.5,
+        content: 'Great film',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ],
+    total: 1,
+    myReview: {
+      id: 'r-mine',
+      user: { id: 'me', name: 'Me' },
+      score: 9.2,
+      content: 'My take',
+      createdAt: '2026-02-01T00:00:00Z',
+    },
+  };
+
+  it('omits the excludeCurrentUser query param when not requested', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(sampleResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await fetchFilmReviews('film-1');
+
+    const url = String(fetchSpy.mock.calls[0][0]);
+    expect(url).toContain('/films/film-1/reviews');
+    expect(url).not.toContain('excludeCurrentUser');
+  });
+
+  it('appends ?excludeCurrentUser=true when requested', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(sampleResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await fetchFilmReviews('film-1', { excludeCurrentUser: true });
+
+    const url = String(fetchSpy.mock.calls[0][0]);
+    expect(url).toContain('/films/film-1/reviews?excludeCurrentUser=true');
+  });
+
+  it('returns the parsed body on 2xx with myReview as a top-level field', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(sampleResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    const result = await fetchFilmReviews('film-1', { excludeCurrentUser: true });
+    expect(result?.reviews).toHaveLength(1);
+    expect(result?.total).toBe(1);
+    expect(result?.myReview?.score).toBe(9.2);
+  });
+
+  it('returns null on non-2xx', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 500 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    const result = await fetchFilmReviews('film-1');
+    expect(result).toBeNull();
   });
 });
 
