@@ -21,6 +21,7 @@ import { TERMS_URL, PRIVACY_URL } from '../../src/constants/legal';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { authError, authSuccess } from '../../src/lib/haptics';
 import FieldError from '../../src/components/ui/FieldError';
+import { PasswordInput } from '../../src/components/PasswordInput';
 import { useToast } from '../../src/components/ui/Toast';
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
@@ -104,7 +105,9 @@ export default function AuthScreen() {
       showSuccess('Signed in');
     } catch (e: any) {
       authError();
-      showError(e.message || 'Sign in failed. Please check your credentials.');
+      const message = e.message || 'Sign in failed. Please check your credentials.';
+      setPasswordError(message);
+      showError(message);
     }
     setIsSubmitting(false);
   };
@@ -239,24 +242,17 @@ export default function AuthScreen() {
 
         <View style={[styles.fieldWrap, { marginBottom: tab === 'signin' ? 8 : 20 }]}>
           <Text style={styles.label}>Password</Text>
-          <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
-            <TextInput
-              ref={passwordRef}
-              value={password}
-              onChangeText={(t) => { setPassword(t); setPasswordError(null); }}
-              placeholder={tab === 'signin' ? 'Enter your password' : 'Create a password'}
-              placeholderTextColor="rgba(245,240,225,0.2)"
-              style={styles.input}
-              secureTextEntry
-              onFocus={() => setFocusedField('password')}
-              onBlur={() => setFocusedField('')}
-              textContentType={tab === 'create' ? 'newPassword' : 'password'}
-              returnKeyType="done"
-              onSubmitEditing={tab === 'signin' ? handleSignIn : handleCreate}
-              accessibilityLabel="Password"
-            />
-          </View>
-          <FieldError message={passwordError} />
+          <PasswordInput
+            ref={passwordRef}
+            value={password}
+            onChangeText={(t) => { setPassword(t); setPasswordError(null); }}
+            placeholder={tab === 'signin' ? 'Enter your password' : 'Create a password'}
+            textContentType={tab === 'create' ? 'newPassword' : 'password'}
+            returnKeyType="done"
+            onSubmitEditing={tab === 'signin' ? handleSignIn : handleCreate}
+            accessibilityLabel="Password"
+            error={passwordError ?? undefined}
+          />
         </View>
 
         {tab === 'create' && (
