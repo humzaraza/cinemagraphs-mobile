@@ -157,7 +157,21 @@ describe('setBlindForFilm', () => {
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/user/blind-mode/film/film-abc');
     expect(init.method).toBe('PUT');
-    expect(JSON.parse(init.body as string)).toEqual({ blind: true });
+    // Server contract: body field is `isBlind`, not `blind`. Sending
+    // `{ blind }` makes the route return 400 'isBlind (boolean) required',
+    // which surfaces on device as the optimistic toggle reverting plus
+    // an error toast. Guard against silent drift on either side.
+    expect(JSON.parse(init.body as string)).toEqual({ isBlind: true });
+  });
+
+  it('sends { isBlind: false } when toggling off', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+
+    await setBlindForFilm('film-abc', false);
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ isBlind: false });
   });
 
   it('throws on non-2xx so callers can revert optimistic updates', async () => {

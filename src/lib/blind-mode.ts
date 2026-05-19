@@ -101,7 +101,7 @@ export async function setBlindForFilm(
 ): Promise<void> {
   const res = await apiFetch(`/user/blind-mode/film/${filmId}`, {
     method: 'PUT',
-    body: JSON.stringify({ blind }),
+    body: JSON.stringify({ isBlind: blind }),
   });
   if (!res.ok) {
     throw new Error(`Failed to update blind mode for film (${res.status})`);
