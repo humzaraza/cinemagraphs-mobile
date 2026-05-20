@@ -1,6 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 import { TERMS_VERSION } from '../constants/legal';
-import type { Film, FilmDetail, ReviewSubmission } from '../types/film';
+import type {
+  Film,
+  FilmDetail,
+  ReviewSubmission,
+  ReviewsResponse,
+} from '../types/film';
 
 // Origin for the cinemagraphs.ca API. Override via EXPO_PUBLIC_API_BASE_URL
 // at build time (e.g., to point at a staging environment). API_BASE composes
@@ -330,6 +335,30 @@ export async function fetchCategoryFilms(
   return { films, hasMore: films.length === limit };
 }
 
+/**
+ * Fetch the review list for a film, plus the current user's own review
+ * (if any) as a separate field. When `excludeCurrentUser` is true the
+ * server filters the user's own review out of the `reviews` array and
+ * total count so the client can render it separately in the "Your
+ * review" section without de-duplication.
+ *
+ * Returns null on non-2xx so callers can render an empty state.
+ */
+export async function fetchFilmReviews(
+  filmId: string,
+  options: { excludeCurrentUser?: boolean } = {},
+): Promise<ReviewsResponse | null> {
+  const params = new URLSearchParams();
+  if (options.excludeCurrentUser) {
+    params.set('excludeCurrentUser', 'true');
+  }
+  const qs = params.toString();
+  const path = `/films/${filmId}/reviews${qs ? `?${qs}` : ''}`;
+  const res = await apiFetch(path);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export async function submitReview(filmId: string, data: ReviewSubmission): Promise<any> {
   const res = await apiFetch(`/films/${filmId}/reviews`, {
     method: 'POST',
@@ -364,13 +393,6 @@ export async function fetchAudienceData(
   } catch {
     return null;
   }
-}
-
-export async function fetchSimilarFilms(filmId: string, genre: string): Promise<Film[]> {
-  // TODO: If the API doesn't support genre filtering, fall back to /films?limit=6
-  return extractFilms(
-    await apiFetch(`/films?genre=${encodeURIComponent(genre)}&limit=6&exclude=${filmId}`)
-  );
 }
 
 // ---------------------------------------------------------------------------

@@ -14,6 +14,9 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { fetchUserSettings, updateUserSettings } from '../../src/lib/api';
+import { getBlindModeState } from '../../src/lib/blind-mode';
+import { useBlindDefaultsToggle } from '../../src/components/settings/useBlindDefaultsToggle';
+import { useToast } from '../../src/components/ui/Toast';
 
 function ChevronRight() {
   return (
@@ -76,6 +79,9 @@ export default function SettingsScreen() {
   const [publicProfile, setPublicProfile] = useState(true);
   const [allowFollowers, setAllowFollowers] = useState(true);
   const [privateGraphs, setPrivateGraphs] = useState(false);
+  // Blind-mode default. Off by default per spec; the server state
+  // overrides on mount if the user has previously set it.
+  const [blindUnwatched, setBlindUnwatched] = useState(false);
 
   useEffect(() => {
     fetchUserSettings()
@@ -86,12 +92,24 @@ export default function SettingsScreen() {
         if (s.privateGraphs !== undefined) setPrivateGraphs(s.privateGraphs);
       })
       .catch(() => {});
+
+    getBlindModeState()
+      .then((s) => {
+        if (!s) return;
+        setBlindUnwatched(s.blindUnwatchedDefault);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleSetting = (key: string, value: boolean, setter: (v: boolean) => void) => {
     setter(value);
     updateUserSettings({ [key]: value }).catch(() => setter(!value));
   };
+
+  const { showError } = useToast();
+  // useBlindDefaultsToggle owns: selection haptic, optimistic flip,
+  // PATCH /user/blind-mode/defaults, and revert + toast on failure.
+  const toggleBlindDefault = useBlindDefaultsToggle({ showError });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -174,6 +192,14 @@ export default function SettingsScreen() {
             label="Private graphs"
             value={privateGraphs}
             onToggle={(v) => toggleSetting('privateGraphs', v, setPrivateGraphs)}
+          />
+          <View style={styles.divider} />
+          <ToggleRow
+            label="Hide scores until I review"
+            value={blindUnwatched}
+            onToggle={(v) =>
+              toggleBlindDefault('blindUnwatchedDefault', v, setBlindUnwatched)
+            }
           />
         </View>
 
