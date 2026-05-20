@@ -18,7 +18,7 @@ import { BLIND_MODE_ERROR_MESSAGE } from '../film-detail/useBlindToggle';
 function setup(args: Parameters<typeof useBlindDefaultsToggle>[0]) {
   let handler:
     | ((
-        key: 'blindUnwatchedDefault' | 'blindReviewedDefault',
+        key: 'blindUnwatchedDefault',
         value: boolean,
         setter: (v: boolean) => void,
       ) => Promise<void>)
@@ -56,26 +56,6 @@ describe('useBlindDefaultsToggle', () => {
     expect(vi.mocked(setBlindModeDefaults)).toHaveBeenCalledWith({
       blindUnwatchedDefault: true,
     });
-  });
-
-  it('on PATCH failure reverts the setter AND shows the error toast', async () => {
-    vi.mocked(setBlindModeDefaults).mockRejectedValue(
-      new Error('server down'),
-    );
-    const setter = vi.fn();
-    const showError = vi.fn();
-    const handler = setup({ showError });
-
-    await TestRenderer.act(async () => {
-      await handler('blindReviewedDefault', true, setter);
-    });
-
-    // First call is the optimistic flip; second call reverts.
-    expect(setter).toHaveBeenCalledTimes(2);
-    expect(setter).toHaveBeenNthCalledWith(1, true);
-    expect(setter).toHaveBeenNthCalledWith(2, false);
-    expect(showError).toHaveBeenCalledTimes(1);
-    expect(showError).toHaveBeenCalledWith(BLIND_MODE_ERROR_MESSAGE);
   });
 
   it('reverts to true when the setter was being flipped to false and PATCH fails', async () => {

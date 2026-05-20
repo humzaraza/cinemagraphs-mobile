@@ -13,7 +13,6 @@ import { setBlindForFilm, type BlindModeState } from '../../lib/blind-mode';
 
 const fullyDefaultedState: BlindModeState = {
   blindUnwatchedDefault: false,
-  blindReviewedDefault: false,
   perFilm: {},
   hasSeenBlindModeTooltip: false,
 };

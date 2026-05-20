@@ -19,7 +19,6 @@ import {
 
 const fullState: BlindModeState = {
   blindUnwatchedDefault: true,
-  blindReviewedDefault: false,
   perFilm: { 'film-1': false, 'film-2': true },
   hasSeenBlindModeTooltip: true,
 };
@@ -99,7 +98,6 @@ describe('getBlindModeState', () => {
     const fetchSpy = vi.fn().mockResolvedValue(
       jsonResponse({
         blindUnwatchedDefault: false,
-        blindReviewedDefault: false,
         hasSeenBlindModeTooltip: false,
       }),
     );
@@ -120,8 +118,8 @@ describe('resolveBlindForFilm', () => {
     // film-1 has perFilm = false, but blindUnwatchedDefault = true.
     // The override wins.
     expect(resolveBlindForFilm(fullState, 'film-1', false)).toBe(false);
-    // film-2 has perFilm = true, but blindReviewedDefault = false.
-    // The override wins.
+    // film-2 has perFilm = true. A reviewed film would otherwise
+    // auto-lift to visible, but the per-film override still wins.
     expect(resolveBlindForFilm(fullState, 'film-2', true)).toBe(true);
   });
 
@@ -129,8 +127,15 @@ describe('resolveBlindForFilm', () => {
     expect(resolveBlindForFilm(fullState, 'unknown-film', false)).toBe(true);
   });
 
-  it('falls back to blindReviewedDefault for reviewed films with no override', () => {
-    expect(resolveBlindForFilm(fullState, 'unknown-film', true)).toBe(false);
+  it('returns false for reviewed films with no override (blind auto-lifts on review)', () => {
+    // Once the user has reviewed a film, blind mode has nothing left to
+    // protect, so it lifts regardless of blindUnwatchedDefault.
+    const state: BlindModeState = {
+      blindUnwatchedDefault: true,
+      perFilm: {},
+      hasSeenBlindModeTooltip: false,
+    };
+    expect(resolveBlindForFilm(state, 'unknown-film', true)).toBe(false);
   });
 
   it('treats explicit perFilm[id] = false as an override (not absence)', () => {
@@ -138,7 +143,6 @@ describe('resolveBlindForFilm', () => {
     // to the default. Confirm we treat explicit false as an override.
     const state: BlindModeState = {
       blindUnwatchedDefault: true,
-      blindReviewedDefault: true,
       perFilm: { 'explicitly-visible': false },
       hasSeenBlindModeTooltip: false,
     };
@@ -184,7 +188,6 @@ describe('setBlindForFilm', () => {
   it('updates the cached perFilm entry on success', async () => {
     __setCachedStateForTesting({
       blindUnwatchedDefault: false,
-      blindReviewedDefault: false,
       perFilm: {},
       hasSeenBlindModeTooltip: false,
     });
@@ -219,18 +222,17 @@ describe('setBlindModeDefaults', () => {
   it('merges patch into the cached state on success', async () => {
     __setCachedStateForTesting({
       blindUnwatchedDefault: false,
-      blindReviewedDefault: false,
       perFilm: {},
       hasSeenBlindModeTooltip: false,
     });
     const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
 
-    await setBlindModeDefaults({ blindReviewedDefault: true });
+    await setBlindModeDefaults({ blindUnwatchedDefault: true });
 
     const state = await getBlindModeState();
-    expect(state?.blindReviewedDefault).toBe(true);
-    expect(state?.blindUnwatchedDefault).toBe(false);
+    expect(state?.blindUnwatchedDefault).toBe(true);
+    expect(state?.hasSeenBlindModeTooltip).toBe(false);
   });
 
   it('throws on non-2xx', async () => {

@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { setBlindModeDefaults } from '../../lib/blind-mode';
 import { BLIND_MODE_ERROR_MESSAGE } from '../film-detail/useBlindToggle';
 
-type BlindDefaultKey = 'blindUnwatchedDefault' | 'blindReviewedDefault';
+type BlindDefaultKey = 'blindUnwatchedDefault';
 
 interface UseBlindDefaultsToggleArgs {
   showError: (msg: string) => void;

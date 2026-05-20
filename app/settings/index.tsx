@@ -79,10 +79,9 @@ export default function SettingsScreen() {
   const [publicProfile, setPublicProfile] = useState(true);
   const [allowFollowers, setAllowFollowers] = useState(true);
   const [privateGraphs, setPrivateGraphs] = useState(false);
-  // Blind-mode defaults. Both off by default per spec; the server state
-  // overrides on mount if the user has previously set them.
+  // Blind-mode default. Off by default per spec; the server state
+  // overrides on mount if the user has previously set it.
   const [blindUnwatched, setBlindUnwatched] = useState(false);
-  const [blindReviewed, setBlindReviewed] = useState(false);
 
   useEffect(() => {
     fetchUserSettings()
@@ -98,7 +97,6 @@ export default function SettingsScreen() {
       .then((s) => {
         if (!s) return;
         setBlindUnwatched(s.blindUnwatchedDefault);
-        setBlindReviewed(s.blindReviewedDefault);
       })
       .catch(() => {});
   }, []);
@@ -197,18 +195,10 @@ export default function SettingsScreen() {
           />
           <View style={styles.divider} />
           <ToggleRow
-            label="Always blind for unwatched films"
+            label="Hide scores until I review"
             value={blindUnwatched}
             onToggle={(v) =>
               toggleBlindDefault('blindUnwatchedDefault', v, setBlindUnwatched)
-            }
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            label="Always blind for films I've reviewed"
-            value={blindReviewed}
-            onToggle={(v) =>
-              toggleBlindDefault('blindReviewedDefault', v, setBlindReviewed)
             }
           />
         </View>

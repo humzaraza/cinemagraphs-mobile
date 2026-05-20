@@ -2,13 +2,17 @@
  * Blind mode state — server-backed user preferences for hiding scores
  * on the film detail screen.
  *
- * The server stores three things per user:
+ * The server stores per user:
  *   - blindUnwatchedDefault: default blind state for films the user
  *     has not reviewed
- *   - blindReviewedDefault: default blind state for films the user
- *     has already reviewed
  *   - perFilm[filmId]: an explicit override per film. If set, takes
- *     precedence over the defaults.
+ *     precedence over the default.
+ *
+ * Blind mode protects the user before they form an opinion. Once they
+ * review a film that purpose is gone, so blind mode auto-lifts on
+ * reviewed films: resolveBlindForFilm returns false for them unless a
+ * per-film override says otherwise. The server response may still carry
+ * a blindReviewedDefault field; mobile does not read it.
  *
  * Plus a one-shot flag:
  *   - hasSeenBlindModeTooltip: the first-encounter tooltip is shown
@@ -29,7 +33,6 @@ import { apiFetch } from './api';
 
 export interface BlindModeState {
   blindUnwatchedDefault: boolean;
-  blindReviewedDefault: boolean;
   perFilm: Record<string, boolean>;
   hasSeenBlindModeTooltip: boolean;
 }
@@ -54,7 +57,6 @@ export async function getBlindModeState(): Promise<BlindModeState | null> {
       const data = (await res.json()) as Partial<BlindModeState>;
       const normalized: BlindModeState = {
         blindUnwatchedDefault: !!data.blindUnwatchedDefault,
-        blindReviewedDefault: !!data.blindReviewedDefault,
         perFilm:
           data.perFilm && typeof data.perFilm === 'object' ? data.perFilm : {},
         hasSeenBlindModeTooltip: !!data.hasSeenBlindModeTooltip,
@@ -73,8 +75,9 @@ export async function getBlindModeState(): Promise<BlindModeState | null> {
 
 /**
  * Resolve whether blind mode should be ON for a given film, given the
- * server state. perFilm[id] wins if set; otherwise use the default for
- * the film's reviewed/unwatched status.
+ * server state. perFilm[id] wins if set. Otherwise a reviewed film is
+ * never blind (the user has already formed an opinion), and an
+ * unwatched film falls back to blindUnwatchedDefault.
  */
 export function resolveBlindForFilm(
   state: BlindModeState | null,
@@ -85,9 +88,7 @@ export function resolveBlindForFilm(
   if (Object.prototype.hasOwnProperty.call(state.perFilm, filmId)) {
     return state.perFilm[filmId];
   }
-  return userHasReviewed
-    ? state.blindReviewedDefault
-    : state.blindUnwatchedDefault;
+  return userHasReviewed ? false : state.blindUnwatchedDefault;
 }
 
 /**
@@ -120,10 +121,7 @@ export async function setBlindForFilm(
  */
 export async function setBlindModeDefaults(
   patch: Partial<
-    Pick<
-      BlindModeState,
-      'blindUnwatchedDefault' | 'blindReviewedDefault' | 'hasSeenBlindModeTooltip'
-    >
+    Pick<BlindModeState, 'blindUnwatchedDefault' | 'hasSeenBlindModeTooltip'>
   >,
 ): Promise<void> {
   const res = await apiFetch('/user/blind-mode/defaults', {
