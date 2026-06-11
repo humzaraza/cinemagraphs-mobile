@@ -40,7 +40,7 @@ cinemagraphs-mobile/
       verify.tsx             # OTP verification (new users only)
     (tabs)/
       _layout.tsx            # 3-tab bar layout
-      index.tsx              # Explore tab
+      explore.tsx            # Explore tab
       search.tsx             # Search tab
       profile.tsx            # Profile tab
   src/
@@ -60,7 +60,7 @@ Gold: #C8A951
 Teal: #2DD4A8
 Ivory/Text: #F5F0E1
 Positive green: #00E676
-Negative red: #E24B4A
+Negative red: #E05555
 
 Card borders: 0.5px solid rgba(200,169,81,0.12)
 Card background: rgba(245,240,225,0.04)
