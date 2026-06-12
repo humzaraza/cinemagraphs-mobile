@@ -14,9 +14,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Polyline, Circle, Path, Rect, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline, { formatRuntime } from '../../src/components/Sparkline';
+import TicketStub from '../../src/components/TicketStub';
+import { useIsReviewed } from '../../src/lib/reviewed-films';
 import {
   fetchTickerFilms,
   fetchNowPlayingFilms,
@@ -157,21 +159,6 @@ function Divider() {
 }
 
 // ---------------------------------------------------------------------------
-// Ticket stub overlay icon (mockup stub: 20pt chip, rect + tear line)
-// ---------------------------------------------------------------------------
-
-function TicketStub() {
-  return (
-    <View style={styles.ticketStub}>
-      <Svg width={11} height={11} viewBox="0 0 24 24">
-        <Rect x={2} y={4} width={20} height={14} rx={2} fill="none" stroke={colors.gold} strokeWidth={1.5} />
-        <Path d="M2 8h20" fill="none" stroke={colors.gold} strokeWidth={1.5} />
-      </Svg>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Poster card: art + title + gold score. No sparklines in rows; the hero
 // is the only graph on this screen.
 // ---------------------------------------------------------------------------
@@ -180,6 +167,7 @@ function PosterCard({ film, inTheatres }: { film: Film; inTheatres?: boolean }) 
   const router = useRouter();
   const posterUri = getPosterUrl(film, 'card');
   const score = film.sentimentGraph?.overallScore;
+  const optimistic = useIsReviewed(film.id);
 
   return (
     <Pressable
@@ -194,9 +182,7 @@ function PosterCard({ film, inTheatres }: { film: Film; inTheatres?: boolean }) 
             <Text style={styles.posterPlaceholderText}>{film.title}</Text>
           </View>
         )}
-        {/* TODO: unhide when the list endpoints (/api/films, /api/hero) return
-            per-user watched data; only FilmDetail has userHasReviewed today. */}
-        {false && <TicketStub />}
+        {(film.userHasReviewed || optimistic) && <TicketStub />}
         {inTheatres && (
           <View style={styles.theatresTag}>
             <Text style={styles.theatresTagText}>IN THEATRES</Text>
@@ -541,6 +527,7 @@ function HeroCard({ hero }: { hero: HeroResponse }) {
   const film = hero.film;
   const posterUri = getPosterUrl(film, 'card');
   const score = film.sentimentGraph?.overallScore;
+  const optimistic = useIsReviewed(film.id);
   const why = HERO_WHY[hero.angle.label];
   const weekday = new Date()
     .toLocaleDateString('en-US', { weekday: 'long' })
@@ -565,6 +552,7 @@ function HeroCard({ hero }: { hero: HeroResponse }) {
             {posterUri ? (
               <Image source={{ uri: posterUri }} style={styles.heroPosterImage} resizeMode="cover" />
             ) : null}
+            {(film.userHasReviewed || optimistic) && <TicketStub />}
           </View>
           <View style={styles.heroMeta}>
             <Text style={styles.heroTitle} numberOfLines={2}>{film.title}</Text>
@@ -1017,21 +1005,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.gold,
     marginTop: 2,
-  },
-
-  // Ticket stub
-  ticketStub: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 20,
-    height: 20,
-    backgroundColor: 'rgba(13,13,26,0.7)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.25)',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // IN THEATRES tag
