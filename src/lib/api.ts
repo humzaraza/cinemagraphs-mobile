@@ -3,6 +3,7 @@ import { TERMS_VERSION } from '../constants/legal';
 import type {
   Film,
   FilmDetail,
+  HeroResponse,
   ReviewSubmission,
   ReviewsResponse,
 } from '../types/film';
@@ -252,12 +253,33 @@ export async function fetchNowPlayingFilms(): Promise<Film[]> {
   return extractFilms(await apiFetch('/films?nowPlaying=true&limit=10'));
 }
 
-export async function fetchTrendingFilms(): Promise<Film[]> {
-  return extractFilms(await apiFetch('/films?sort=highest&limit=6'));
-}
-
 export async function fetchRecommendedFilms(): Promise<Film[]> {
   return extractFilms(await apiFetch('/films?sort=recent&limit=10'));
+}
+
+// arcShape values contain spaces; keep them URL-encoded inline.
+export async function fetchHiddenPeakFilms(): Promise<Film[]> {
+  return extractFilms(await apiFetch('/films?arcShape=hidden%20peak&limit=10'));
+}
+
+export async function fetchSlowBurnFilms(): Promise<Film[]> {
+  return extractFilms(await apiFetch('/films?arcShape=slow%20burn&limit=10'));
+}
+
+// Daily hero pick (backend PR #55). Public, no params; the server owns
+// the angle-to-day mapping and the eligibility/no-repeat rules. Returns
+// null on any failure so the Explore screen can collapse the hero
+// section instead of showing an error card.
+export async function fetchHero(): Promise<HeroResponse | null> {
+  try {
+    const res = await apiFetch('/hero');
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.film || !data?.angle?.label) return null;
+    return data as HeroResponse;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchFilmDetail(id: string): Promise<FilmDetail | null> {
@@ -329,6 +351,35 @@ export async function fetchCategoryFilms(
   const res = await apiFetch(`/films?${qs.toString()}`, { signal });
   if (!res.ok) {
     throw new Error(`Failed to load category films (${res.status})`);
+  }
+  const data = await res.json();
+  const films = (data?.films ?? (Array.isArray(data) ? data : [])) as Film[];
+  return { films, hasMore: films.length === limit };
+}
+
+// Paginated fetch for the Explore "See all" section screens. Accepts the
+// same /api/films filters the Explore rows use (arcShape, nowPlaying,
+// sort=recent). Same hasMore heuristic as fetchCategoryFilms: a full
+// page means there's likely another one.
+export interface SectionFilter {
+  arcShape?: string;
+  nowPlaying?: boolean;
+  sort?: 'highest' | 'swing' | 'recent';
+}
+
+export async function fetchSectionFilms(
+  filter: SectionFilter,
+  page: number,
+  signal?: AbortSignal,
+): Promise<CategoryFetchResult> {
+  const limit = 21; // multiple of 3 so full pages end on a complete grid row
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (filter.arcShape) qs.set('arcShape', filter.arcShape);
+  if (filter.nowPlaying) qs.set('nowPlaying', 'true');
+  if (filter.sort) qs.set('sort', filter.sort);
+  const res = await apiFetch(`/films?${qs.toString()}`, { signal });
+  if (!res.ok) {
+    throw new Error(`Failed to load section films (${res.status})`);
   }
   const data = await res.json();
   const films = (data?.films ?? (Array.isArray(data) ? data : [])) as Film[];

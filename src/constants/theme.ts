@@ -4,7 +4,7 @@ export const colors = {
   teal: '#2DD4A8',
   ivory: '#F5F0E1',
   positiveGreen: '#00E676',
-  negativeRed: '#E24B4A',
+  negativeRed: '#E05555',
 
   // Derived
   cardBorder: 'rgba(200,169,81,0.12)',

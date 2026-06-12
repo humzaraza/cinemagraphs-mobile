@@ -117,6 +117,34 @@ export interface SimilarFilm {
   userHasReviewed: boolean;
 }
 
+// Daily hero (GET /api/hero, backend PR #55). The film payload matches
+// the detail shape closely enough for the Explore hero card: it always
+// includes peakMoment/lowestMoment inside sentimentGraph, which the hero
+// graph uses directly for the teal/red dots.
+export interface HeroSentimentGraph extends SentimentGraph {
+  peakMoment: PeakLowMoment;
+  lowestMoment: PeakLowMoment;
+}
+
+export interface HeroFilm extends Film {
+  sentimentGraph: HeroSentimentGraph | null;
+}
+
+// kind varies by weekday ("shape" on Wed/Sat, other kinds on other
+// days); label is always the lowercase space-separated angle name used
+// to key display copy.
+export interface HeroAngle {
+  kind: string;
+  shape?: string;
+  label: string;
+}
+
+export interface HeroResponse {
+  film: HeroFilm;
+  angle: HeroAngle;
+  usedFallback: boolean;
+}
+
 export interface ReviewsResponse {
   reviews: FilmReview[];
   total: number;

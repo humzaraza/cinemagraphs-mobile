@@ -19,13 +19,20 @@ interface SparklineProps {
   hideStartLabel?: boolean;
   fixPeakClipping?: boolean;
   yLabelWidth?: number;
+  // Normalize y to the film's own min/max beat scores so the shape
+  // fills the height (Apple Stocks behavior). Simple mode only.
+  fitY?: boolean;
 }
 
-function formatRuntime(minutes: number): string {
+export function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}m`;
 }
+
+// Below this score spread, fitY rendering would divide by near-zero and
+// amplify noise into a full-height shape; draw a centered line instead.
+const FIT_Y_MIN_SPREAD = 0.3;
 
 const AXIS_COLOR = 'rgba(245,240,225,0.15)';
 const LABEL_COLOR = 'rgba(245,240,225,0.35)';
@@ -50,6 +57,7 @@ export default function Sparkline({
   hideStartLabel = false,
   fixPeakClipping = false,
   yLabelWidth,
+  fitY = false,
 }: SparklineProps) {
   if (dataPoints.length < 2) return null;
 
@@ -62,27 +70,34 @@ export default function Sparkline({
 
   // Simple sparkline (no axes)
   if (!showAxes) {
-    const pad = 4;
-    const cw = width - pad * 2;
-    const ch = height - pad * 2;
+    const padX = fitY ? 1 : 4;
+    const padY = fitY ? 2 : 4;
+    const cw = width - padX * 2;
+    const ch = height - padY * 2;
+
+    const fitFlat = fitY && rawMax - rawMin < FIT_Y_MIN_SPREAD;
+    const yMinEff = fitY ? rawMin : yMin;
+    const yRangeEff = fitY ? rawMax - rawMin || 1 : yRange;
+
+    const getSimpleY = (score: number) =>
+      fitFlat ? height / 2 : padY + (1 - (score - yMinEff) / yRangeEff) * ch;
 
     const points = dataPoints
       .map((dp, i) => {
-        const x = pad + (i / (dataPoints.length - 1)) * cw;
-        const y = pad + (1 - (dp.score - yMin) / yRange) * ch;
-        return `${x},${y}`;
+        const x = padX + (i / (dataPoints.length - 1)) * cw;
+        return `${x},${getSimpleY(dp.score)}`;
       })
       .join(' ');
 
     let peakIdx = 0;
     scores.forEach((s, i) => { if (s > scores[peakIdx]) peakIdx = i; });
-    const peakX = pad + (peakIdx / (dataPoints.length - 1)) * cw;
-    const peakY = pad + (1 - (scores[peakIdx] - yMin) / yRange) * ch;
+    const peakX = padX + (peakIdx / (dataPoints.length - 1)) * cw;
+    const peakY = getSimpleY(scores[peakIdx]);
 
     let lowIdx = 0;
     scores.forEach((s, i) => { if (s < scores[lowIdx]) lowIdx = i; });
-    const lowX = pad + (lowIdx / (dataPoints.length - 1)) * cw;
-    const lowY = pad + (1 - (scores[lowIdx] - yMin) / yRange) * ch;
+    const lowX = padX + (lowIdx / (dataPoints.length - 1)) * cw;
+    const lowY = getSimpleY(scores[lowIdx]);
 
     return (
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
