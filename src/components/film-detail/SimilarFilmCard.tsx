@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { colors, fonts } from '../../constants/theme';
 import { useIsReviewed } from '../../lib/reviewed-films';
 import { formatScore } from '../../lib/score-format';
+import { getPosterUrl } from '../../lib/tmdb-image';
 import TicketStub from '../TicketStub';
 import type { SimilarFilm } from '../../types/film';
 
@@ -13,10 +14,9 @@ export function SimilarFilmCard({ film: f }: { film: SimilarFilm }) {
   // Visible in both default and blind mode (the stub is a status
   // indicator, not a score).
   const reviewed = f.userHasReviewed || optimistic;
-  // SimilarFilm.posterUrl comes through as an absolute URL from the
-  // PR 4a server transform. Fall back to undefined so the placeholder
-  // renders cleanly when the server returned null.
-  const posterUri = f.posterUrl ?? undefined;
+  // The API returns posterUrl as a bare TMDB path; getPosterUrl builds the
+  // absolute card-size URL and returns null when the path is missing.
+  const posterUri = getPosterUrl(f, 'card') ?? undefined;
   const scoreLabel = f.score !== null ? formatScore(f.score) : '--';
   const yearLabel = `${f.year}${f.score !== null ? ` · ${scoreLabel}` : ''}`;
 
