@@ -13,6 +13,7 @@ vi.mock('react-native', () => ({
 vi.mock('react-native-svg', () => ({
   default: 'Svg',
   Path: 'Path',
+  Rect: 'Rect',
 }));
 
 vi.mock('expo-router', () => ({
@@ -21,6 +22,7 @@ vi.mock('expo-router', () => ({
 
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 import { SimilarFilmCard } from './SimilarFilmCard';
+import TicketStub from '../TicketStub';
 import type { SimilarFilm } from '../../types/film';
 
 const baseFilm: SimilarFilm = {
@@ -54,16 +56,14 @@ describe('SimilarFilmCard', () => {
     expect(tree.root.findByProps({ children: '1974' })).toBeTruthy();
   });
 
-  it('does not render the Reviewed ribbon when userHasReviewed is false', () => {
+  it('does not render the TicketStub when userHasReviewed is false', () => {
     const tree = render(baseFilm);
-    const reviewedText = tree.root.findAllByProps({ children: 'reviewed' });
-    expect(reviewedText).toHaveLength(0);
+    expect(tree.root.findAllByType(TicketStub)).toHaveLength(0);
   });
 
-  it('renders the Reviewed ribbon when userHasReviewed is true', () => {
+  it('renders the TicketStub when userHasReviewed is true', () => {
     const tree = render({ ...baseFilm, userHasReviewed: true });
-    const reviewedText = tree.root.findByProps({ children: 'reviewed' });
-    expect(reviewedText).toBeTruthy();
+    expect(tree.root.findAllByType(TicketStub)).toHaveLength(1);
   });
 
   it('navigates to the film detail route when tapped', () => {
