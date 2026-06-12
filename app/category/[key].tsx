@@ -15,7 +15,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import TicketStub from '../../src/components/TicketStub';
 import { fetchCategoryFilms } from '../../src/lib/api';
+import { useIsReviewed } from '../../src/lib/reviewed-films';
 import {
   CATEGORY_LABELS,
   CATEGORY_PARAMS,
@@ -65,6 +67,7 @@ function SkeletonTile() {
 
 function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
   const uri = getPosterUrl(film, 'grid');
+  const optimistic = useIsReviewed(film.id);
   return (
     <Pressable onPress={onPress} style={styles.tile}>
       {uri ? (
@@ -72,6 +75,7 @@ function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
       ) : (
         <View style={[styles.poster, styles.posterFallback]} />
       )}
+      {(film.userHasReviewed || optimistic) && <TicketStub />}
     </Pressable>
   );
 }

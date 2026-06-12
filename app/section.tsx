@@ -15,7 +15,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../src/constants/theme';
+import TicketStub from '../src/components/TicketStub';
 import { fetchSectionFilms, type SectionFilter } from '../src/lib/api';
+import { useIsReviewed } from '../src/lib/reviewed-films';
 import { getPosterUrl } from '../src/lib/tmdb-image';
 import type { Film } from '../src/types/film';
 
@@ -78,6 +80,7 @@ function SkeletonTile() {
 function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
   const uri = getPosterUrl(film, 'grid');
   const score = film.sentimentGraph?.overallScore;
+  const optimistic = useIsReviewed(film.id);
   return (
     <Pressable onPress={onPress} style={styles.tile}>
       {uri ? (
@@ -85,6 +88,7 @@ function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
       ) : (
         <View style={styles.poster} />
       )}
+      {(film.userHasReviewed || optimistic) && <TicketStub />}
       <Text style={styles.tileTitle} numberOfLines={2}>{film.title}</Text>
       {score != null && <Text style={styles.tileScore}>{score.toFixed(1)}</Text>}
     </Pressable>
