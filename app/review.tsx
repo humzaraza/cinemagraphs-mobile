@@ -23,6 +23,7 @@ import Svg, {
 import Slider from '@react-native-community/slider';
 import { colors, fonts, borderRadius } from '../src/constants/theme';
 import { fetchFilmDetail, submitReview } from '../src/lib/api';
+import { markReviewed } from '../src/lib/reviewed-films';
 import { getPosterUrl } from '../src/lib/tmdb-image';
 import type { FilmDetail, FilmDataPoint } from '../src/types/film';
 
@@ -343,6 +344,7 @@ export default function ReviewScreen() {
     setErrorMsg('');
     try {
       await submitReview(film.id, payload);
+      markReviewed(film.id);
       setScreenState('arc-reveal');
     } catch (err: any) {
       if (err.message?.includes('401') || err.message?.includes('auth') || err.message?.includes('session')) {
@@ -369,6 +371,7 @@ export default function ReviewScreen() {
     setErrorMsg('');
     try {
       await submitReview(film.id, payload);
+      markReviewed(film.id);
       setScreenState('confirmed-b');
     } catch (err: any) {
       if (err.message?.includes('401') || err.message?.includes('auth') || err.message?.includes('session')) {
