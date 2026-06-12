@@ -1,37 +1,18 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Path } from 'react-native-svg';
 
 import { colors, fonts } from '../../constants/theme';
+import { useIsReviewed } from '../../lib/reviewed-films';
 import { formatScore } from '../../lib/score-format';
+import TicketStub from '../TicketStub';
 import type { SimilarFilm } from '../../types/film';
-
-/**
- * Editorial corner mark for the "Similar films" carousel — appears on
- * the top-right of a poster when `userHasReviewed === true`. Visible in
- * both default and blind mode (per spec: the ribbon is a status
- * indicator, not a score). Renders behind pointer events so taps still
- * fall through to the parent Pressable.
- */
-function ReviewedRibbon() {
-  return (
-    <View style={styles.reviewedRibbon} pointerEvents="none">
-      <Svg width={9} height={9} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M5 12l5 5 9-11"
-          stroke={colors.gold}
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </Svg>
-      <Text style={styles.reviewedRibbonText}>reviewed</Text>
-    </View>
-  );
-}
 
 export function SimilarFilmCard({ film: f }: { film: SimilarFilm }) {
   const router = useRouter();
+  const optimistic = useIsReviewed(f.id);
+  // Visible in both default and blind mode (the stub is a status
+  // indicator, not a score).
+  const reviewed = f.userHasReviewed || optimistic;
   // SimilarFilm.posterUrl comes through as an absolute URL from the
   // PR 4a server transform. Fall back to undefined so the placeholder
   // renders cleanly when the server returned null.
@@ -45,7 +26,7 @@ export function SimilarFilmCard({ film: f }: { film: SimilarFilm }) {
       style={styles.card}
       accessibilityRole="button"
       accessibilityLabel={
-        f.userHasReviewed
+        reviewed
           ? `${f.title}, ${f.year}. Score ${scoreLabel}. Reviewed.`
           : `${f.title}, ${f.year}. Score ${scoreLabel}.`
       }
@@ -60,7 +41,7 @@ export function SimilarFilmCard({ film: f }: { film: SimilarFilm }) {
         ) : (
           <View style={[styles.poster, styles.posterPlaceholder]} />
         )}
-        {f.userHasReviewed && <ReviewedRibbon />}
+        {reviewed && <TicketStub />}
       </View>
       <Text style={styles.title} numberOfLines={1}>
         {f.title}
@@ -94,23 +75,5 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: colors.gold,
     fontFamily: fonts.body,
-  },
-  reviewedRibbon: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(13,13,26,0.7)',
-    borderRadius: 4,
-  },
-  reviewedRibbonText: {
-    fontFamily: fonts.body,
-    fontSize: 8,
-    color: colors.gold,
-    letterSpacing: 0.1,
   },
 });

@@ -33,6 +33,7 @@ import type { GraphMode } from '../../src/components/GraphToggle';
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuthGate } from '../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
+import { useIsReviewed } from '../../src/lib/reviewed-films';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
 import { BlindModeTooltip } from '../../src/components/BlindModeTooltip';
@@ -185,6 +186,7 @@ function Backdrop({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const backdropUri = getBackdropUri(film.backdropUrl);
+  const optimisticReviewed = useIsReviewed(film.id);
 
   return (
     <View style={styles.backdrop}>
@@ -211,8 +213,7 @@ function Backdrop({
 
       {/* Watched badge + action circles row (bookmark, add-to-list, blind toggle) */}
       <View style={styles.badgeRow}>
-        {/* TODO: unhide ticket stub when watched feature is ready */}
-        {false && (
+        {(film.userHasReviewed || optimisticReviewed) && (
         <View style={styles.watchedBadge}>
           <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
             <Path
@@ -222,7 +223,7 @@ function Backdrop({
             />
             <Line x1={2} y1={8} x2={22} y2={8} stroke={colors.gold} strokeWidth={1.5} />
           </Svg>
-          <Text style={styles.watchedText}>Watched</Text>
+          <Text style={styles.watchedText}>Reviewed</Text>
         </View>
         )}
         <Pressable
