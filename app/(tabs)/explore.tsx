@@ -24,7 +24,7 @@ import {
   fetchNowPlayingFilms,
   fetchHiddenPeakFilms,
   fetchSlowBurnFilms,
-  fetchRecommendedFilms,
+  fetchRecommendations,
   fetchHero,
   fetchUserProfile,
 } from '../../src/lib/api';
@@ -37,6 +37,7 @@ const POSTER_ART_HEIGHT = 152;
 // One full pass of the item set, per the mockup's 34s marquee cycle.
 const TICKER_CYCLE_MS = 34000;
 const RECOMMENDED_MIN_REVIEWS = 5;
+const RECOMMENDED_MIN_RESULTS = 8;
 
 function calcDelta(dataPoints: { score: number }[]): number | null {
   if (dataPoints.length < 4) return null;
@@ -125,7 +126,8 @@ function SkeletonBox({ width, height, style }: { width: number; height: number; 
 // ---------------------------------------------------------------------------
 
 // filter: the /api/films query params the section row uses, forwarded
-// to the generic section screen as route params.
+// to the generic section screen as route params. Omitted when the row
+// has no "See all" target (Recommended), which hides the link.
 function SectionHeader({
   title,
   sub,
@@ -133,7 +135,7 @@ function SectionHeader({
 }: {
   title: string;
   sub: string;
-  filter: { arcShape?: string; nowPlaying?: string; sort?: string };
+  filter?: { arcShape?: string; nowPlaying?: string; sort?: string };
 }) {
   const router = useRouter();
   return (
@@ -142,14 +144,16 @@ function SectionHeader({
         <Text style={styles.secTitle}>{title}</Text>
         <Text style={styles.secSub}>{sub}</Text>
       </View>
-      <Pressable
-        hitSlop={10}
-        onPress={() =>
-          router.push({ pathname: '/section', params: { title, sub, ...filter } } as any)
-        }
-      >
-        <Text style={styles.secMore}>See all</Text>
-      </Pressable>
+      {filter && (
+        <Pressable
+          hitSlop={10}
+          onPress={() =>
+            router.push({ pathname: '/section', params: { title, sub, ...filter } } as any)
+          }
+        >
+          <Text style={styles.secMore}>See all</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -645,7 +649,7 @@ export default function ExploreScreen() {
       fetchNowPlayingFilms().then(setNowPlaying).catch(() => {}).finally(() => setLoadingNowPlaying(false)),
       fetchHiddenPeakFilms().then(setHiddenPeaks).catch(() => {}).finally(() => setLoadingHiddenPeaks(false)),
       fetchSlowBurnFilms().then(setSlowBurns).catch(() => {}).finally(() => setLoadingSlowBurns(false)),
-      fetchRecommendedFilms().then(setRecommended).catch(() => {}).finally(() => setLoadingRecommended(false)),
+      fetchRecommendations().then(setRecommended).catch(() => {}).finally(() => setLoadingRecommended(false)),
       fetchUserProfile()
         .then((profile) => setReviewCount(profile?.stats.reviewCount ?? null))
         .catch(() => setReviewCount(null)),
@@ -669,9 +673,13 @@ export default function ExploreScreen() {
     setRefreshing(false);
   }, [loadAll]);
 
-  // Recommended is conditional: hidden until the user has 5+ reviews.
-  // Below the gate the screen ends at Slow Burns.
-  const showRecommended = reviewCount != null && reviewCount >= RECOMMENDED_MIN_REVIEWS;
+  // Recommended is conditional: hidden until the user has 5+ reviews
+  // AND the engine returns enough films to fill a row. Below either
+  // gate the screen ends at Slow Burns.
+  const showRecommended =
+    reviewCount != null &&
+    reviewCount >= RECOMMENDED_MIN_REVIEWS &&
+    recommended.length >= RECOMMENDED_MIN_RESULTS;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -725,17 +733,19 @@ export default function ExploreScreen() {
         />
         {loadingSlowBurns ? <PosterRowSkeleton /> : <PosterRow films={slowBurns} />}
 
-        {/* Recommended for You (5+ reviews only) */}
-        {/* TODO: Replace with personalized recommendation engine. Currently showing recent films as placeholder. */}
+        {/* Recommended for You (5+ reviews, 8+ engine results) */}
         {showRecommended && (
           <>
             <Divider />
             <SectionHeader
               title="Recommended for You"
               sub="Based on what you've reviewed"
-              filter={{ sort: 'recent' }}
             />
-            {loadingRecommended ? <PosterRowSkeleton /> : <PosterRow films={recommended} />}
+            {loadingRecommended ? (
+              <PosterRowSkeleton />
+            ) : (
+              <PosterRow films={recommended.slice(0, 10)} />
+            )}
           </>
         )}
       </ScrollView>
