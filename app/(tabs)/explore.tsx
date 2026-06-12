@@ -14,9 +14,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Polyline, Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Polyline, Circle, Path, Rect, Line, Text as SvgText } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
-import Sparkline from '../../src/components/Sparkline';
+import Sparkline, { formatRuntime } from '../../src/components/Sparkline';
 import {
   fetchTickerFilms,
   fetchNowPlayingFilms,
@@ -211,13 +211,22 @@ function PosterRow({ films, inTheatres }: { films: Film[]; inTheatres?: boolean 
 // score + delta, trend-colored sparkline beside (mockup variant D).
 // ---------------------------------------------------------------------------
 
+const TICKER_NEUTRAL = 'rgba(245,240,225,0.45)';
+
 function TickerItem({ film }: { film: Film }) {
   const router = useRouter();
   const score = film.sentimentGraph?.overallScore;
   const dataPoints = film.sentimentGraph?.dataPoints ?? [];
   const delta = calcDelta(dataPoints);
+  // A delta that rounds to 0.0 reads as neutral: no arrow, dim ivory.
+  const deltaText = delta != null ? Math.abs(delta).toFixed(1) : null;
+  const isNeutral = deltaText === '0.0';
   const isPositive = delta != null && delta >= 0;
-  const trendColor = isPositive ? colors.teal : colors.negativeRed;
+  const trendColor = isNeutral
+    ? TICKER_NEUTRAL
+    : isPositive
+      ? colors.teal
+      : colors.negativeRed;
 
   return (
     <Pressable onPress={() => router.push(`/film/${film.id}` as any)} style={styles.tickerItem}>
@@ -227,9 +236,9 @@ function TickerItem({ film }: { film: Film }) {
           {score != null && (
             <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
           )}
-          {delta != null && (
+          {deltaText != null && (
             <Text style={[styles.tickerDelta, { color: trendColor }]}>
-              {isPositive ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}
+              {isNeutral ? deltaText : `${isPositive ? '▲' : '▼'} ${deltaText}`}
             </Text>
           )}
         </View>
@@ -241,6 +250,7 @@ function TickerItem({ film }: { film: Film }) {
           height={26}
           strokeColor={trendColor}
           strokeWidth={1.6}
+          fitY
         />
       )}
     </Pressable>
@@ -412,9 +422,37 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
 
   const polyline = points.map((p) => `${getX(p.timeMidpoint)},${getY(p.score)}`).join(' ');
 
+  // Dashed midline at the vertical center of the plotted y-range.
+  const midY = PAD_TOP + (HERO_GRAPH_HEIGHT - PAD_TOP - PAD_BOTTOM) / 2;
+
+  // Score label beside each dot. Dots in the left half label to the
+  // right and vice versa, so labels stay in bounds even when the dot
+  // sits on the first or last beat. Baseline is clamped vertically.
+  const dotLabel = (cx: number, cy: number, r: number) => {
+    const onRight = cx <= HERO_GRAPH_WIDTH / 2;
+    return {
+      x: onRight ? cx + r + 4 : cx - r - 4,
+      y: Math.min(Math.max(cy + 3.5, 10), HERO_GRAPH_HEIGHT - 2),
+      anchor: (onRight ? 'start' : 'end') as 'start' | 'end',
+    };
+  };
+  const peakLabel = peak ? dotLabel(getX(peak.time), getY(peak.score), 4) : null;
+  const lowLabel = lowest ? dotLabel(getX(lowest.time), getY(lowest.score), 3.5) : null;
+
+  const runtime = hero.film.runtime;
+
   return (
     <View style={styles.heroGraph}>
       <Svg width={HERO_GRAPH_WIDTH} height={HERO_GRAPH_HEIGHT}>
+        <Line
+          x1={PAD_X}
+          y1={midY}
+          x2={HERO_GRAPH_WIDTH - PAD_X}
+          y2={midY}
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth={0.5}
+          strokeDasharray="3,3"
+        />
         <Polyline
           points={polyline}
           fill="none"
@@ -429,7 +467,42 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
         {lowest && (
           <Circle cx={getX(lowest.time)} cy={getY(lowest.score)} r={3.5} fill={colors.negativeRed} />
         )}
+        {peak && peakLabel && (
+          <SvgText
+            x={peakLabel.x}
+            y={peakLabel.y}
+            textAnchor={peakLabel.anchor}
+            fontSize={10}
+            fontWeight="600"
+            fill={colors.teal}
+          >
+            {peak.score.toFixed(1)}
+          </SvgText>
+        )}
+        {lowest && lowLabel && (
+          <SvgText
+            x={lowLabel.x}
+            y={lowLabel.y}
+            textAnchor={lowLabel.anchor}
+            fontSize={10}
+            fontWeight="600"
+            fill={colors.negativeRed}
+          >
+            {lowest.score.toFixed(1)}
+          </SvgText>
+        )}
       </Svg>
+      {runtime != null && runtime > 0 && (
+        <View style={styles.heroAxisRow}>
+          <Text style={[styles.heroAxisLabel, { textAlign: 'left' }]}>0m</Text>
+          <Text style={[styles.heroAxisLabel, { textAlign: 'center' }]}>
+            {formatRuntime(Math.round(runtime / 2))}
+          </Text>
+          <Text style={[styles.heroAxisLabel, { textAlign: 'right' }]}>
+            {formatRuntime(runtime)}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -831,6 +904,16 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingHorizontal: 12,
     paddingBottom: 6,
+  },
+  heroAxisRow: {
+    flexDirection: 'row',
+    paddingTop: 2,
+  },
+  heroAxisLabel: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: 'rgba(245,240,225,0.25)',
   },
   heroWhy: {
     paddingTop: 4,
