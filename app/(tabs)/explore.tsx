@@ -176,7 +176,9 @@ function PosterCard({ film, inTheatres }: { film: Film; inTheatres?: boolean }) 
             <Text style={styles.posterPlaceholderText}>{film.title}</Text>
           </View>
         )}
-        <TicketStub />
+        {/* TODO: unhide when the list endpoints (/api/films, /api/hero) return
+            per-user watched data; only FilmDetail has userHasReviewed today. */}
+        {false && <TicketStub />}
         {inTheatres && (
           <View style={styles.theatresTag}>
             <Text style={styles.theatresTagText}>IN THEATRES</Text>
@@ -411,9 +413,11 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
   // Inset the plotting area on every side by at least the largest dot
   // radius (4) plus the polyline stroke (2.5) so endpoint dots and line
   // caps never clip at the SVG bounds (e.g. nosedive picks, where the
-  // peak sits on the first beat and the low on the last).
+  // peak sits on the first beat and the low on the last). Top and
+  // bottom insets also reserve room for the 10px score labels, which
+  // sit above the peak dot and below the low dot.
   const PAD_X = 7;
-  const PAD_TOP = 10;
+  const PAD_TOP = 14;
   const PAD_BOTTOM = 14;
   const getX = (t: number) =>
     PAD_X + ((t - minT) / tSpan) * (HERO_GRAPH_WIDTH - PAD_X * 2);
@@ -425,19 +429,26 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
   // Dashed midline at the vertical center of the plotted y-range.
   const midY = PAD_TOP + (HERO_GRAPH_HEIGHT - PAD_TOP - PAD_BOTTOM) / 2;
 
-  // Score label beside each dot. Dots in the left half label to the
-  // right and vice versa, so labels stay in bounds even when the dot
-  // sits on the first or last beat. Baseline is clamped vertically.
-  const dotLabel = (cx: number, cy: number, r: number) => {
+  // Score label for each dot, offset diagonally away from the line:
+  // the polyline is always at or below the peak dot and at or above
+  // the low dot, so placing the peak label above and the low label
+  // below guarantees clearance from the path. Horizontally, dots in
+  // the left half label to the right and vice versa, so labels stay
+  // in bounds even when the dot sits on the first or last beat.
+  const dotLabel = (cx: number, cy: number, r: number, placement: 'above' | 'below') => {
     const onRight = cx <= HERO_GRAPH_WIDTH / 2;
+    const y =
+      placement === 'above'
+        ? Math.max(cy - r - 2, 8) // baseline; text bottom clears the dot top
+        : Math.min(cy + r + 10, HERO_GRAPH_HEIGHT - 1); // text top clears the dot bottom
     return {
       x: onRight ? cx + r + 4 : cx - r - 4,
-      y: Math.min(Math.max(cy + 3.5, 10), HERO_GRAPH_HEIGHT - 2),
+      y,
       anchor: (onRight ? 'start' : 'end') as 'start' | 'end',
     };
   };
-  const peakLabel = peak ? dotLabel(getX(peak.time), getY(peak.score), 4) : null;
-  const lowLabel = lowest ? dotLabel(getX(lowest.time), getY(lowest.score), 3.5) : null;
+  const peakLabel = peak ? dotLabel(getX(peak.time), getY(peak.score), 4, 'above') : null;
+  const lowLabel = lowest ? dotLabel(getX(lowest.time), getY(lowest.score), 3.5, 'below') : null;
 
   const runtime = hero.film.runtime;
 
@@ -536,7 +547,6 @@ function HeroCard({ hero }: { hero: HeroResponse }) {
             {posterUri ? (
               <Image source={{ uri: posterUri }} style={styles.heroPosterImage} resizeMode="cover" />
             ) : null}
-            <TicketStub />
           </View>
           <View style={styles.heroMeta}>
             <Text style={styles.heroTitle} numberOfLines={2}>{film.title}</Text>
