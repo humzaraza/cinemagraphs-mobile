@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Polyline, Circle, Path, Rect } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import Sparkline from '../../src/components/Sparkline';
 import {
   fetchTickerFilms,
   fetchNowPlayingFilms,
@@ -206,7 +207,8 @@ function PosterRow({ films, inTheatres }: { films: Film[]; inTheatres?: boolean 
 }
 
 // ---------------------------------------------------------------------------
-// Movie Market Ticker: title + gold score + teal/red delta with arrow
+// Movie Market Ticker: Apple Stocks widget layout. Stacked title over
+// score + delta, trend-colored sparkline beside (mockup variant D).
 // ---------------------------------------------------------------------------
 
 function TickerItem({ film }: { film: Film }) {
@@ -215,17 +217,31 @@ function TickerItem({ film }: { film: Film }) {
   const dataPoints = film.sentimentGraph?.dataPoints ?? [];
   const delta = calcDelta(dataPoints);
   const isPositive = delta != null && delta >= 0;
+  const trendColor = isPositive ? colors.teal : colors.negativeRed;
 
   return (
     <Pressable onPress={() => router.push(`/film/${film.id}` as any)} style={styles.tickerItem}>
-      <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
-      {score != null && (
-        <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
-      )}
-      {delta != null && (
-        <Text style={[styles.tickerDelta, { color: isPositive ? colors.teal : colors.negativeRed }]}>
-          {isPositive ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}
-        </Text>
+      <View style={styles.tickerCol}>
+        <Text style={styles.tickerTitle} numberOfLines={1}>{film.title}</Text>
+        <View style={styles.tickerScoreRow}>
+          {score != null && (
+            <Text style={styles.tickerScore}>{score.toFixed(1)}</Text>
+          )}
+          {delta != null && (
+            <Text style={[styles.tickerDelta, { color: trendColor }]}>
+              {isPositive ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}
+            </Text>
+          )}
+        </View>
+      </View>
+      {delta != null && dataPoints.length >= 2 && (
+        <Sparkline
+          dataPoints={dataPoints}
+          width={52}
+          height={26}
+          strokeColor={trendColor}
+          strokeWidth={1.6}
+        />
       )}
     </Pressable>
   );
@@ -382,9 +398,15 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
   const tSpan = maxT - minT || 1;
   const sSpan = maxS - minS || 1;
 
+  // Inset the plotting area on every side by at least the largest dot
+  // radius (4) plus the polyline stroke (2.5) so endpoint dots and line
+  // caps never clip at the SVG bounds (e.g. nosedive picks, where the
+  // peak sits on the first beat and the low on the last).
+  const PAD_X = 7;
   const PAD_TOP = 10;
   const PAD_BOTTOM = 14;
-  const getX = (t: number) => ((t - minT) / tSpan) * HERO_GRAPH_WIDTH;
+  const getX = (t: number) =>
+    PAD_X + ((t - minT) / tSpan) * (HERO_GRAPH_WIDTH - PAD_X * 2);
   const getY = (s: number) =>
     PAD_TOP + ((maxS - s) / sSpan) * (HERO_GRAPH_HEIGHT - PAD_TOP - PAD_BOTTOM);
 
@@ -478,7 +500,7 @@ function HeroCard({ hero }: { hero: HeroResponse }) {
 function TickerSkeleton() {
   return (
     <View style={styles.tickerContainer}>
-      <SkeletonBox width={SCREEN_WIDTH} height={17} style={{ borderRadius: 0 }} />
+      <SkeletonBox width={SCREEN_WIDTH} height={40} style={{ borderRadius: 0 }} />
     </View>
   );
 }
@@ -670,7 +692,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,13,26,0.97)',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(200,169,81,0.10)',
-    paddingVertical: 8,
+    paddingVertical: 12,
     overflow: 'hidden',
   },
   tickerStrip: {
@@ -680,28 +702,36 @@ const styles = StyleSheet.create({
   tickerSet: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 24,
+    paddingHorizontal: 17,
+    gap: 34,
   },
   tickerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 12,
+  },
+  tickerCol: {
+    gap: 1,
   },
   tickerTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 11,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
     color: colors.ivory,
-    maxWidth: 140,
+    maxWidth: 150,
+  },
+  tickerScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
   },
   tickerScore: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
     color: colors.gold,
   },
   tickerDelta: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
+    fontSize: 12,
   },
 
   // Hero
