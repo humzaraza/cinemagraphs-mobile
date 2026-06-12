@@ -19,6 +19,7 @@ import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { searchFilms, searchUsers } from '../../src/lib/api';
 import { CATEGORY_LABELS, type CategoryKey } from '../../src/lib/categories';
 import UserCard from '../../src/components/UserCard';
+import RecentlyViewedStrip from '../../src/components/search/RecentlyViewedStrip';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import type { Film } from '../../src/types/film';
 
@@ -399,7 +400,12 @@ export default function SearchScreen() {
         <FlatList
           data={[]}
           renderItem={null}
-          ListHeaderComponent={<BrowseCategories onSelect={onCategoryTap} />}
+          ListHeaderComponent={
+            <>
+              <RecentlyViewedStrip />
+              <BrowseCategories onSelect={onCategoryTap} />
+            </>
+          }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
