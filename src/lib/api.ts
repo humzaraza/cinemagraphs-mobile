@@ -253,8 +253,28 @@ export async function fetchNowPlayingFilms(): Promise<Film[]> {
   return extractFilms(await apiFetch('/films?nowPlaying=true&limit=10'));
 }
 
-export async function fetchRecommendedFilms(): Promise<Film[]> {
-  return extractFilms(await apiFetch('/films?sort=recent&limit=10'));
+// Live recommendation engine (replaces the sort=recent placeholder).
+// GET /api/recommendations returns { films } where each film carries a
+// flat `score` instead of the nested sentimentGraph the /films listings
+// use, so remap it onto sentimentGraph.overallScore for the poster
+// cards. The server excludes unscored films, but a null score maps to
+// a null graph rather than crashing. Same silent-degrade convention as
+// the other Explore rows: [] on any failure.
+export async function fetchRecommendations(): Promise<Film[]> {
+  try {
+    const raw = (await extractFilms(await apiFetch('/recommendations'))) as (Film & {
+      score?: number | null;
+    })[];
+    return raw.map(({ score, ...film }) => ({
+      ...film,
+      sentimentGraph:
+        score != null
+          ? { overallScore: score, dataPoints: [], biggestSwing: null }
+          : null,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // arcShape values contain spaces; keep them URL-encoded inline.
