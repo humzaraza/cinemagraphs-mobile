@@ -357,6 +357,35 @@ export async function fetchCategoryFilms(
   return { films, hasMore: films.length === limit };
 }
 
+// Paginated fetch for the Explore "See all" section screens. Accepts the
+// same /api/films filters the Explore rows use (arcShape, nowPlaying,
+// sort=recent). Same hasMore heuristic as fetchCategoryFilms: a full
+// page means there's likely another one.
+export interface SectionFilter {
+  arcShape?: string;
+  nowPlaying?: boolean;
+  sort?: 'highest' | 'swing' | 'recent';
+}
+
+export async function fetchSectionFilms(
+  filter: SectionFilter,
+  page: number,
+  signal?: AbortSignal,
+): Promise<CategoryFetchResult> {
+  const limit = 21; // multiple of 3 so full pages end on a complete grid row
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (filter.arcShape) qs.set('arcShape', filter.arcShape);
+  if (filter.nowPlaying) qs.set('nowPlaying', 'true');
+  if (filter.sort) qs.set('sort', filter.sort);
+  const res = await apiFetch(`/films?${qs.toString()}`, { signal });
+  if (!res.ok) {
+    throw new Error(`Failed to load section films (${res.status})`);
+  }
+  const data = await res.json();
+  const films = (data?.films ?? (Array.isArray(data) ? data : [])) as Film[];
+  return { films, hasMore: films.length === limit };
+}
+
 /**
  * Fetch the review list for a film, plus the current user's own review
  * (if any) as a separate field. When `excludeCurrentUser` is true the

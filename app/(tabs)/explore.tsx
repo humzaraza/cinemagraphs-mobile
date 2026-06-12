@@ -122,14 +122,32 @@ function SkeletonBox({ width, height, style }: { width: number; height: number; 
 // Section header: title + subtitle left, gold "See all" right
 // ---------------------------------------------------------------------------
 
-function SectionHeader({ title, sub }: { title: string; sub: string }) {
+// filter: the /api/films query params the section row uses, forwarded
+// to the generic section screen as route params.
+function SectionHeader({
+  title,
+  sub,
+  filter,
+}: {
+  title: string;
+  sub: string;
+  filter: { arcShape?: string; nowPlaying?: string; sort?: string };
+}) {
+  const router = useRouter();
   return (
     <View style={styles.secHead}>
       <View>
         <Text style={styles.secTitle}>{title}</Text>
         <Text style={styles.secSub}>{sub}</Text>
       </View>
-      <Text style={styles.secMore}>See all</Text>
+      <Pressable
+        hitSlop={10}
+        onPress={() =>
+          router.push({ pathname: '/section', params: { title, sub, ...filter } } as any)
+        }
+      >
+        <Text style={styles.secMore}>See all</Text>
+      </Pressable>
     </View>
   );
 }
@@ -688,7 +706,11 @@ export default function ExploreScreen() {
         {loadingHero ? <HeroSkeleton /> : hero ? <HeroCard hero={hero} /> : null}
 
         {/* Now Playing */}
-        <SectionHeader title="Now Playing" sub="In theatres this week" />
+        <SectionHeader
+          title="Now Playing"
+          sub="In theatres this week"
+          filter={{ nowPlaying: 'true' }}
+        />
         {loadingNowPlaying ? (
           <PosterRowSkeleton />
         ) : (
@@ -698,13 +720,21 @@ export default function ExploreScreen() {
         <Divider />
 
         {/* Hidden Peaks */}
-        <SectionHeader title="Hidden Peaks" sub="Films that crest in the middle" />
+        <SectionHeader
+          title="Hidden Peaks"
+          sub="Films that crest in the middle"
+          filter={{ arcShape: 'hidden peak' }}
+        />
         {loadingHiddenPeaks ? <PosterRowSkeleton /> : <PosterRow films={hiddenPeaks} />}
 
         <Divider />
 
         {/* Slow Burns */}
-        <SectionHeader title="Slow Burns" sub="A steady climb to the finish" />
+        <SectionHeader
+          title="Slow Burns"
+          sub="A steady climb to the finish"
+          filter={{ arcShape: 'slow burn' }}
+        />
         {loadingSlowBurns ? <PosterRowSkeleton /> : <PosterRow films={slowBurns} />}
 
         {/* Recommended for You (5+ reviews only) */}
@@ -712,7 +742,11 @@ export default function ExploreScreen() {
         {showRecommended && (
           <>
             <Divider />
-            <SectionHeader title="Recommended for You" sub="Based on what you've reviewed" />
+            <SectionHeader
+              title="Recommended for You"
+              sub="Based on what you've reviewed"
+              filter={{ sort: 'recent' }}
+            />
             {loadingRecommended ? <PosterRowSkeleton /> : <PosterRow films={recommended} />}
           </>
         )}

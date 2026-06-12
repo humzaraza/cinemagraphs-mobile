@@ -37,6 +37,7 @@ function RootNav() {
       <Stack.Screen name="list/[id]" />
       <Stack.Screen name="film/[id]" />
       <Stack.Screen name="category/[key]" />
+      <Stack.Screen name="section" />
       <Stack.Screen name="review" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="live-react/index" />
