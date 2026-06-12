@@ -38,6 +38,9 @@ export interface Film {
   director: string | null;
   sentimentGraph: SentimentGraph | null;
   filmBeats?: FilmBeats | null;
+  // Returned by /api/films and /api/hero for authenticated requests
+  // only; absent when anonymous or on older server responses.
+  userHasReviewed?: boolean;
 }
 
 export interface PeakLowMoment {
