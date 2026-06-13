@@ -16,6 +16,9 @@ export default function SectionHeader({ title, allLink }: SectionHeaderProps) {
           accessibilityRole="link"
           accessibilityLabel={allLink.label}
           onPress={allLink.onPress}
+          // Baseline-aligned header: hitSlop reaches a 44pt target without a
+          // min-height that would shift the row.
+          hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}
         >
           <Text style={styles.allLink}>{allLink.label}</Text>
         </Pressable>

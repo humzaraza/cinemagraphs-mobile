@@ -129,17 +129,38 @@ function OverallRatingCard({
         <Text style={styles.overallLabel}>Overall rating</Text>
         <Text style={styles.overallScore}>{value.toFixed(1)}</Text>
       </View>
-      <Slider
-        value={value}
-        onValueChange={onChange}
-        minimumValue={1}
-        maximumValue={10}
-        step={0.5}
-        minimumTrackTintColor="#C8A951"
-        maximumTrackTintColor="rgba(245,240,225,0.08)"
-        thumbTintColor="#C8A951"
-        style={{ height: 28 }}
-      />
+      <View
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel="Your rating"
+        accessibilityValue={{ text: `${value.toFixed(1)} out of 10` }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          // @react-native-community/slider does not reliably forward
+          // onAccessibilityAction from its JS props to the native view, so the
+          // VoiceOver adjust gesture is wired on this wrapper View instead.
+          // Step and clamp match the Slider so touch and screen reader agree.
+          const action = event.nativeEvent.actionName;
+          if (action === 'increment') {
+            onChange(Math.min(10, value + 0.5));
+          } else if (action === 'decrement') {
+            onChange(Math.max(1, value - 0.5));
+          }
+        }}
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Slider
+          value={value}
+          onValueChange={onChange}
+          minimumValue={1}
+          maximumValue={10}
+          step={0.5}
+          minimumTrackTintColor="#C8A951"
+          maximumTrackTintColor="rgba(245,240,225,0.08)"
+          thumbTintColor="#C8A951"
+          style={{ height: 28 }}
+        />
+      </View>
       <View style={styles.scaleRow}>
         <Text style={styles.scaleLabel}>1</Text>
         <Text style={styles.scaleLabel}>5</Text>
@@ -171,17 +192,38 @@ function BeatCard({
         </Text>
         <Text style={styles.beatScore}>{value.toFixed(1)}</Text>
       </View>
-      <Slider
-        value={value}
-        onValueChange={onChange}
-        minimumValue={1}
-        maximumValue={10}
-        step={0.5}
-        minimumTrackTintColor="#C8A951"
-        maximumTrackTintColor="rgba(245,240,225,0.08)"
-        thumbTintColor="#C8A951"
-        style={{ height: 24 }}
-      />
+      <View
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={dp.label}
+        accessibilityValue={{ text: `${value.toFixed(1)} out of 10` }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          // @react-native-community/slider does not reliably forward
+          // onAccessibilityAction from its JS props to the native view, so the
+          // VoiceOver adjust gesture is wired on this wrapper View instead.
+          // Step and clamp match the Slider so touch and screen reader agree.
+          const action = event.nativeEvent.actionName;
+          if (action === 'increment') {
+            onChange(Math.min(10, value + 0.5));
+          } else if (action === 'decrement') {
+            onChange(Math.max(1, value - 0.5));
+          }
+        }}
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Slider
+          value={value}
+          onValueChange={onChange}
+          minimumValue={1}
+          maximumValue={10}
+          step={0.5}
+          minimumTrackTintColor="#C8A951"
+          maximumTrackTintColor="rgba(245,240,225,0.08)"
+          thumbTintColor="#C8A951"
+          style={{ height: 24 }}
+        />
+      </View>
       <View style={styles.scaleRow}>
         <Text style={styles.scaleHint}>Hated it</Text>
         <Text style={styles.scaleHint}>Neutral</Text>

@@ -329,6 +329,9 @@ function MovieTicker({ films }: { films: Film[] }) {
   return (
     <View
       style={styles.tickerContainer}
+      accessible
+      accessibilityLabel="Market ticker showing today's film scores"
+      importantForAccessibility="no-hide-descendants"
       onStartShouldSetResponder={() => true}
       onMoveShouldSetResponder={() => true}
       onResponderGrant={(e) => {

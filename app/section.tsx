@@ -81,14 +81,27 @@ function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
   const uri = getPosterUrl(film, 'grid');
   const score = film.sentimentGraph?.overallScore;
   const optimistic = useIsReviewed(film.id);
+  const reviewed = film.userHasReviewed || optimistic;
+  // Score clause only when a score exists; "Reviewed." appended when the
+  // stub is showing. Mirrors SimilarFilmCard's label composition.
+  const scoreClause = score != null ? ` Score ${score.toFixed(1)}.` : '';
   return (
-    <Pressable onPress={onPress} style={styles.tile}>
+    <Pressable
+      onPress={onPress}
+      style={styles.tile}
+      accessibilityRole="button"
+      accessibilityLabel={
+        reviewed
+          ? `${film.title}, ${film.year}.${scoreClause} Reviewed.`
+          : `${film.title}, ${film.year}.${scoreClause}`
+      }
+    >
       {uri ? (
         <Image source={{ uri }} style={styles.poster} resizeMode="cover" />
       ) : (
         <View style={styles.poster} />
       )}
-      {(film.userHasReviewed || optimistic) && <TicketStub />}
+      {reviewed && <TicketStub />}
       <Text style={styles.tileTitle} numberOfLines={2}>{film.title}</Text>
       {score != null && <Text style={styles.tileScore}>{score.toFixed(1)}</Text>}
     </Pressable>
