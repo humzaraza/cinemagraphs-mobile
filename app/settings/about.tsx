@@ -61,6 +61,21 @@ function GridIcon() {
   );
 }
 
+function FavoriteIcon() {
+  return (
+    <Svg width={28} height={28} viewBox="0 0 28 28" fill="none">
+      <Path
+        d="M14 21.5C13 20 5 14.5 5 9.5 5 7 7 5.5 9.2 5.5 11 5.5 12.8 6.6 14 8.3 15.2 6.6 17 5.5 18.8 5.5 21 5.5 23 7 23 9.5 23 14.5 15 20 14 21.5Z"
+        stroke={colors.gold}
+        strokeWidth={1.5}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 const INFO_CARDS = [
   {
     icon: ArcIcon,
@@ -81,6 +96,11 @@ const INFO_CARDS = [
     icon: PlayIcon,
     title: 'Live react',
     body: 'Start a session while watching. Use the slider and reaction buttons to capture how you feel in real-time. Rate beats after to create a combined arc.',
+  },
+  {
+    icon: FavoriteIcon,
+    title: 'Favorites',
+    body: "Feature up to four films you've reviewed on your profile. Each one shows your personal arc shape, not just a poster. Tap an empty slot to pick one, and long-press a favorite to remove it.",
   },
   {
     icon: GridIcon,
