@@ -1000,7 +1000,10 @@ function StoryBeatPills({ film, activeBeatIndex }: { film: FilmDetail; activeBea
 // Peak / Low cards
 // ---------------------------------------------------------------------------
 
-function PeakLowCards({ film, blind }: { film: FilmDetail; blind: boolean }) {
+// Blind mode is owned entirely by the caller: when blind, the parent does not
+// render this component at all (see the call site), so the card never needs to
+// know about blind state. It always renders its labels and full score meta.
+function PeakLowCards({ film }: { film: FilmDetail }) {
   const sg = film.sentimentGraph;
   if (!sg?.peakMoment || !sg?.lowestMoment) return null;
 
@@ -1013,18 +1016,14 @@ function PeakLowCards({ film, blind }: { film: FilmDetail; blind: boolean }) {
         <Text style={styles.peakLabel}>Peak moment</Text>
         <Text style={styles.peakTitle}>{peak.label}</Text>
         <Text style={styles.peakMeta}>
-          {blind
-            ? formatTimestamp(peak.time)
-            : `${formatTimestamp(peak.time)} \u00B7 ${formatScore(peak.score)}/10`}
+          {`${formatTimestamp(peak.time)} \u00B7 ${formatScore(peak.score)}/10`}
         </Text>
       </View>
       <View style={styles.lowCard}>
         <Text style={styles.lowLabel}>Lowest point</Text>
         <Text style={styles.lowTitle}>{low.label}</Text>
         <Text style={styles.lowMeta}>
-          {blind
-            ? formatTimestamp(low.time)
-            : `${formatTimestamp(low.time)} \u00B7 ${formatScore(low.score)}/10`}
+          {`${formatTimestamp(low.time)} \u00B7 ${formatScore(low.score)}/10`}
         </Text>
       </View>
     </View>
@@ -1395,7 +1394,10 @@ export default function FilmDetailScreen() {
           <MetadataRow film={film} />
           <SentimentArc film={film} activeBeatIndex={activeBeatIndex} setActiveBeatIndex={setActiveBeatIndex} setIsGraphTouched={setIsGraphTouched} audienceData={audienceData} graphMode={graphMode} setGraphMode={setGraphMode} blind={blind} />
           <StoryBeatPills film={film} activeBeatIndex={activeBeatIndex} />
-          <PeakLowCards film={film} blind={blind} />
+          {/* Blind mode masks scores, but the peak/low LABELS would still
+              telegraph the arc's shape (where it spikes, where it dips). Skip
+              rendering the cards entirely while blind so no shape signal leaks. */}
+          {!blind && <PeakLowCards film={film} />}
           <AISummary summary={film.sentimentGraph?.summary} />
           {myReview ? (
             <YourReview review={myReview} filmId={film.id} blind={blind} />
