@@ -51,6 +51,7 @@ import RecentReviewsRow from '../../src/components/profile/RecentReviewsRow';
 import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+import { useToast } from '../../src/components/ui/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const POSTER_GAP = 8;
@@ -391,6 +392,8 @@ export default function ProfileScreen() {
   // the fetch entirely (resolveBannerSource ignores the film record).
   const [bannerFilm, setBannerFilm] = useState<FilmDetail | null>(null);
 
+  const { showError } = useToast();
+
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
     fetchUserProfile()
@@ -403,6 +406,7 @@ export default function ProfileScreen() {
       })
       .catch((e) => {
         console.error('[Profile] fetchUserProfile error:', e);
+        showError('Could not load your profile.');
       })
       .finally(() => setFirstFetchComplete(true));
     Promise.all([
@@ -432,10 +436,23 @@ export default function ProfileScreen() {
         const unique = all.filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
         setFilms(unique);
       })
-      .catch((e) => console.error('[Profile] fetchUserFilms error:', e));
-    fetchUserWatchlist().then(setWatchlist).catch((e) => console.error('[Profile] fetchUserWatchlist error:', e));
-    fetchUserLists().then(setLists).catch((e) => console.error('[Profile] fetchUserLists error:', e));
-  }, [isAuthenticated]);
+      .catch((e) => {
+        console.error('[Profile] fetchUserFilms error:', e);
+        showError('Could not load your films.');
+      });
+    fetchUserWatchlist()
+      .then(setWatchlist)
+      .catch((e) => {
+        console.error('[Profile] fetchUserWatchlist error:', e);
+        showError('Could not load your watchlist.');
+      });
+    fetchUserLists()
+      .then(setLists)
+      .catch((e) => {
+        console.error('[Profile] fetchUserLists error:', e);
+        showError('Could not load your lists.');
+      });
+  }, [isAuthenticated, showError]);
 
   useFocusEffect(loadProfile);
 
