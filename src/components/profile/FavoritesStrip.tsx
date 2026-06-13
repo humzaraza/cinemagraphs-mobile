@@ -19,7 +19,6 @@ export default function FavoritesStrip({
   onRemoveFavorite,
 }: FavoritesStripProps) {
   const isEmpty = favorites.length === 0;
-  const isFull = favorites.length >= 4;
 
   return (
     <View style={styles.wrap}>
@@ -38,9 +37,6 @@ export default function FavoritesStrip({
         <Text style={styles.microcopy}>
           Favorite films you&apos;ve reviewed. Each shows your personal arc shape.
         </Text>
-      )}
-      {isFull && (
-        <Text style={styles.microcopy}>Long-press a favorite to remove it.</Text>
       )}
     </View>
   );
