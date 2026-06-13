@@ -110,13 +110,13 @@ Pass/fail notes:
 
 Reach it: open the Profile tab, go to Lists, and open any list (or open a public list from another user's profile). The header has three small icon buttons on the right: poster view, graph view, and a menu.
 
-- [ ] Poster-view toggle (grid icon) -> "button" (no descriptive name in this batch)
-- [ ] Graph-view toggle (list icon) -> "button"
-- [ ] Menu toggle (three lines) -> "button"
+- [ ] Poster-view toggle (grid icon) -> "Poster view" (button)
+- [ ] Graph-view toggle (list icon) -> "Graph view" (button)
+- [ ] Menu toggle (three lines) -> "List options" (button). Activating it opens the List options sheet (currently containing Delete list).
 
 Pass/fail notes:
+- [ ] Each toggle MUST announce its descriptive label, not a bare "button". If you hear "button" with no name, the label did not apply.
 - [ ] 44pt target: each icon is about 16pt with padding 4 (about 24pt box) and now carries hitSlop 10 on every side, giving a roughly 44pt touch area. Confirm each is easily tappable without hitting a neighbor.
-- [ ] Known gap (not a failure for this pass): these three toggles announce only as "button" with no descriptive label. Adding labels ("Poster view", "Graph view", "List options") is a recommended follow-up; this batch only enlarged the touch targets.
 
 ## Write Review screen - sliders (review.tsx)
 
