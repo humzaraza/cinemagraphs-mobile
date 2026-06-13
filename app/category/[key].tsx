@@ -68,14 +68,24 @@ function SkeletonTile() {
 function PosterTile({ film, onPress }: { film: Film; onPress: () => void }) {
   const uri = getPosterUrl(film, 'grid');
   const optimistic = useIsReviewed(film.id);
+  const reviewed = film.userHasReviewed || optimistic;
   return (
-    <Pressable onPress={onPress} style={styles.tile}>
+    <Pressable
+      onPress={onPress}
+      style={styles.tile}
+      accessibilityRole="button"
+      accessibilityLabel={
+        reviewed
+          ? `${film.title}, ${film.year}. Reviewed.`
+          : `${film.title}, ${film.year}`
+      }
+    >
       {uri ? (
         <Image source={{ uri }} style={styles.poster} resizeMode="cover" />
       ) : (
         <View style={[styles.poster, styles.posterFallback]} />
       )}
-      {(film.userHasReviewed || optimistic) && <TicketStub />}
+      {reviewed && <TicketStub />}
     </Pressable>
   );
 }

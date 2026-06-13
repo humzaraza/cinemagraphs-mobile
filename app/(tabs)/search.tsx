@@ -132,6 +132,8 @@ function BrowseCategories({ onSelect }: { onSelect: (key: CategoryKey) => void }
           <Pressable
             key={key}
             onPress={() => onSelect(key)}
+            accessibilityRole="button"
+            accessibilityLabel={`Browse ${label}`}
             style={[
               styles.categoryRow,
               i < CATEGORIES_IN_ORDER.length - 1 && styles.categoryDivider,
@@ -162,6 +164,8 @@ function ResultCard({ film }: { film: Film }) {
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.resultCard}
+      accessibilityRole="button"
+      accessibilityLabel={`${film.title}${film.year ? `, ${film.year}` : ''}${director ? `, directed by ${director}` : ''}`}
     >
       {posterUri ? (
         <Image source={{ uri: posterUri }} style={styles.resultPoster} resizeMode="cover" />

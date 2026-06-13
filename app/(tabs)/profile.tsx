@@ -281,6 +281,12 @@ function PosterCell({
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.posterCell}
+      accessibilityRole="button"
+      accessibilityLabel={
+        showSparkline
+          ? `${film.title}. Your score ${film.personalScore.toFixed(1)}.`
+          : film.title
+      }
     >
       <View style={styles.posterImageContainer}>
         {imgError || !posterUri ? (
@@ -329,6 +335,8 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
     <Pressable
       onPress={() => router.push(`/film/${film.id}` as any)}
       style={styles.posterCell}
+      accessibilityRole="button"
+      accessibilityLabel={film.title}
     >
       <View style={styles.posterImageContainer}>
         {imgError || !posterUri ? (

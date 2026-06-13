@@ -298,13 +298,13 @@ export default function ListDetailScreen() {
           </Pressable>
           <Text style={styles.title} numberOfLines={1}>{list.name}</Text>
           <View style={styles.toggleRow}>
-            <Pressable onPress={() => setViewMode('poster')} style={styles.toggleBtn}>
+            <Pressable onPress={() => setViewMode('poster')} style={styles.toggleBtn} hitSlop={10}>
               <GridIcon active={viewMode === 'poster'} />
             </Pressable>
-            <Pressable onPress={() => setViewMode('graph')} style={styles.toggleBtn}>
+            <Pressable onPress={() => setViewMode('graph')} style={styles.toggleBtn} hitSlop={10}>
               <ListViewIcon active={viewMode === 'graph'} />
             </Pressable>
-            <Pressable onPress={() => setShowMenu(true)} style={styles.toggleBtn} hitSlop={8}>
+            <Pressable onPress={() => setShowMenu(true)} style={styles.toggleBtn} hitSlop={10}>
               <MenuIcon />
             </Pressable>
           </View>

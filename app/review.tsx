@@ -138,6 +138,8 @@ function OverallRatingCard({
         minimumTrackTintColor="#C8A951"
         maximumTrackTintColor="rgba(245,240,225,0.08)"
         thumbTintColor="#C8A951"
+        accessibilityRole="adjustable"
+        accessibilityValue={{ text: `Your rating, ${value.toFixed(1)} out of 10` }}
         style={{ height: 28 }}
       />
       <View style={styles.scaleRow}>
@@ -180,6 +182,8 @@ function BeatCard({
         minimumTrackTintColor="#C8A951"
         maximumTrackTintColor="rgba(245,240,225,0.08)"
         thumbTintColor="#C8A951"
+        accessibilityRole="adjustable"
+        accessibilityValue={{ text: `${dp.label}, ${value.toFixed(1)} out of 10` }}
         style={{ height: 24 }}
       />
       <View style={styles.scaleRow}>
