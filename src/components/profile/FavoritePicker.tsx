@@ -13,6 +13,7 @@ import { colors, fonts, borderRadius } from '../../constants/theme';
 import { fetchUserFilms, type UserReviewedFilm } from '../../lib/api';
 import { getPosterUrl } from '../../lib/tmdb-image';
 import BottomSheet from '../BottomSheet';
+import { useToast } from '../ui/Toast';
 
 type FavoritePickerProps = {
   // Parent controls visibility.
@@ -35,6 +36,7 @@ export default function FavoritePicker({
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
+  const { showError } = useToast();
 
   // Fetch the caller's reviewed films once per open. Reset on close so
   // the next open starts fresh (and re-fetches in case reviews changed).
@@ -58,6 +60,7 @@ export default function FavoritePicker({
         if (cancelled) return;
         setFilms([]);
         setLoaded(true);
+        showError('Could not load your films. Please try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -65,7 +68,7 @@ export default function FavoritePicker({
     return () => {
       cancelled = true;
     };
-  }, [visible]);
+  }, [visible, showError]);
 
   // Client-side title filter. These are the user's own reviewed films, so
   // there is no remote search; just narrow the already-fetched list.

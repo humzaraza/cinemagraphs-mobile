@@ -1279,7 +1279,7 @@ export default function FilmDetailScreen() {
     return resolveBlindForFilm(blindState, film.id, !!film.userHasReviewed);
   }, [blindOverride, blindState, film]);
 
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   // useBlindToggle owns: optimistic flip, server PUT, revert + toast on
   // failure, and first-encounter tooltip gating (flag only flips after
@@ -1324,12 +1324,16 @@ export default function FilmDetailScreen() {
       if (inWatchlist) {
         await removeFromWatchlist(id);
         setInWatchlist(false);
+        showSuccess('Removed from watchlist');
       } else {
         await addToWatchlist(id);
         setInWatchlist(true);
+        showSuccess('Added to watchlist');
       }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e) {
       console.error('[Watchlist] toggle error:', e);
+      showError('Could not update watchlist. Please try again.');
     }
   };
 
@@ -1432,8 +1436,11 @@ export default function FilmDetailScreen() {
                     await addFilmToListAPI(list.id, id);
                     const updated = await fetchUserLists();
                     setLists(updated);
+                    showSuccess(`Added to ${list.name}`);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                   } catch (e) {
                     console.error('[AddToList] API error:', e);
+                    showError('Could not add to list. Please try again.');
                   }
                   setShowListSheet(false);
                 }

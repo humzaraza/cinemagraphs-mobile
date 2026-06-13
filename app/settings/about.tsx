@@ -85,7 +85,7 @@ const INFO_CARDS = [
   {
     icon: TicketIcon,
     title: 'The ticket stub',
-    body: 'Tap the ticket stub on any poster to mark a film as watched. Set the date. Once you review it, it moves from Watched to Reviewed.',
+    body: "The ticket stub on a poster marks a film you've reviewed. It's a passive badge, not a button, and it appears anywhere that film shows up once your review is in.",
   },
   {
     icon: SliderIcon,
