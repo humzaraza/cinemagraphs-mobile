@@ -11,6 +11,7 @@ import {
   Switch,
   BackHandler,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +26,9 @@ import {
   fetchUserLists,
   createUserList,
   fetchFilmDetail,
+  updateFavorites,
   type UserProfile,
+  type UserReviewedFilm,
 } from '../../src/lib/api';
 import {
   type MockFilm,
@@ -43,6 +46,7 @@ import ProfileIdentity from '../../src/components/profile/ProfileIdentity';
 import ProfileStats from '../../src/components/profile/ProfileStats';
 import SectionHeader from '../../src/components/profile/SectionHeader';
 import FavoritesStrip from '../../src/components/profile/FavoritesStrip';
+import FavoritePicker from '../../src/components/profile/FavoritePicker';
 import RecentReviewsRow from '../../src/components/profile/RecentReviewsRow';
 import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
@@ -367,6 +371,7 @@ export default function ProfileScreen() {
   const [newListPublic, setNewListPublic] = useState(true);
   const [newListFilmIds, setNewListFilmIds] = useState<string[]>([]);
   const [showFilmPicker, setShowFilmPicker] = useState(false);
+  const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   // Cache of films picked via FilmPicker, keyed by id. Used so the
   // chip row in the New List sheet can render posters for films
   // outside the user's reviewed/watched set. Reset on list create.
@@ -659,6 +664,57 @@ export default function ProfileScreen() {
     setNewListFilmIds((prev) => prev.filter((id) => id !== filmId));
   };
 
+  // Favorites are review-derived, ordered, and capped at 4. The same film
+  // may occupy more than one slot, so every operation works on the ordered
+  // id list verbatim: appends add a slot, removes drop a single slot by
+  // index. The server returns the rebuilt profile, which we adopt directly.
+  // Plain functions (not useCallback) to match the sibling handlers and to
+  // sit safely below the component's early returns.
+  const handleAddFavorite = () => {
+    if (!profile) return;
+    if (profile.user.favoriteFilms.length >= 4) return;
+    setShowFavoritePicker(true);
+  };
+
+  const handleSelectFavorite = async (film: UserReviewedFilm) => {
+    if (!profile) return;
+    const current = profile.user.favoriteFilms.map((f) => f.id);
+    if (current.length >= 4) return;
+    // Close immediately so a second tap during the request cannot append
+    // a duplicate the user did not intend. Reopen via "+" to add another.
+    setShowFavoritePicker(false);
+    try {
+      const updated = await updateFavorites([...current, film.id]);
+      setProfile(updated);
+    } catch (e) {
+      console.error('[Profile] add favorite error:', e);
+    }
+  };
+
+  const handleRemoveFavorite = (index: number) => {
+    if (!profile) return;
+    const current = profile.user.favoriteFilms;
+    if (index < 0 || index >= current.length) return;
+    Alert.alert('Remove from favorites?', "This won't delete your review.", [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          // Remove by slot index, not by film id: dropping one copy of a
+          // film that fills multiple slots must leave the others intact.
+          const next = current.filter((_, i) => i !== index).map((f) => f.id);
+          try {
+            const updated = await updateFavorites(next);
+            setProfile(updated);
+          } catch (e) {
+            console.error('[Profile] remove favorite error:', e);
+          }
+        },
+      },
+    ]);
+  };
+
   const renderLists = () => (
     <>
       {/* New list button */}
@@ -806,11 +862,10 @@ export default function ProfileScreen() {
 
           <SectionHeader title="FAVORITE FILMS" />
           <FavoritesStrip
-            favorites={[]}
-            onAddFavorite={() => {
-              // No-op until favorite editing ships (PR 9).
-            }}
+            favorites={profile.user.favoriteFilms}
+            onAddFavorite={handleAddFavorite}
             onPressFilm={(filmId) => router.push(`/film/${filmId}` as any)}
+            onRemoveFavorite={handleRemoveFavorite}
           />
 
           <SectionHeader
@@ -985,6 +1040,13 @@ export default function ProfileScreen() {
         onSelect={togglePickedFilm}
         selectedIds={new Set(newListFilmIds)}
         title="Add films"
+      />
+
+      {/* ---- Favorite Picker (single-add, review-derived favorites) ---- */}
+      <FavoritePicker
+        visible={showFavoritePicker}
+        onClose={() => setShowFavoritePicker(false)}
+        onSelect={handleSelectFavorite}
       />
 
       {/* ---- Banner 3-dots menu sheet ---- */}

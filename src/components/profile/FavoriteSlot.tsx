@@ -15,12 +15,16 @@ type FavoriteSlotProps = {
   film?: FavoriteFilm;
   onAdd?: () => void;
   onPressFilm?: (filmId: string) => void;
+  // Fired on long-press of a filled slot. The parent removes by slot
+  // index (it already knows which slot this is), so this takes no args.
+  onLongPress?: () => void;
 };
 
 export default function FavoriteSlot({
   film,
   onAdd,
   onPressFilm,
+  onLongPress,
 }: FavoriteSlotProps) {
   if (!film) {
     return (
@@ -51,6 +55,7 @@ export default function FavoriteSlot({
         accessibilityRole="button"
         accessibilityLabel={`View ${film.title}`}
         onPress={() => onPressFilm?.(film.id)}
+        onLongPress={onLongPress}
         hitSlop={8}
       >
         <View style={styles.posterShadow}>
