@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
-  Alert,
   BackHandler,
   ActivityIndicator,
   useWindowDimensions,
@@ -15,6 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../src/constants/theme';
+import { useToast } from '../src/components/ui/Toast';
 import {
   getBackdrops,
   updateUserBanner,
@@ -121,6 +121,8 @@ export default function BackdropPickerScreen() {
   // path once per mount, even across the load -> setBackdrops re-render.
   const autoSavedRef = useRef(false);
 
+  const { showError } = useToast();
+
   // -------------------------------------------------------------------------
   // Hardware back (no-op while saving so user cannot abandon mid-PATCH)
   // -------------------------------------------------------------------------
@@ -155,22 +157,22 @@ export default function BackdropPickerScreen() {
           e instanceof Error
             ? e.message
             : 'Could not save banner. Please try again.';
-        Alert.alert('Save failed', message);
+        showError(message);
         setSaving(false);
         // Selection is preserved (selectedFilePath state untouched).
       }
     },
-    [saving, filmId, router],
+    [saving, filmId, router, showError],
   );
 
   // -------------------------------------------------------------------------
   // Initial load: cache hit -> use cached data; cache miss -> fetch.
-  // Empty / errored response -> Alert and pop back to picker.
+  // Empty / errored response -> toast and pop back to picker.
   // Single-backdrop response -> auto-save and pop both screens.
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!filmId) {
-      Alert.alert('Could not load backdrop options for this film');
+      showError('Could not load backdrop options for this film.');
       router.back();
       return;
     }
@@ -192,7 +194,7 @@ export default function BackdropPickerScreen() {
       })
       .catch(() => {
         if (cancelled) return;
-        Alert.alert('Could not load backdrop options for this film');
+        showError('Could not load backdrop options for this film.');
         router.back();
       })
       .finally(() => {
@@ -211,7 +213,7 @@ export default function BackdropPickerScreen() {
   // cache-miss paths share the logic.
   function handleLoaded(list: Backdrop[]) {
     if (list.length === 0) {
-      Alert.alert('Could not load backdrop options for this film');
+      showError('Could not load backdrop options for this film.');
       router.back();
       return;
     }

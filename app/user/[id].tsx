@@ -53,7 +53,9 @@ export default function PublicProfileScreen() {
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  // Distinguish a genuine 404 (no such user / private) from a network or
+  // server failure, so the latter offers a retry instead of a dead end.
+  const [loadError, setLoadError] = useState<'none' | 'notfound' | 'network'>('none');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [activeTab, setActiveTab] = useState<ProfileTab>('reviews');
@@ -67,10 +69,12 @@ export default function PublicProfileScreen() {
   const loadProfile = useCallback(async () => {
     if (!id) return;
     setLoading(true);
+    setLoadError('none');
     try {
       const data = await fetchPublicProfile(id);
       if (!data) {
-        setNotFound(true);
+        // fetchPublicProfile returns null only on a real 404.
+        setLoadError('notfound');
         return;
       }
       setProfile(data);
@@ -87,7 +91,8 @@ export default function PublicProfileScreen() {
         }
       }
     } catch {
-      setNotFound(true);
+      // A throw means a network/server error, not a missing user.
+      setLoadError('network');
     } finally {
       setLoading(false);
     }
@@ -135,14 +140,25 @@ export default function PublicProfileScreen() {
     );
   }
 
-  if (notFound || !profile) {
+  if (loadError !== 'none' || !profile) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <BackIcon />
         </Pressable>
         <View style={styles.centered}>
-          <Text style={styles.notFoundText}>User not found</Text>
+          {loadError === 'network' ? (
+            <>
+              <Text style={styles.notFoundText}>
+                Could not load this profile. Check your connection and try again.
+              </Text>
+              <Pressable onPress={loadProfile} style={styles.retryBtn}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Text style={styles.notFoundText}>User not found</Text>
+          )}
         </View>
       </View>
     );
@@ -344,7 +360,23 @@ const styles = StyleSheet.create({
   notFoundText: {
     fontFamily: fonts.body,
     fontSize: 15,
+    lineHeight: 21,
     color: 'rgba(245,240,225,0.4)',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    marginBottom: 16,
+  },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.25)',
+    borderRadius: borderRadius.md,
+  },
+  retryBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.gold,
   },
   backBtn: {
     paddingVertical: 12,
