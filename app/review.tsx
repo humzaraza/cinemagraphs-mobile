@@ -139,6 +139,18 @@ function OverallRatingCard({
         maximumTrackTintColor="rgba(245,240,225,0.08)"
         thumbTintColor="#C8A951"
         accessibilityRole="adjustable"
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          // role="adjustable" alone does not move the value for VoiceOver;
+          // the swipe-up/down gesture dispatches these actions. Step and
+          // clamp match the Slider above so touch and screen reader agree.
+          const action = event.nativeEvent.actionName;
+          if (action === 'increment') {
+            onChange(Math.min(10, value + 0.5));
+          } else if (action === 'decrement') {
+            onChange(Math.max(1, value - 0.5));
+          }
+        }}
         accessibilityValue={{ text: `Your rating, ${value.toFixed(1)} out of 10` }}
         style={{ height: 28 }}
       />
@@ -183,6 +195,18 @@ function BeatCard({
         maximumTrackTintColor="rgba(245,240,225,0.08)"
         thumbTintColor="#C8A951"
         accessibilityRole="adjustable"
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          // role="adjustable" alone does not move the value for VoiceOver;
+          // the swipe-up/down gesture dispatches these actions. Step and
+          // clamp match the Slider above so touch and screen reader agree.
+          const action = event.nativeEvent.actionName;
+          if (action === 'increment') {
+            onChange(Math.min(10, value + 0.5));
+          } else if (action === 'decrement') {
+            onChange(Math.max(1, value - 0.5));
+          }
+        }}
         accessibilityValue={{ text: `${dp.label}, ${value.toFixed(1)} out of 10` }}
         style={{ height: 24 }}
       />
