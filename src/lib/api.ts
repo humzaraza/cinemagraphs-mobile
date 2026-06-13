@@ -629,6 +629,18 @@ export async function loginWithApple(identityToken: string, fullName?: string | 
 
 export type BannerType = 'GRADIENT' | 'PHOTO' | 'BACKDROP';
 
+// A review-derived favorite as hydrated by the profile payload. Mirrors
+// UserProfileRecentReview's sparklinePoints (the per-user arc overlay).
+// Shape matches the FavoriteFilm type FavoriteSlot renders, so the
+// profile screen can pass these through without remapping.
+export interface UserProfileFavoriteFilm {
+  id: string;
+  title: string;
+  year: number | null;
+  posterUrl: string | null;
+  sparklinePoints: number[];
+}
+
 export interface UserProfileUser {
   id: string;
   name: string | null;
@@ -637,6 +649,9 @@ export interface UserProfileUser {
   image: string | null;
   bannerType: BannerType;
   bannerValue: string;
+  // Ordered, max 4. May contain the same film more than once: a film can
+  // occupy multiple slots, so this is not a deduped set.
+  favoriteFilms: UserProfileFavoriteFilm[];
 }
 
 export interface UserProfileStats {
@@ -677,6 +692,24 @@ export async function fetchUserProfile(): Promise<UserProfile | null> {
       console.error('[API] fetchUserProfile failed:', res.status);
     }
     return null;
+  }
+  return res.json();
+}
+
+// Replace the caller's favorite films with the given ordered list and
+// return the rebuilt profile payload. The list is sent verbatim: order is
+// preserved and duplicates are allowed (the same film may appear in more
+// than one slot). The server caps the list at 4 and rejects films the
+// caller has not reviewed, but the UI never sends an invalid list, so
+// those guards are not expected to fire from the app.
+export async function updateFavorites(filmIds: string[]): Promise<UserProfile> {
+  const res = await apiFetch('/user/favorites', {
+    method: 'PATCH',
+    body: JSON.stringify({ favoriteFilms: filmIds }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update favorites');
   }
   return res.json();
 }
@@ -728,6 +761,19 @@ export async function getBackdrops(filmId: string): Promise<Backdrop[]> {
   // Server may return { backdrops: [...] } or a bare array; tolerate both.
   const list = Array.isArray(data) ? data : (data?.backdrops ?? []);
   return list as Backdrop[];
+}
+
+// One of the caller's own reviewed films, as returned by
+// GET /user/films?type=reviewed. The favorite picker only needs id /
+// title / poster / year to render its grid; `sparkline` is the canonical
+// graph's data points (not the per-user overlay) and is carried for
+// parity with the endpoint, not currently rendered in the picker.
+export interface UserReviewedFilm {
+  id: string;
+  title: string;
+  posterUrl: string | null;
+  year: number | null;
+  sparkline: { score: number; label?: string }[] | null;
 }
 
 export async function fetchUserFilms(type?: string): Promise<any[]> {
