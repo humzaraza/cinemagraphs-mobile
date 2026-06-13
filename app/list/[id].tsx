@@ -127,8 +127,14 @@ export default function ListDetailScreen() {
   // Track ownership by which endpoint succeeded
   const [isOwnerList, setIsOwnerList] = useState(false);
 
+  // Distinguish a genuine 404 (list not found / not public) from a network
+  // or server failure, so the latter offers a retry instead of a dead end.
+  const [loadError, setLoadError] = useState<'none' | 'notfound' | 'network'>('none');
+
   const loadList = useCallback(async () => {
     setLoaded(false);
+    setLoadError('none');
+    let networkError = false;
     try {
       // Try the owner endpoint first
       const found = await fetchUserList(id!);
@@ -139,16 +145,24 @@ export default function ListDetailScreen() {
         return;
       }
     } catch {
-      // Owner endpoint failed, try public
+      // Owner endpoint threw (network/server). Fall through to the public
+      // endpoint, but remember the throw so a transient failure is not
+      // mislabeled as "not found".
+      networkError = true;
     }
     try {
       setIsOwnerList(false);
       const pub = await fetchPublicList(id!);
-      setList(pub ?? null);
+      if (pub) {
+        setList(pub);
+        setLoaded(true);
+        return;
+      }
     } catch {
-      setIsOwnerList(false);
-      setList(null);
+      networkError = true;
     }
+    setList(null);
+    setLoadError(networkError ? 'network' : 'notfound');
     setLoaded(true);
   }, [id]);
 
@@ -247,8 +261,20 @@ export default function ListDetailScreen() {
               <Path d="M15 18l-6-6 6-6" stroke={colors.gold} strokeWidth={2} />
             </Svg>
           </Pressable>
-          <Text style={styles.title}>List not found</Text>
+          <Text style={styles.title}>
+            {loadError === 'network' ? 'Something went wrong' : 'List not found'}
+          </Text>
         </View>
+        {loadError === 'network' && (
+          <View style={styles.errorState}>
+            <Text style={styles.errorText}>
+              Could not load this list. Check your connection and try again.
+            </Text>
+            <Pressable onPress={loadList} style={styles.retryBtn}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     );
   }
@@ -470,6 +496,33 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     color: 'rgba(255,255,255,0.3)',
+  },
+
+  // Load error / retry
+  errorState: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  errorText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(245,240,225,0.5)',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.25)',
+    borderRadius: borderRadius.md,
+  },
+  retryBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.gold,
   },
 
   // Add film button
