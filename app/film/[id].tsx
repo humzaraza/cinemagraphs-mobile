@@ -1077,9 +1077,6 @@ function UserReviews({ reviews, blind }: { reviews: FilmReview[]; blind: boolean
     <View style={{ marginBottom: 14 }}>
       <View style={styles.reviewsHeader}>
         <Text style={styles.reviewsTitle}>User reviews</Text>
-        {reviews && reviews.length > 0 && (
-          <Text style={styles.reviewsSeeAll}>See all</Text>
-        )}
       </View>
       {reviews && reviews.length > 0 ? (
         <View style={{ gap: 6 }}>
@@ -1804,11 +1801,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ivory,
     letterSpacing: -0.1,
-  },
-  reviewsSeeAll: {
-    fontSize: 11,
-    color: colors.gold,
-    fontFamily: fonts.body,
   },
   reviewCard: {
     backgroundColor: 'rgba(245,240,225,0.03)',

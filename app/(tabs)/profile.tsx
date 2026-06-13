@@ -480,7 +480,7 @@ export default function ProfileScreen() {
     return () => sub.remove();
   }, [subTab]);
 
-  console.log('[Profile] authUser?.image:', authUser?.image);
+  if (__DEV__) console.log('[Profile] authUser?.image:', authUser?.image);
 
   // Navigation helpers from profile hub rows
   const handleRowTap = useCallback(
@@ -632,12 +632,12 @@ export default function ProfileScreen() {
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
-      console.log('[Profile] Creating list:', newListName.trim(), newListGenre, newListFilmIds, newListPublic);
+      if (__DEV__) console.log('[Profile] Creating list:', newListName.trim(), newListGenre, newListFilmIds, newListPublic);
       const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds, newListPublic);
-      console.log('[Profile] createUserList returned:', JSON.stringify(apiList).slice(0, 300));
+      if (__DEV__) console.log('[Profile] createUserList returned:', JSON.stringify(apiList).slice(0, 300));
       // API may return { list: {...} } or {...} directly
       const listObj = apiList.list ?? apiList;
-      console.log('[Profile] listObj.id:', listObj.id, 'keys:', Object.keys(listObj));
+      if (__DEV__) console.log('[Profile] listObj.id:', listObj.id, 'keys:', Object.keys(listObj));
       setLists((prev) => [listObj, ...prev]);
       setShowCreateList(false);
       setNewListName('');

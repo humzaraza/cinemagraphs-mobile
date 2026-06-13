@@ -468,22 +468,6 @@ const styles = StyleSheet.create({
     color: colors.ivory,
     letterSpacing: -0.4,
   },
-  reviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(200,169,81,0.12)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,169,81,0.25)',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  reviewButtonText: {
-    fontSize: 11,
-    color: colors.gold,
-    fontFamily: fonts.bodyMedium,
-  },
 
   // Search bar
   searchRow: {
