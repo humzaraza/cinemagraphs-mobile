@@ -6,12 +6,17 @@ type FavoritesStripProps = {
   favorites: FavoriteFilm[];
   onAddFavorite: () => void;
   onPressFilm: (filmId: string) => void;
+  // Remove the favorite at this slot index. By index, not film id, so
+  // removing one copy of a film that fills multiple slots leaves the
+  // others in place.
+  onRemoveFavorite: (index: number) => void;
 };
 
 export default function FavoritesStrip({
   favorites,
   onAddFavorite,
   onPressFilm,
+  onRemoveFavorite,
 }: FavoritesStripProps) {
   const isEmpty = favorites.length === 0;
 
@@ -24,12 +29,13 @@ export default function FavoritesStrip({
             film={favorites[i]}
             onAdd={onAddFavorite}
             onPressFilm={onPressFilm}
+            onLongPress={() => onRemoveFavorite(i)}
           />
         ))}
       </View>
       {isEmpty && (
         <Text style={styles.microcopy}>
-          Review films to add favorites. Each favorite shows your personal arc shape.
+          Favorite films you&apos;ve reviewed. Each shows your personal arc shape.
         </Text>
       )}
     </View>
