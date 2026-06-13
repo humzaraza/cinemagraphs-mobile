@@ -33,13 +33,17 @@ function SectionLabel({ label }: { label: string }) {
 function Row({
   label,
   onPress,
+  destructive,
 }: {
   label: string;
   onPress: () => void;
+  destructive?: boolean;
 }) {
   return (
     <Pressable onPress={onPress} style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={[styles.rowLabel, destructive && styles.rowLabelDestructive]}>
+        {label}
+      </Text>
       <ChevronRight />
     </Pressable>
   );
@@ -158,7 +162,8 @@ export default function SettingsScreen() {
         <SectionLabel label="ACCOUNT" />
         <View style={styles.section}>
           <Row
-            label="Account"
+            label="Delete account"
+            destructive
             onPress={() => router.push('/settings/account' as any)}
           />
           <View style={styles.divider} />
@@ -330,6 +335,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
     color: colors.ivory,
+  },
+  rowLabelDestructive: {
+    color: colors.negativeRed,
   },
   divider: {
     height: 0.5,
