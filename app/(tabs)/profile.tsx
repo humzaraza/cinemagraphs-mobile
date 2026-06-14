@@ -51,6 +51,7 @@ import EmptyStateCard from '../../src/components/profile/EmptyStateCard';
 import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+import * as payloadCache from '../../src/lib/payload-cache';
 import { useToast } from '../../src/components/ui/Toast';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -435,57 +436,87 @@ export default function ProfileScreen() {
 
   const loadProfile = useCallback(() => {
     if (!isAuthenticated) return;
-    fetchUserProfile()
-      .then((p) => {
-        if (p) {
-          setProfile(p);
-        } else {
-          console.error('[Profile] fetchUserProfile returned null');
-        }
-      })
+
+    // Each payload is served from the session cache when fresh, so the
+    // five network calls no longer all re-fire on every focus: they hit
+    // the network only when the cached entry is missing or older than the
+    // TTL. Cached values still paint immediately (the spinner stays gated
+    // to the true first load via firstFetchComplete).
+    payloadCache
+      .getWithRevalidate<UserProfile>(
+        'profile:me',
+        () =>
+          fetchUserProfile().then((p) => {
+            // fetchUserProfile returns null only on a failed response, so
+            // treat null as an error: never cache it, surface the toast.
+            if (!p) throw new Error('fetchUserProfile returned null');
+            return p;
+          }),
+        payloadCache.PAYLOAD_TTL_MS,
+      )
+      .then(setProfile)
       .catch((e) => {
         console.error('[Profile] fetchUserProfile error:', e);
         showError('Could not load your profile.');
       })
       .finally(() => setFirstFetchComplete(true));
-    Promise.all([
-      fetchUserFilms('reviewed'),
-      fetchUserFilms('watched'),
-    ])
-      .then(([reviewed, watched]) => {
-        // Normalize API fields to match MockFilm shape
-        const normalize = (raw: any, status: string) => ({
-          ...raw,
-          id: raw.id,
-          title: raw.title ?? '',
-          posterUrl: raw.posterUrl ?? '',
-          personalScore: raw.reviewScore ?? 0,
-          score: raw.reviewScore ?? 0,
-          sparklineData: Array.isArray(raw.sparkline) ? raw.sparkline.map((dp: any) => dp.score) : [],
-          dateWatched: raw.reviewDate ?? '',
-          status,
-          year: raw.year ?? 0,
-          runtime: raw.runtime ?? (Array.isArray(raw.sparkline) && raw.sparkline.length > 0 ? raw.sparkline[raw.sparkline.length - 1]?.timeEnd ?? 0 : 0),
-          genres: raw.genres ?? [],
-          dominantColor: raw.dominantColor ?? '#2E4057',
-        });
-        const taggedReviewed = reviewed.map((f: any) => normalize(f, 'reviewed'));
-        const taggedWatched = watched.map((f: any) => normalize(f, 'watched'));
-        const all = [...taggedReviewed, ...taggedWatched];
-        const unique = all.filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
-        setFilms(unique);
-      })
+
+    payloadCache
+      .getWithRevalidate<MockFilm[]>(
+        'films:me',
+        () =>
+          Promise.all([
+            fetchUserFilms('reviewed'),
+            fetchUserFilms('watched'),
+          ]).then(([reviewed, watched]) => {
+            // Normalize API fields to match MockFilm shape
+            const normalize = (raw: any, status: string) => ({
+              ...raw,
+              id: raw.id,
+              title: raw.title ?? '',
+              posterUrl: raw.posterUrl ?? '',
+              personalScore: raw.reviewScore ?? 0,
+              score: raw.reviewScore ?? 0,
+              sparklineData: Array.isArray(raw.sparkline) ? raw.sparkline.map((dp: any) => dp.score) : [],
+              dateWatched: raw.reviewDate ?? '',
+              status,
+              year: raw.year ?? 0,
+              runtime: raw.runtime ?? (Array.isArray(raw.sparkline) && raw.sparkline.length > 0 ? raw.sparkline[raw.sparkline.length - 1]?.timeEnd ?? 0 : 0),
+              genres: raw.genres ?? [],
+              dominantColor: raw.dominantColor ?? '#2E4057',
+            });
+            const taggedReviewed = reviewed.map((f: any) => normalize(f, 'reviewed'));
+            const taggedWatched = watched.map((f: any) => normalize(f, 'watched'));
+            const all = [...taggedReviewed, ...taggedWatched];
+            const unique = all.filter((f, i, arr) => arr.findIndex((x) => x.id === f.id) === i);
+            return unique;
+          }),
+        payloadCache.PAYLOAD_TTL_MS,
+      )
+      .then(setFilms)
       .catch((e) => {
         console.error('[Profile] fetchUserFilms error:', e);
         showError('Could not load your films.');
       });
-    fetchUserWatchlist()
+
+    payloadCache
+      .getWithRevalidate<Film[]>(
+        'watchlist:me',
+        fetchUserWatchlist,
+        payloadCache.PAYLOAD_TTL_MS,
+      )
       .then(setWatchlist)
       .catch((e) => {
         console.error('[Profile] fetchUserWatchlist error:', e);
         showError('Could not load your watchlist.');
       });
-    fetchUserLists()
+
+    payloadCache
+      .getWithRevalidate<any[]>(
+        'lists:me',
+        fetchUserLists,
+        payloadCache.PAYLOAD_TTL_MS,
+      )
       .then(setLists)
       .catch((e) => {
         console.error('[Profile] fetchUserLists error:', e);
@@ -692,6 +723,11 @@ export default function ProfileScreen() {
       const listObj = apiList.list ?? apiList;
       if (__DEV__) console.log('[Profile] listObj.id:', listObj.id, 'keys:', Object.keys(listObj));
       setLists((prev) => [listObj, ...prev]);
+      // Drop the cached lists/profile payloads so the optimistic insert is
+      // not reverted on the next focus and the hub previews refetch fresh
+      // (the profile payload carries the lists preview shown on the hub).
+      payloadCache.invalidate('lists:me');
+      payloadCache.invalidate('profile:me');
       setShowCreateList(false);
       setNewListName('');
       setNewListGenre('Drama');
@@ -739,6 +775,8 @@ export default function ProfileScreen() {
     try {
       const updated = await updateFavorites([...current, film.id]);
       setProfile(updated);
+      // Keep the cache in step so the next focus does not revert the change.
+      payloadCache.set('profile:me', updated);
     } catch (e) {
       console.error('[Profile] add favorite error:', e);
     }
@@ -760,6 +798,8 @@ export default function ProfileScreen() {
           try {
             const updated = await updateFavorites(next);
             setProfile(updated);
+            // Keep the cache in step so the next focus does not revert it.
+            payloadCache.set('profile:me', updated);
           } catch (e) {
             console.error('[Profile] remove favorite error:', e);
           }
