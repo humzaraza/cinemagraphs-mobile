@@ -30,6 +30,15 @@ interface CacheEntry<T> {
 
 const store = new Map<string, CacheEntry<unknown>>();
 const inFlight = new Map<string, Promise<unknown>>();
+// Per-key write generation. Bumped by every explicit set() and invalidate()
+// so a slow background refresh that started earlier can notice the cache has
+// moved on (a mutation seeded an authoritative value, or a forced refresh
+// wrote a newer payload) and decline to overwrite it with its stale result.
+const generation = new Map<string, number>();
+
+function bumpGeneration(key: string): void {
+  generation.set(key, (generation.get(key) ?? 0) + 1);
+}
 
 /**
  * Read a cached payload synchronously. Returns undefined when nothing is
@@ -48,6 +57,7 @@ export function get<T>(key: string): T | undefined {
  */
 export function set<T>(key: string, value: T): void {
   store.set(key, { value, storedAt: Date.now() });
+  bumpGeneration(key);
 }
 
 /**
@@ -57,6 +67,7 @@ export function set<T>(key: string, value: T): void {
 export function invalidate(key: string): void {
   store.delete(key);
   inFlight.delete(key);
+  bumpGeneration(key);
 }
 
 /**
@@ -75,10 +86,19 @@ export function clearPayloadCache(): void {
 function runDeduped<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   const existing = inFlight.get(key);
   if (existing) return existing as Promise<T>;
+  // Snapshot the generation at fetch start. If an explicit set() or
+  // invalidate() bumps it while this fetch is in flight, the result is stale
+  // on arrival and must not clobber the newer state. The value is still
+  // returned to the caller; only the cache write is skipped. The success
+  // write goes straight to the store (not through set()) so it does not bump
+  // the generation itself.
+  const startGeneration = generation.get(key) ?? 0;
   const pending = (async () => {
     try {
       const value = await fetcher();
-      set(key, value);
+      if ((generation.get(key) ?? 0) === startGeneration) {
+        store.set(key, { value, storedAt: Date.now() });
+      }
       return value;
     } finally {
       inFlight.delete(key);
