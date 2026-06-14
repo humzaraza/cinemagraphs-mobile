@@ -24,11 +24,24 @@ import Slider from '@react-native-community/slider';
 import { colors, fonts, borderRadius } from '../src/constants/theme';
 import { fetchFilmDetail, submitReview } from '../src/lib/api';
 import { markReviewed } from '../src/lib/reviewed-films';
+import * as payloadCache from '../src/lib/payload-cache';
 import { getPosterUrl } from '../src/lib/tmdb-image';
 import type { FilmDetail, FilmDataPoint } from '../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MAX_BEATS = 8;
+
+// Reviewing a film changes its detail payload, its reviews lists, and the
+// Profile reviewed/films/stats payloads. Drop all of them from the session
+// cache so each screen refetches fresh on its next open instead of serving
+// the pre-review snapshot for up to the cache TTL.
+function invalidateReviewCaches(filmId: string): void {
+  payloadCache.invalidate(`film:${filmId}`);
+  payloadCache.invalidate(`reviews:${filmId}:ex`);
+  payloadCache.invalidate(`reviews:${filmId}:all`);
+  payloadCache.invalidate('films:me');
+  payloadCache.invalidate('profile:me');
+}
 
 /** Select up to MAX_BEATS: peak, lowest, first, last, then evenly spaced. */
 function selectBeats(dataPoints: FilmDataPoint[]): FilmDataPoint[] {
@@ -387,6 +400,7 @@ export default function ReviewScreen() {
     try {
       await submitReview(film.id, payload);
       markReviewed(film.id);
+      invalidateReviewCaches(film.id);
       setScreenState('arc-reveal');
     } catch (err: any) {
       if (err.message?.includes('401') || err.message?.includes('auth') || err.message?.includes('session')) {
@@ -414,6 +428,7 @@ export default function ReviewScreen() {
     try {
       await submitReview(film.id, payload);
       markReviewed(film.id);
+      invalidateReviewCaches(film.id);
       setScreenState('confirmed-b');
     } catch (err: any) {
       if (err.message?.includes('401') || err.message?.includes('auth') || err.message?.includes('session')) {

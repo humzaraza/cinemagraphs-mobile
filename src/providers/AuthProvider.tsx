@@ -22,6 +22,7 @@ import {
 import { consumePendingBanner } from '../lib/onboarding-persistence';
 import { trackEvent, EVENTS } from '../lib/events';
 import { clearBlindModeCache } from '../lib/blind-mode';
+import { clearPayloadCache } from '../lib/payload-cache';
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -160,6 +161,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setUser(null);
       setTokenState(null);
       setNeedsOnboarding(false);
+      clearPayloadCache();
     });
     return () => setOnAuthFailure(null);
   }, []);
@@ -246,6 +248,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // previous user's perFilm overrides and tooltip-seen flag.
     clearBlindModeCache();
 
+    // Drop cached screen payloads (profile, films, watchlist, lists, film
+    // and category data) so the next user on this device cannot inherit
+    // the previous user's private data from the in-memory cache.
+    clearPayloadCache();
+
     // Fire-and-forget server-side revocation. Background network call
     // with 2s abort timeout. Local sign-out has already happened.
     if (refreshTokenSnapshot) {
@@ -286,6 +293,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setTokenState(null);
     setNeedsOnboarding(false);
     clearBlindModeCache();
+    clearPayloadCache();
   }, [user?.id]);
 
   const signInWithGoogleFn = useCallback(async (idToken: string) => {

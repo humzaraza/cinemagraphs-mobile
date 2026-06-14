@@ -1364,6 +1364,9 @@ export default function FilmDetailScreen() {
         setInWatchlist(true);
         showSuccess('Added to watchlist');
       }
+      // Profile caches its watchlist; drop it so the change shows on the
+      // Profile tab's next focus instead of waiting out the TTL.
+      payloadCache.invalidate('watchlist:me');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e) {
       console.error('[Watchlist] toggle error:', e);
