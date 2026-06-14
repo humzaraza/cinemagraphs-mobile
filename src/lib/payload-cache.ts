@@ -35,6 +35,13 @@ const inFlight = new Map<string, Promise<unknown>>();
 // moved on (a mutation seeded an authoritative value, or a forced refresh
 // wrote a newer payload) and decline to overwrite it with its stale result.
 const generation = new Map<string, number>();
+// Global epoch, bumped by clearPayloadCache(). A fetch that began before the
+// clear (e.g. issued with the previous user's token) carries the old epoch
+// and is refused at write time, so it cannot repopulate the cleared store.
+// This covers keys whose per-key generation is still 0 (only ever populated
+// by a deduped fetch, never set()/invalidate()d), which the per-key counter
+// alone would not protect.
+let epoch = 0;
 
 function bumpGeneration(key: string): void {
   generation.set(key, (generation.get(key) ?? 0) + 1);
@@ -76,6 +83,10 @@ export function invalidate(key: string): void {
 export function clearPayloadCache(): void {
   store.clear();
   inFlight.clear();
+  generation.clear();
+  // Bump the epoch so any fetch already in flight cannot write its result
+  // back into the just-cleared store (closes a cross-user leak on sign-out).
+  epoch += 1;
 }
 
 /**
@@ -86,26 +97,32 @@ export function clearPayloadCache(): void {
 function runDeduped<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   const existing = inFlight.get(key);
   if (existing) return existing as Promise<T>;
-  // Snapshot the generation at fetch start. If an explicit set() or
-  // invalidate() bumps it while this fetch is in flight, the result is stale
-  // on arrival and must not clobber the newer state. The value is still
-  // returned to the caller; only the cache write is skipped. The success
-  // write goes straight to the store (not through set()) so it does not bump
-  // the generation itself.
+  // Snapshot the epoch and generation at fetch start. If clearPayloadCache()
+  // (epoch) or an explicit set()/invalidate() (generation) intervenes while
+  // this fetch is in flight, the result is stale on arrival and must not
+  // clobber the newer state. The value is still returned to the caller; only
+  // the cache write is skipped. The success write goes straight to the store
+  // (not through set()) so it does not bump the generation itself.
+  const startEpoch = epoch;
   const startGeneration = generation.get(key) ?? 0;
-  const pending = (async () => {
+  // Hold the promise on an object so the finally block can compare identity
+  // without referencing a const inside its own initializer.
+  const slot: { promise?: Promise<T> } = {};
+  slot.promise = (async () => {
     try {
       const value = await fetcher();
-      if ((generation.get(key) ?? 0) === startGeneration) {
+      if (epoch === startEpoch && (generation.get(key) ?? 0) === startGeneration) {
         store.set(key, { value, storedAt: Date.now() });
       }
       return value;
     } finally {
-      inFlight.delete(key);
+      // Only clear our own slot: an intervening invalidate() may have already
+      // removed us and a newer fetch may now own the key.
+      if (inFlight.get(key) === slot.promise) inFlight.delete(key);
     }
   })();
-  inFlight.set(key, pending);
-  return pending;
+  inFlight.set(key, slot.promise);
+  return slot.promise;
 }
 
 /**
