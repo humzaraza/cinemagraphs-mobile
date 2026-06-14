@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import * as payloadCache from '../../src/lib/payload-cache';
 import { useAuth } from '../../src/providers/AuthProvider';
 import {
   fetchPublicProfile,
@@ -119,6 +120,8 @@ export default function PublicProfileScreen() {
       } else {
         await followUser(id);
       }
+      // The viewer's own following count lives on the cached profile payload.
+      payloadCache.invalidate('profile:me');
     } catch {
       setIsFollowing(wasFollowing);
       setFollowerCount((c) => c + (wasFollowing ? 1 : -1));

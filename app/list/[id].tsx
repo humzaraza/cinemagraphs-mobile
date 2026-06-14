@@ -17,6 +17,7 @@ import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import Sparkline from '../../src/components/Sparkline';
 import ArcCard from '../../src/components/ArcCard';
 import { fetchUserList, fetchPublicList, addFilmToListAPI, deleteUserList, removeFilmFromListAPI, updateListVisibility } from '../../src/lib/api';
+import * as payloadCache from '../../src/lib/payload-cache';
 import BottomSheet from '../../src/components/BottomSheet';
 import FilmPicker from '../../src/components/FilmPicker';
 import { useAuth } from '../../src/providers/AuthProvider';
@@ -178,6 +179,10 @@ export default function ListDetailScreen() {
       await addFilmToListAPI(id, filmId);
       const updated = await fetchUserList(id);
       setList(updated ?? null);
+      // Profile caches its lists and the profile lists preview; drop them so
+      // the change shows on the Profile tab next focus instead of after TTL.
+      payloadCache.invalidate('lists:me');
+      payloadCache.invalidate('profile:me');
     } catch (e) {
       console.error('[ListDetail] addFilmToListAPI error:', e);
     }
@@ -198,6 +203,8 @@ export default function ListDetailScreen() {
               await removeFilmFromListAPI(id, filmId);
               const updated = await fetchUserList(id);
               setList(updated ?? null);
+              payloadCache.invalidate('lists:me');
+              payloadCache.invalidate('profile:me');
             } catch (e) {
               console.error('[ListDetail] removeFilmFromListAPI error:', e);
               Alert.alert('Error', 'Could not remove film. Please try again.');
@@ -222,6 +229,8 @@ export default function ListDetailScreen() {
             if (!id) return;
             try {
               await deleteUserList(id);
+              payloadCache.invalidate('lists:me');
+              payloadCache.invalidate('profile:me');
               router.back();
             } catch (e) {
               console.error('[ListDetail] deleteUserList error:', e);
@@ -239,6 +248,8 @@ export default function ListDetailScreen() {
     setList((l: any) => ({ ...l, isPublic: newValue }));
     try {
       await updateListVisibility(id, newValue);
+      payloadCache.invalidate('lists:me');
+      payloadCache.invalidate('profile:me');
     } catch {
       setList((l: any) => ({ ...l, isPublic: prev }));
     }

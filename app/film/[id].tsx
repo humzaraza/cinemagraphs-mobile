@@ -1391,6 +1391,10 @@ export default function FilmDetailScreen() {
     try {
       const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
       setLists((prev) => [apiList, ...prev]);
+      // The new list shows on the Profile tab, which caches its lists and the
+      // profile payload (whose lists preview feeds the hub); drop both.
+      payloadCache.invalidate('lists:me');
+      payloadCache.invalidate('profile:me');
       setShowCreateFlow(false);
       setNewListName('');
       setNewListGenre('Drama');
@@ -1476,6 +1480,10 @@ export default function FilmDetailScreen() {
                     await addFilmToListAPI(list.id, id);
                     const updated = await fetchUserLists();
                     setLists(updated);
+                    // Profile caches lists/profile previews; drop them so the
+                    // updated film count shows on the Profile tab next focus.
+                    payloadCache.invalidate('lists:me');
+                    payloadCache.invalidate('profile:me');
                     showSuccess(`Added to ${list.name}`);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                   } catch (e) {
