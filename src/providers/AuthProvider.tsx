@@ -161,6 +161,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setUser(null);
       setTokenState(null);
       setNeedsOnboarding(false);
+      clearBlindModeCache();
       clearPayloadCache();
     });
     return () => setOnAuthFailure(null);
