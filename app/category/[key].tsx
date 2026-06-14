@@ -16,7 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import TicketStub from '../../src/components/TicketStub';
-import { fetchCategoryFilms } from '../../src/lib/api';
+import { fetchCategoryFilms, type CategoryFetchResult } from '../../src/lib/api';
+import * as payloadCache from '../../src/lib/payload-cache';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
 import {
   CATEGORY_LABELS,
@@ -104,10 +105,18 @@ export default function CategoryScreen() {
   const params = validKey ? CATEGORY_PARAMS[validKey] : null;
   const label = validKey ? CATEGORY_LABELS[validKey] : '';
 
-  const [films, setFilms] = useState<Film[]>([]);
+  // Seed the first page from the session cache so re-opening a category
+  // within the TTL shows its tiles immediately instead of the skeleton
+  // grid. A cold open (nothing cached) still shows the skeleton.
+  const categoryCacheKey = validKey ? `category:${validKey}` : null;
+  const cachedFirstPage = categoryCacheKey
+    ? payloadCache.get<CategoryFetchResult>(categoryCacheKey)
+    : undefined;
+
+  const [films, setFilms] = useState<Film[]>(cachedFirstPage?.films ?? []);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(cachedFirstPage?.hasMore ?? true);
+  const [initialLoading, setInitialLoading] = useState(!cachedFirstPage);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
@@ -117,7 +126,26 @@ export default function CategoryScreen() {
 
   const loadPage = useCallback(
     async (pageToLoad: number, mode: 'initial' | 'append' | 'refresh') => {
-      if (!params) return;
+      if (!params || !validKey) return;
+      const cacheKey = `category:${validKey}`;
+
+      // First page with something cached: the grid is already painted from
+      // the seed above, so skip the skeleton and just revalidate per the
+      // TTL in the background (which refreshes the cache for the next open).
+      // Pull-to-refresh uses mode 'refresh', so it never takes this path
+      // and always forces a fresh network fetch below.
+      if (mode === 'initial' && payloadCache.get<CategoryFetchResult>(cacheKey)) {
+        setError(false);
+        payloadCache
+          .getWithRevalidate<CategoryFetchResult>(
+            cacheKey,
+            () => fetchCategoryFilms(params, 1),
+            payloadCache.PAYLOAD_TTL_MS,
+          )
+          .catch(() => {});
+        return;
+      }
+
       if (abortRef.current) abortRef.current.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -137,6 +165,11 @@ export default function CategoryScreen() {
         }
         setHasMore(result.hasMore);
         setPage(pageToLoad);
+        // Cache only the first page, on cold open and on forced refresh, so a
+        // re-open within the TTL is instant. Appended pages are not cached.
+        if (mode === 'initial' || mode === 'refresh') {
+          payloadCache.set(cacheKey, result);
+        }
       } catch (err: any) {
         if (err?.name === 'AbortError') return;
         if (mode !== 'append') setError(true);
@@ -151,7 +184,7 @@ export default function CategoryScreen() {
         }
       }
     },
-    [params],
+    [params, validKey],
   );
 
   // Validate key, redirect if invalid, otherwise kick off the first load.
