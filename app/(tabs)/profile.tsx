@@ -32,7 +32,6 @@ import {
 } from '../../src/lib/api';
 import {
   type MockFilm,
-  type MockWatchlistFilm,
 } from '../../src/data/mockProfile';
 import { resolveBannerSource } from '../../src/lib/banner-url';
 import type { Film, FilmDetail } from '../../src/types/film';
@@ -48,6 +47,7 @@ import SectionHeader from '../../src/components/profile/SectionHeader';
 import FavoritesStrip from '../../src/components/profile/FavoritesStrip';
 import FavoritePicker from '../../src/components/profile/FavoritePicker';
 import RecentReviewsRow from '../../src/components/profile/RecentReviewsRow';
+import EmptyStateCard from '../../src/components/profile/EmptyStateCard';
 import ListsPreview from '../../src/components/profile/ListsPreview';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
@@ -150,9 +150,9 @@ function Avatar({ size, initial, imageUrl }: { size: number; initial: string; im
 // Sub-tab bar
 //
 // Hidden in PR 1a redesign. Legacy sub-tabs are reachable via "All ->" on
-// the new hub. Watchlist sub-tab is currently orphaned (no UI entry point);
-// will be re-wired as a pinned list on the Lists screen in PR 3. Definition
-// is kept in case rollback is needed during the PR 1a rollout.
+// the new hub; the Watchlist sub-tab is reached via the "View all" link on
+// the hub's WATCHLIST strip. Definition is kept in case rollback is needed
+// during the PR 1a rollout.
 // ---------------------------------------------------------------------------
 
 const SUB_TABS: { key: SubTab; label: string }[] = [
@@ -326,7 +326,7 @@ function PosterCell({
 // Watchlist poster cell
 // ---------------------------------------------------------------------------
 
-function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
+function WatchlistCell({ film }: { film: Film }) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const posterUri = getPosterUrl(film, 'grid');
@@ -354,6 +354,37 @@ function WatchlistCell({ film }: { film: MockWatchlistFilm }) {
   );
 }
 
+// Fixed-size poster cell for the horizontal Watchlist strip on the profile
+// hub. Poster-only, 104x156 (1.5 ratio), distinct from the dynamic-width
+// grid cell above which fills a 3-column layout.
+function WatchlistStripCell({ film }: { film: Film }) {
+  const router = useRouter();
+  const [imgError, setImgError] = useState(false);
+  const posterUri = getPosterUrl(film, 'grid');
+
+  return (
+    <Pressable
+      onPress={() => router.push(`/film/${film.id}` as any)}
+      style={styles.watchlistStripCell}
+      accessibilityRole="button"
+      accessibilityLabel={film.title}
+    >
+      <View style={styles.watchlistStripImage}>
+        {imgError || !posterUri ? (
+          <PosterFallback title={film.title} />
+        ) : (
+          <Image
+            source={{ uri: posterUri }}
+            style={styles.posterImageInner}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main screen
 // ---------------------------------------------------------------------------
@@ -365,7 +396,7 @@ export default function ProfileScreen() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [films, setFilms] = useState<MockFilm[]>([]);
-  const [watchlist, setWatchlist] = useState<MockWatchlistFilm[]>([]);
+  const [watchlist, setWatchlist] = useState<Film[]>([]);
   const [lists, setLists] = useState<any[]>([]);
   const [firstFetchComplete, setFirstFetchComplete] = useState(false);
 
@@ -518,9 +549,6 @@ export default function ProfileScreen() {
         case 'Watched':
           setFilmFilter('watched');
           setSubTab('my-films');
-          break;
-        case 'Watchlist':
-          setSubTab('watchlist');
           break;
         case 'Lists':
           setSubTab('lists');
@@ -812,15 +840,13 @@ export default function ProfileScreen() {
   const renderWatchlist = () => {
     if (watchlist.length === 0) {
       return (
-        <View style={styles.listEmptyWrap}>
-          <Text style={styles.listEmptyText}>Save films to watch later</Text>
-          <Pressable
-            onPress={() => router.push('/(tabs)/search' as any)}
-            style={styles.browseButton}
-          >
-            <Text style={styles.browseText}>Browse films</Text>
-          </Pressable>
-        </View>
+        <EmptyStateCard
+          icon="◫"
+          title="Nothing saved yet"
+          body="Bookmark films you want to watch. They land here."
+          ctaLabel="Find a film"
+          onCtaPress={() => router.push('/(tabs)/search' as any)}
+        />
       );
     }
 
@@ -906,6 +932,34 @@ export default function ProfileScreen() {
             onPressReview={(filmId) => router.push(`/film/${filmId}` as any)}
             onFindFilm={() => router.push('/(tabs)/search' as any)}
           />
+
+          <SectionHeader
+            title="WATCHLIST"
+            allLink={
+              watchlist.length > 0
+                ? { label: 'View all →', onPress: () => setSubTab('watchlist') }
+                : undefined
+            }
+          />
+          {watchlist.length === 0 ? (
+            <EmptyStateCard
+              icon="◫"
+              title="Nothing saved yet"
+              body="Bookmark films you want to watch. They land here."
+              ctaLabel="Find a film"
+              onCtaPress={() => router.push('/(tabs)/search' as any)}
+            />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}
+            >
+              {watchlist.map((f) => (
+                <WatchlistStripCell key={f.id} film={f} />
+              ))}
+            </ScrollView>
+          )}
 
           <SectionHeader
             title="LISTS"
@@ -1385,6 +1439,19 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 5,
   },
+  // ---- Watchlist horizontal strip (profile hub) ----
+  watchlistStripCell: {
+    width: 104,
+  },
+  watchlistStripImage: {
+    width: 104,
+    height: 156,
+    borderRadius: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(200,169,81,0.12)',
+    backgroundColor: 'rgba(30,30,60,0.8)',
+    overflow: 'hidden',
+  },
   posterFallback: {
     width: '100%',
     height: '100%',
@@ -1450,19 +1517,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     color: 'rgba(200,169,81,0.3)',
-  },
-  browseButton: {
-    backgroundColor: 'rgba(45,212,168,0.1)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(45,212,168,0.2)',
-    borderRadius: borderRadius.md,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  browseText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.teal,
   },
 
   // ---- Lists (real) ----

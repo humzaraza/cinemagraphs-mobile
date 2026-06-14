@@ -788,11 +788,8 @@ export async function fetchUserFilms(type?: string): Promise<any[]> {
   return films;
 }
 
-export async function fetchUserWatchlist(): Promise<any[]> {
-  const res = await apiFetch('/user/watchlist');
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.films ?? [];
+export async function fetchUserWatchlist(): Promise<Film[]> {
+  return extractFilms(await apiFetch('/user/watchlist'));
 }
 
 export async function addToWatchlist(filmId: string): Promise<void> {
