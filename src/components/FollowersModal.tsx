@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { colors, fonts } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
 import { fetchFollowers, fetchFollowing, followUser, unfollowUser } from '../lib/api';
+import * as payloadCache from '../lib/payload-cache';
 
 interface FollowUser {
   id: string;
@@ -86,6 +87,8 @@ export default function FollowersModal({ visible, onClose, userId, initialTab }:
       } else {
         await followUser(targetUser.id);
       }
+      // The viewer's own following count lives on the cached profile payload.
+      payloadCache.invalidate('profile:me');
     } catch {
       setUsers((prev) =>
         prev.map((u) => u.id === targetUser.id ? { ...u, isFollowing: wasFollowing } : u)

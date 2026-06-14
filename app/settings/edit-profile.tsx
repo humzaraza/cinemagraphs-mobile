@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { fetchUserProfile, updateUserProfile, uploadAvatar } from '../../src/lib/api';
+import * as payloadCache from '../../src/lib/payload-cache';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -76,6 +77,9 @@ export default function EditProfileScreen() {
         username: username.trim() || undefined,
         bio: bio.trim() || undefined,
       });
+      // Drop the cached profile so the Profile tab shows these edits on its
+      // next focus instead of the pre-edit snapshot until the cache TTL.
+      payloadCache.invalidate('profile:me');
       setSuccess(true);
       setTimeout(() => router.back(), 800);
     } catch (e: any) {
@@ -132,6 +136,9 @@ export default function EditProfileScreen() {
       const { url } = await uploadAvatar(asset.uri);
       setImageUrl(url);
       await refreshUser();
+      // The Profile tab reads the avatar from its cached profile payload,
+      // so drop it to avoid showing the old photo until the cache TTL.
+      payloadCache.invalidate('profile:me');
     } catch {
       setImageUrl(previousUrl);
       setErrors({ avatar: 'Failed to upload photo' });

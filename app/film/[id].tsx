@@ -33,6 +33,7 @@ import type { GraphMode } from '../../src/components/GraphToggle';
 import BottomSheet from '../../src/components/BottomSheet';
 import { useAuthGate } from '../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
+import * as payloadCache from '../../src/lib/payload-cache';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
@@ -48,7 +49,7 @@ import {
   markTooltipSeen,
   type BlindModeState,
 } from '../../src/lib/blind-mode';
-import type { Film, FilmDetail, FilmReview, FilmDataPoint, SimilarFilm } from '../../src/types/film';
+import type { Film, FilmDetail, FilmReview, FilmDataPoint, SimilarFilm, ReviewsResponse } from '../../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
@@ -1170,8 +1171,16 @@ function SimilarFilms({ films }: { films: SimilarFilm[] }) {
 export default function FilmDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const [film, setFilm] = useState<FilmDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Session cache key for this film's detail payload.
+  const filmCacheKey = id ? `film:${id}` : null;
+  // Seed from the cache so a re-open paints instantly. A true cold open
+  // (nothing cached) starts with loading=true and shows DetailSkeleton.
+  const [film, setFilm] = useState<FilmDetail | null>(() =>
+    filmCacheKey ? payloadCache.get<FilmDetail>(filmCacheKey) ?? null : null,
+  );
+  const [loading, setLoading] = useState(() =>
+    filmCacheKey ? payloadCache.get<FilmDetail>(filmCacheKey) === undefined : true,
+  );
   const [error, setError] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [lists, setLists] = useState<any[]>([]);
@@ -1192,6 +1201,12 @@ export default function FilmDetailScreen() {
   const [reviews, setReviews] = useState<FilmReview[]>([]);
   const [tooltipVisible, setTooltipVisible] = useState(false);
 
+  // Optimistic "has reviewed" flag for this session. A film reviewed
+  // moments ago may still be served from the payload cache with
+  // userHasReviewed=false; combining with this flag keeps blind mode
+  // auto-lifted and the reviews fetch excluding the user's own row.
+  const optimisticReviewed = useIsReviewed(id ?? '');
+
   // Create-list-from-detail state
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [newListName, setNewListName] = useState('');
@@ -1205,23 +1220,35 @@ export default function FilmDetailScreen() {
 
   const load = useCallback(() => {
     if (!id) return;
-    setLoading(true);
+    const key = `film:${id}`;
+    // Only show the skeleton when there is nothing cached to paint. With a
+    // cached payload the screen is already rendered; we revalidate quietly.
+    if (payloadCache.get<FilmDetail>(key) === undefined) {
+      setLoading(true);
+    }
     setError(false);
-    fetchFilmDetail(id)
+    payloadCache
+      .getWithRevalidate<FilmDetail>(
+        key,
+        () =>
+          // Treat a null detail as an error so it is never cached and a
+          // cold open with no data falls through to the error state.
+          fetchFilmDetail(id).then((data) => {
+            if (!data) throw new Error('Film not found');
+            return data;
+          }),
+        payloadCache.PAYLOAD_TTL_MS,
+      )
       .then((data) => {
-        if (data) {
-          setFilm(data);
-          const posterPath = data.posterUrl || data.posterPath || null;
-          addRecentlyViewed(id, data.title ?? '', posterPath);
-          // Fetch audience data after film loads (only if the film has beats to render against)
-          const beats = data.sentimentGraph?.dataPoints;
-          if (beats?.length) {
-            fetchAudienceData(id)
-              .then(setAudienceData)
-              .catch(() => setAudienceData(null));
-          }
-        } else {
-          setError(true);
+        setFilm(data);
+        const posterPath = data.posterUrl || data.posterPath || null;
+        addRecentlyViewed(id, data.title ?? '', posterPath);
+        // Fetch audience data after film loads (only if the film has beats to render against)
+        const beats = data.sentimentGraph?.dataPoints;
+        if (beats?.length) {
+          fetchAudienceData(id)
+            .then(setAudienceData)
+            .catch(() => setAudienceData(null));
         }
       })
       .catch(() => setError(true))
@@ -1247,33 +1274,44 @@ export default function FilmDetailScreen() {
   // can render it in the "Your review" section instead.
   useEffect(() => {
     if (!id || !film) return;
-    const exclude = !!film.userHasReviewed;
-    fetchFilmReviews(id, { excludeCurrentUser: exclude })
+    const exclude = !!film.userHasReviewed || optimisticReviewed;
+    // The reviews payload differs by the exclude flag, so it is part of
+    // the cache key. Cached reviews paint immediately on re-open.
+    const key = `reviews:${id}:${exclude ? 'ex' : 'all'}`;
+    payloadCache
+      .getWithRevalidate<ReviewsResponse>(
+        key,
+        () =>
+          fetchFilmReviews(id, { excludeCurrentUser: exclude }).then((res) => {
+            if (!res) throw new Error('No reviews payload');
+            return res;
+          }),
+        payloadCache.PAYLOAD_TTL_MS,
+      )
       .then((res) => {
-        if (res) {
-          setReviews(res.reviews ?? []);
-          setMyReview(res.myReview ?? null);
-        } else {
-          // Fall back to whatever the film-detail endpoint included so
-          // we still show *something* when the dedicated reviews fetch
-          // fails (e.g. unauthenticated).
-          setReviews(film.reviews ?? []);
-          setMyReview(null);
-        }
+        setReviews(res.reviews ?? []);
+        setMyReview(res.myReview ?? null);
       })
       .catch(() => {
+        // Dedicated reviews fetch failed with nothing cached: fall back to
+        // whatever the film-detail endpoint included so we still show
+        // *something* (e.g. when unauthenticated).
         setReviews(film.reviews ?? []);
         setMyReview(null);
       });
-  }, [id, film]);
+  }, [id, film, optimisticReviewed]);
 
   // Resolved blind state for this film: server state + local optimistic
   // override (so the toggle feels instant while the PUT is in flight).
   const blind = useMemo(() => {
     if (blindOverride !== null) return blindOverride;
     if (!film) return false;
-    return resolveBlindForFilm(blindState, film.id, !!film.userHasReviewed);
-  }, [blindOverride, blindState, film]);
+    return resolveBlindForFilm(
+      blindState,
+      film.id,
+      !!film.userHasReviewed || optimisticReviewed,
+    );
+  }, [blindOverride, blindState, film, optimisticReviewed]);
 
   const { showError, showSuccess } = useToast();
 
@@ -1326,6 +1364,9 @@ export default function FilmDetailScreen() {
         setInWatchlist(true);
         showSuccess('Added to watchlist');
       }
+      // Profile caches its watchlist; drop it so the change shows on the
+      // Profile tab's next focus instead of waiting out the TTL.
+      payloadCache.invalidate('watchlist:me');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e) {
       console.error('[Watchlist] toggle error:', e);
@@ -1350,6 +1391,10 @@ export default function FilmDetailScreen() {
     try {
       const apiList = await createUserList(newListName.trim(), newListGenre, newListFilmIds);
       setLists((prev) => [apiList, ...prev]);
+      // The new list shows on the Profile tab, which caches its lists and the
+      // profile payload (whose lists preview feeds the hub); drop both.
+      payloadCache.invalidate('lists:me');
+      payloadCache.invalidate('profile:me');
       setShowCreateFlow(false);
       setNewListName('');
       setNewListGenre('Drama');
@@ -1435,6 +1480,10 @@ export default function FilmDetailScreen() {
                     await addFilmToListAPI(list.id, id);
                     const updated = await fetchUserLists();
                     setLists(updated);
+                    // Profile caches lists/profile previews; drop them so the
+                    // updated film count shows on the Profile tab next focus.
+                    payloadCache.invalidate('lists:me');
+                    payloadCache.invalidate('profile:me');
                     showSuccess(`Added to ${list.name}`);
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                   } catch (e) {
