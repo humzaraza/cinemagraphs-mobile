@@ -896,19 +896,6 @@ export async function updateListVisibility(listId: string, isPublic: boolean): P
   }
 }
 
-export async function fetchUserSettings(): Promise<any> {
-  const res = await apiFetch('/user/settings');
-  if (!res.ok) return null;
-  return res.json();
-}
-
-export async function updateUserSettings(settings: Record<string, any>): Promise<void> {
-  await apiFetch('/user/settings', {
-    method: 'PUT',
-    body: JSON.stringify(settings),
-  });
-}
-
 export async function updateUserProfile(data: { name?: string; username?: string; bio?: string }): Promise<any> {
   const res = await apiFetch('/user/profile', {
     method: 'PATCH',

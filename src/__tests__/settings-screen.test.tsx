@@ -30,11 +30,6 @@ vi.mock('../providers/AuthProvider', () => ({
   }),
 }));
 
-vi.mock('../lib/api', () => ({
-  fetchUserSettings: vi.fn().mockResolvedValue(null),
-  updateUserSettings: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock('../lib/blind-mode', () => ({
   getBlindModeState: vi.fn().mockResolvedValue(null),
 }));
