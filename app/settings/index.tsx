@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, borderRadius } from '../../src/constants/theme';
 import { useAuth } from '../../src/providers/AuthProvider';
-import { fetchUserSettings, updateUserSettings } from '../../src/lib/api';
 import { getBlindModeState } from '../../src/lib/blind-mode';
 import { useBlindDefaultsToggle } from '../../src/components/settings/useBlindDefaultsToggle';
 import { useToast } from '../../src/components/ui/Toast';
@@ -80,23 +79,11 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { signOut, user: authUser } = useAuth();
 
-  const [publicProfile, setPublicProfile] = useState(true);
-  const [allowFollowers, setAllowFollowers] = useState(true);
-  const [privateGraphs, setPrivateGraphs] = useState(false);
   // Blind-mode default. Off by default per spec; the server state
   // overrides on mount if the user has previously set it.
   const [blindUnwatched, setBlindUnwatched] = useState(false);
 
   useEffect(() => {
-    fetchUserSettings()
-      .then((s) => {
-        if (!s) return;
-        if (s.publicProfile !== undefined) setPublicProfile(s.publicProfile);
-        if (s.allowFollowers !== undefined) setAllowFollowers(s.allowFollowers);
-        if (s.privateGraphs !== undefined) setPrivateGraphs(s.privateGraphs);
-      })
-      .catch(() => {});
-
     getBlindModeState()
       .then((s) => {
         if (!s) return;
@@ -104,11 +91,6 @@ export default function SettingsScreen() {
       })
       .catch(() => {});
   }, []);
-
-  const toggleSetting = (key: string, value: boolean, setter: (v: boolean) => void) => {
-    setter(value);
-    updateUserSettings({ [key]: value }).catch(() => setter(!value));
-  };
 
   const { showError } = useToast();
   // useBlindDefaultsToggle owns: selection haptic, optimistic flip,
@@ -181,24 +163,6 @@ export default function SettingsScreen() {
         {/* Privacy */}
         <SectionLabel label="PRIVACY" />
         <View style={styles.section}>
-          <ToggleRow
-            label="Public profile"
-            value={publicProfile}
-            onToggle={(v) => toggleSetting('publicProfile', v, setPublicProfile)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            label="Allow followers"
-            value={allowFollowers}
-            onToggle={(v) => toggleSetting('allowFollowers', v, setAllowFollowers)}
-          />
-          <View style={styles.divider} />
-          <ToggleRow
-            label="Private graphs"
-            value={privateGraphs}
-            onToggle={(v) => toggleSetting('privateGraphs', v, setPrivateGraphs)}
-          />
-          <View style={styles.divider} />
           <ToggleRow
             label="Hide scores until I review"
             value={blindUnwatched}
