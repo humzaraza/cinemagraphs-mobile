@@ -22,6 +22,12 @@ import {
   loginWithGoogle,
   deleteAccount,
   fetchFilmReviews,
+  fetchReviewDetail,
+  fetchReviewReplies,
+  postReply,
+  deleteReply,
+  likeReview,
+  unlikeReview,
 } from './api';
 
 const TOKENS_KEY = 'auth_tokens';
@@ -662,5 +668,162 @@ describe('deleteAccount', () => {
     globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
 
     await expect(deleteAccount()).rejects.toThrow('Failed to delete account');
+  });
+});
+
+describe('review detail helpers', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    // No stored token: the review detail and replies reads are public, and
+    // a null token keeps a non-ok response from entering the refresh path.
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  function jsonResponse(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  function stubFetch(response: Response) {
+    const fetchSpy = vi.fn().mockResolvedValue(response);
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+    return fetchSpy;
+  }
+
+  describe('fetchReviewDetail', () => {
+    it('GETs /reviews/:id and returns the parsed payload on 2xx', async () => {
+      const payload = {
+        id: 'r1',
+        filmId: 'f1',
+        overallRating: 8.5,
+        likes: { count: 2, liked: false },
+        replyCount: 3,
+      };
+      const fetchSpy = stubFetch(jsonResponse(payload));
+
+      const result = await fetchReviewDetail('r1');
+
+      expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\/reviews\/r1$/);
+      expect(result?.likes).toEqual({ count: 2, liked: false });
+      expect(result?.replyCount).toBe(3);
+    });
+
+    it('returns null on non-2xx', async () => {
+      stubFetch(new Response(null, { status: 404 }));
+      expect(await fetchReviewDetail('r1')).toBeNull();
+    });
+  });
+
+  describe('fetchReviewReplies', () => {
+    it('GETs /reviews/:id/replies and returns the grouped payload on 2xx', async () => {
+      const payload = { comments: [{ id: 'c1', children: [] }], total: 1 };
+      const fetchSpy = stubFetch(jsonResponse(payload));
+
+      const result = await fetchReviewReplies('r1');
+
+      expect(String(fetchSpy.mock.calls[0][0])).toMatch(/\/reviews\/r1\/replies$/);
+      expect(result?.total).toBe(1);
+      expect(result?.comments).toHaveLength(1);
+    });
+
+    it('returns null on non-2xx', async () => {
+      stubFetch(new Response(null, { status: 500 }));
+      expect(await fetchReviewReplies('r1')).toBeNull();
+    });
+  });
+
+  describe('postReply', () => {
+    it('POSTs the body, omitting parentReplyId for a top-level comment', async () => {
+      const fetchSpy = stubFetch(jsonResponse({ id: 'c1' }, 201));
+
+      await postReply('r1', 'Nice review');
+
+      const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(String(url)).toMatch(/\/reviews\/r1\/replies$/);
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(String(init.body))).toEqual({ body: 'Nice review' });
+    });
+
+    it('includes parentReplyId when replying to a comment', async () => {
+      const fetchSpy = stubFetch(jsonResponse({ id: 'c2' }, 201));
+
+      await postReply('r1', 'Agreed', 'c1');
+
+      const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(String(init.body))).toEqual({
+        body: 'Agreed',
+        parentReplyId: 'c1',
+      });
+    });
+
+    it('throws with the server-provided error message on a non-ok response', async () => {
+      stubFetch(
+        jsonResponse({ error: 'Replies are limited to 2000 characters' }, 400),
+      );
+      await expect(postReply('r1', 'x')).rejects.toThrow(
+        'Replies are limited to 2000 characters',
+      );
+    });
+  });
+
+  describe('deleteReply', () => {
+    it('DELETEs /reviews/replies/:replyId', async () => {
+      const fetchSpy = stubFetch(jsonResponse({ success: true }));
+
+      await deleteReply('c1');
+
+      const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(String(url)).toMatch(/\/reviews\/replies\/c1$/);
+      expect(init.method).toBe('DELETE');
+    });
+
+    it('throws on a non-ok response', async () => {
+      stubFetch(new Response(null, { status: 500 }));
+      await expect(deleteReply('c1')).rejects.toThrow('Failed to delete comment');
+    });
+  });
+
+  describe('likeReview / unlikeReview', () => {
+    it('likeReview POSTs /reviews/:id/like and returns the { liked, count } body', async () => {
+      const fetchSpy = stubFetch(jsonResponse({ liked: true, count: 5 }));
+
+      const result = await likeReview('r1');
+
+      const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(String(url)).toMatch(/\/reviews\/r1\/like$/);
+      expect(init.method).toBe('POST');
+      expect(result).toEqual({ liked: true, count: 5 });
+    });
+
+    it('unlikeReview DELETEs /reviews/:id/like and returns the { liked, count } body', async () => {
+      const fetchSpy = stubFetch(jsonResponse({ liked: false, count: 4 }));
+
+      const result = await unlikeReview('r1');
+
+      const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(String(url)).toMatch(/\/reviews\/r1\/like$/);
+      expect(init.method).toBe('DELETE');
+      expect(result).toEqual({ liked: false, count: 4 });
+    });
+
+    it('likeReview throws with the server error on a non-ok response', async () => {
+      stubFetch(jsonResponse({ error: 'You cannot like your own review' }, 403));
+      await expect(likeReview('r1')).rejects.toThrow(
+        'You cannot like your own review',
+      );
+    });
+
+    it('unlikeReview throws on a non-ok response with no JSON body', async () => {
+      stubFetch(new Response(null, { status: 500 }));
+      await expect(unlikeReview('r1')).rejects.toThrow('Failed to unlike review');
+    });
   });
 });

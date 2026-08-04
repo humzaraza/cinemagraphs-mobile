@@ -1073,6 +1073,8 @@ function ReviewCard({ review, blind }: { review: FilmReview; blind: boolean }) {
 }
 
 function UserReviews({ reviews, blind }: { reviews: FilmReview[]; blind: boolean }) {
+  const router = useRouter();
+
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.reviewsHeader}>
@@ -1081,7 +1083,14 @@ function UserReviews({ reviews, blind }: { reviews: FilmReview[]; blind: boolean
       {reviews && reviews.length > 0 ? (
         <View style={{ gap: 6 }}>
           {reviews.slice(0, 2).map((r) => (
-            <ReviewCard key={r.id} review={r} blind={blind} />
+            <Pressable
+              key={r.id}
+              onPress={() => router.push(`/review/${r.id}` as any)}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${r.user.name ?? 'Anonymous'}'s review`}
+            >
+              <ReviewCard review={r} blind={blind} />
+            </Pressable>
           ))}
         </View>
       ) : (

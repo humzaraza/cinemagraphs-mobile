@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { TERMS_VERSION } from '../constants/legal';
 import type {
   Film,
+  FilmDataPoint,
   FilmDetail,
   HeroResponse,
   ReviewSubmission,
@@ -438,6 +439,132 @@ export async function submitReview(filmId: string, data: ReviewSubmission): Prom
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to submit review');
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Review detail (replies & likes)
+// ---------------------------------------------------------------------------
+
+// Author / commenter identity as selected by the review-detail and replies
+// endpoints. name is nullable; the web renders "Anonymous" for it.
+export interface ReviewDetailUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
+export interface ReviewDetailFilm {
+  id: string;
+  title: string;
+  posterUrl: string | null;
+  releaseDate: string | null;
+  director: string | null;
+  runtime: number | null;
+  sentimentGraph: { dataPoints: FilmDataPoint[] } | null;
+}
+
+export interface ReviewLikes {
+  count: number;
+  liked: boolean;
+}
+
+// GET /api/reviews/[id]. Review fields sit flat at the top level; user,
+// film (with sentimentGraph.dataPoints), likes and replyCount are nested.
+// `liked` is per-viewer (false when unauthenticated).
+export interface ReviewDetail {
+  id: string;
+  filmId: string;
+  overallRating: number;
+  beginning: string | null;
+  middle: string | null;
+  ending: string | null;
+  otherThoughts: string | null;
+  combinedText: string | null;
+  beatRatings: Record<string, number> | null;
+  createdAt: string;
+  updatedAt: string;
+  user: ReviewDetailUser;
+  film: ReviewDetailFilm;
+  likes: ReviewLikes;
+  replyCount: number;
+}
+
+export interface ReviewReply {
+  id: string;
+  body: string;
+  createdAt: string;
+  parentReplyId: string | null;
+  user: ReviewDetailUser;
+}
+
+// Top-level comment with its single level of children, as pre-grouped by
+// GET /api/reviews/[id]/replies. The server enforces the one-level depth
+// rule, so children never carry children of their own.
+export interface ReviewComment extends ReviewReply {
+  children: ReviewReply[];
+}
+
+export interface ReviewRepliesResponse {
+  comments: ReviewComment[];
+  total: number;
+}
+
+export async function fetchReviewDetail(
+  reviewId: string,
+): Promise<ReviewDetail | null> {
+  const res = await apiFetch(`/reviews/${reviewId}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchReviewReplies(
+  reviewId: string,
+): Promise<ReviewRepliesResponse | null> {
+  const res = await apiFetch(`/reviews/${reviewId}/replies`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function postReply(
+  reviewId: string,
+  body: string,
+  parentReplyId?: string,
+): Promise<ReviewReply> {
+  const res = await apiFetch(`/reviews/${reviewId}/replies`, {
+    method: 'POST',
+    body: JSON.stringify(parentReplyId ? { body, parentReplyId } : { body }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to post comment');
+  }
+  return res.json();
+}
+
+export async function deleteReply(replyId: string): Promise<void> {
+  const res = await apiFetch(`/reviews/replies/${replyId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete comment');
+  }
+}
+
+export async function likeReview(reviewId: string): Promise<ReviewLikes> {
+  const res = await apiFetch(`/reviews/${reviewId}/like`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to like review');
+  }
+  return res.json();
+}
+
+export async function unlikeReview(reviewId: string): Promise<ReviewLikes> {
+  const res = await apiFetch(`/reviews/${reviewId}/like`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to unlike review');
   }
   return res.json();
 }
