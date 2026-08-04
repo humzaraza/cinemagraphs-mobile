@@ -39,6 +39,7 @@ function RootNav() {
       <Stack.Screen name="category/[key]" />
       <Stack.Screen name="section" />
       <Stack.Screen name="review" />
+      <Stack.Screen name="review/[id]" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="live-react/index" />
       <Stack.Screen name="header-picker" />
