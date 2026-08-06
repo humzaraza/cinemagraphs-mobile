@@ -35,6 +35,7 @@ import { useAuthGate } from '../../src/components/AuthGate';
 import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
 import * as payloadCache from '../../src/lib/payload-cache';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
+import { getInitials } from '../../src/lib/initials';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import { timeAgo } from '../../src/lib/time-ago';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
@@ -80,15 +81,6 @@ function formatTimestamp(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return `${h}h ${m}m`;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 function getBackdropUri(backdropPath: string | null | undefined): string | null {
