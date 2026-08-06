@@ -58,6 +58,11 @@ describe('ReviewBeatArc', () => {
     expect(tree.toJSON()).toBeNull();
   });
 
+  it('renders nothing when beatRatings is an empty object', () => {
+    const tree = render(POINTS, {});
+    expect(tree.toJSON()).toBeNull();
+  });
+
   it('renders nothing with a single data point', () => {
     const tree = render([POINTS[0]], { Opening: 7 });
     expect(tree.toJSON()).toBeNull();

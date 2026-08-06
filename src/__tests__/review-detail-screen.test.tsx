@@ -5,6 +5,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const showErrorSpy = vi.hoisted(() => vi.fn());
 const alertSpy = vi.hoisted(() => vi.fn());
+const routerPushSpy = vi.hoisted(() => vi.fn());
+const routerBackSpy = vi.hoisted(() => vi.fn());
+const routerReplaceSpy = vi.hoisted(() => vi.fn());
+const canGoBackSpy = vi.hoisted(() => vi.fn());
 
 vi.mock('react-native', async () => {
   const React = (await import('react')).default;
@@ -87,7 +91,12 @@ vi.mock('react-native-svg', () => ({
 }));
 
 vi.mock('expo-router', () => ({
-  useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({
+    push: routerPushSpy,
+    back: routerBackSpy,
+    replace: routerReplaceSpy,
+    canGoBack: canGoBackSpy,
+  }),
   useLocalSearchParams: () => ({ id: 'r1' }),
 }));
 
@@ -198,6 +207,10 @@ beforeEach(() => {
   clearPayloadCache();
   showErrorSpy.mockReset();
   alertSpy.mockReset();
+  routerPushSpy.mockReset();
+  routerBackSpy.mockReset();
+  routerReplaceSpy.mockReset();
+  canGoBackSpy.mockReset().mockReturnValue(true);
   vi.mocked(fetchReviewDetail).mockReset().mockResolvedValue(makeDetail());
   vi.mocked(fetchReviewReplies)
     .mockReset()
@@ -285,6 +298,77 @@ describe('ReviewDetailScreen blind mode', () => {
   it('shows the score when blind state is unavailable', async () => {
     const tree = await renderScreen();
     expect(scoreTexts(tree)).toHaveLength(1);
+  });
+});
+
+describe('ReviewDetailScreen back chevron', () => {
+  function backButton(tree: ReactTestRenderer) {
+    const matches = tree.root.findAll(
+      (node) => node.props?.accessibilityLabel === 'Go back',
+    );
+    expect(matches).toHaveLength(1);
+    return matches[0];
+  }
+
+  it('pops the navigator when it can go back', async () => {
+    const tree = await renderScreen();
+
+    await TestRenderer.act(async () => {
+      backButton(tree).props.onPress();
+    });
+
+    expect(routerBackSpy).toHaveBeenCalledTimes(1);
+    expect(routerReplaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the Explore tab when there is no history (deep link)', async () => {
+    canGoBackSpy.mockReturnValue(false);
+    const tree = await renderScreen();
+
+    await TestRenderer.act(async () => {
+      backButton(tree).props.onPress();
+    });
+
+    expect(routerBackSpy).not.toHaveBeenCalled();
+    expect(routerReplaceSpy).toHaveBeenCalledWith('/(tabs)/explore');
+  });
+});
+
+describe('ReviewDetailScreen beat-arc card', () => {
+  const DATA_POINTS = [
+    { timeMidpoint: 10, score: 6, label: 'Opening' },
+    { timeMidpoint: 90, score: 8, label: 'Resolution' },
+  ];
+
+  function beatArcCards(tree: ReactTestRenderer) {
+    return tree.root.findAll((node) => node.props?.testID === 'beat-arc-card');
+  }
+
+  function makeDetailWithBeats(beatRatings: Record<string, number>) {
+    const base = makeDetail();
+    return {
+      ...base,
+      beatRatings,
+      film: { ...base.film, sentimentGraph: { dataPoints: DATA_POINTS } },
+    };
+  }
+
+  it('renders the card when the review has beat ratings and the film has data points', async () => {
+    vi.mocked(fetchReviewDetail).mockResolvedValue(
+      makeDetailWithBeats({ Opening: 7 }),
+    );
+
+    const tree = await renderScreen();
+
+    expect(beatArcCards(tree)).toHaveLength(1);
+  });
+
+  it('renders no card when beatRatings is an empty object, same as null', async () => {
+    vi.mocked(fetchReviewDetail).mockResolvedValue(makeDetailWithBeats({}));
+
+    const tree = await renderScreen();
+
+    expect(beatArcCards(tree)).toHaveLength(0);
   });
 });
 

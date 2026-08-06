@@ -49,17 +49,26 @@ export interface PeakLowMoment {
   score: number;
 }
 
+// name is nullable on the wire (same identity selection as
+// ReviewDetailUser in src/lib/api.ts); render "Anonymous" for null.
 export interface ReviewUser {
   id: string;
-  name: string;
+  name: string | null;
   image?: string;
 }
 
+// Review row as returned by GET /api/films/[id]/reviews: the rating is
+// overallRating, and prose lives in the four section fields with the
+// denormalized combinedText as a fallback (there is no single `content`).
 export interface FilmReview {
   id: string;
   user: ReviewUser;
-  score: number;
-  content: string;
+  overallRating: number;
+  beginning: string | null;
+  middle: string | null;
+  ending: string | null;
+  otherThoughts: string | null;
+  combinedText: string | null;
   createdAt: string;
 }
 
@@ -100,7 +109,6 @@ export interface LiveReactionSession {
 
 export interface FilmDetail extends Film {
   sentimentGraph: DetailedSentimentGraph;
-  reviews: FilmReview[];
   director: string;
   genres: string[];
   runtime: number;
