@@ -1,6 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestRenderer, { type ReactTestRenderer } from 'react-test-renderer';
 
+// Capture AppState listeners so tests can simulate foreground/background
+// transitions by invoking them directly.
+type AppStateListener = (state: string) => void;
+const appStateListeners: AppStateListener[] = [];
+vi.mock('react-native', () => ({
+  AppState: {
+    addEventListener: vi.fn((_type: string, listener: AppStateListener) => {
+      appStateListeners.push(listener);
+      return {
+        remove: vi.fn(() => {
+          const idx = appStateListeners.indexOf(listener);
+          if (idx !== -1) appStateListeners.splice(idx, 1);
+        }),
+      };
+    }),
+  },
+}));
+
 vi.mock('expo-secure-store', () => ({
   getItemAsync: vi.fn(async () => null),
   setItemAsync: vi.fn(async () => undefined),
@@ -37,6 +55,7 @@ vi.mock('../lib/api', () => ({
   cleanupLegacyTokenKey: vi.fn(async () => undefined),
   setOnAuthFailure: vi.fn(),
   requestServerLogout: vi.fn(),
+  refreshIfExpiringSoon: vi.fn(async () => null),
   deleteAccount: vi.fn(async () => undefined),
   apiFetch: vi.fn(),
 }));
@@ -60,12 +79,15 @@ import {
   apiFetch,
   setOnAuthFailure,
   requestServerLogout,
+  refreshIfExpiringSoon,
   removeTokens,
   deleteAccount as deleteAccountApi,
 } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { clearBlindModeCache } from '../lib/blind-mode';
+// Real module (not mocked): the sign-in test asserts actual cache state.
+import * as payloadCache from '../lib/payload-cache';
 import AuthProvider, { useAuth } from './AuthProvider';
 
 const flushPromises = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -93,7 +115,19 @@ function setup() {
 beforeEach(() => {
   vi.clearAllMocks();
   asyncStore.clear();
+  appStateListeners.length = 0;
+  payloadCache.clearPayloadCache();
+  // clearAllMocks wipes the default implementation set in the factory.
+  vi.mocked(refreshIfExpiringSoon).mockResolvedValue(null);
 });
+
+// Simulate an AppState transition by invoking every registered listener.
+async function fireAppState(nextState: string) {
+  await TestRenderer.act(async () => {
+    for (const listener of [...appStateListeners]) listener(nextState);
+  });
+  await flushPromises();
+}
 
 describe('AuthProvider.signOut', () => {
   it('awaiting signOut() leaves auth state fully cleared, so a caller that navigates after the await sees isAuthenticated=false and needsOnboarding=false', async () => {
@@ -462,5 +496,116 @@ describe('AuthProvider.deleteAccount', () => {
     expect(state().user).toBeNull();
     expect(state().token).toBeNull();
     expect(state().isAuthenticated).toBe(false);
+  });
+});
+
+describe('AuthProvider foreground token refresh', () => {
+  async function signInAsU1(state: () => AuthState) {
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+    await TestRenderer.act(async () => {});
+    await flushPromises();
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+    await flushPromises();
+  }
+
+  it('foregrounding with an expired token refreshes: the check runs and the rotated token lands in state', async () => {
+    // refreshIfExpiringSoon models the expired-token case by returning a
+    // rotated pair (its internal expired/valid discrimination is covered
+    // by the api.ts tests).
+    vi.mocked(refreshIfExpiringSoon).mockResolvedValue({
+      accessToken: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+    });
+
+    const { state } = setup();
+    await signInAsU1(state);
+    expect(state().token).toBe('access-token');
+
+    await fireAppState('active');
+
+    expect(vi.mocked(refreshIfExpiringSoon)).toHaveBeenCalledTimes(1);
+    expect(state().token).toBe('rotated-access-token');
+    expect(state().isAuthenticated).toBe(true);
+  });
+
+  it('foregrounding with a valid token does not rotate: the helper resolves null and state is untouched', async () => {
+    vi.mocked(refreshIfExpiringSoon).mockResolvedValue(null);
+
+    const { state } = setup();
+    await signInAsU1(state);
+
+    await fireAppState('active');
+
+    expect(vi.mocked(refreshIfExpiringSoon)).toHaveBeenCalledTimes(1);
+    expect(state().token).toBe('access-token');
+  });
+
+  it('only fires on the transition to active, not background/inactive', async () => {
+    const { state } = setup();
+    await signInAsU1(state);
+
+    await fireAppState('background');
+    await fireAppState('inactive');
+
+    expect(vi.mocked(refreshIfExpiringSoon)).not.toHaveBeenCalled();
+  });
+
+  it('does not re-run the full restore on foreground (no /user/profile fetch)', async () => {
+    const { state } = setup();
+    await signInAsU1(state);
+    const apiFetchCallsBefore = vi.mocked(apiFetch).mock.calls.length;
+
+    await fireAppState('active');
+
+    expect(vi.mocked(apiFetch).mock.calls.length).toBe(apiFetchCallsBefore);
+  });
+
+  it('a rejected refresh is swallowed and leaves auth state intact', async () => {
+    vi.mocked(refreshIfExpiringSoon).mockRejectedValue(
+      new Error('network down'),
+    );
+
+    const { state } = setup();
+    await signInAsU1(state);
+
+    await fireAppState('active');
+
+    expect(state().token).toBe('access-token');
+    expect(state().isAuthenticated).toBe(true);
+  });
+});
+
+describe('AuthProvider sign-in cache clearing', () => {
+  it('signIn clears the payload cache so guest-browsing payloads do not survive into the session', async () => {
+    // Simulate payloads cached while browsing signed out: the anonymous
+    // variant of viewer-personalized data plus a neutral category page.
+    payloadCache.set('film:1', { id: '1', userReview: null });
+    payloadCache.set('reviews:1:ex', { reviews: [] });
+    payloadCache.set('category:drama', { films: [] });
+
+    vi.mocked(loginWithEmail).mockResolvedValueOnce({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 'u1', email: 'u1@example.com', name: 'User One' },
+    });
+
+    const { state } = setup();
+    await TestRenderer.act(async () => {});
+    await TestRenderer.act(async () => {
+      await state().signIn('u1@example.com', 'pw');
+    });
+
+    // handlePostAuth clears EVERYTHING (unlike token rotation, this is a
+    // session boundary, same as sign-out).
+    expect(payloadCache.get('film:1')).toBeUndefined();
+    expect(payloadCache.get('reviews:1:ex')).toBeUndefined();
+    expect(payloadCache.get('category:drama')).toBeUndefined();
+    expect(state().isAuthenticated).toBe(true);
   });
 });

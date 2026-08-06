@@ -89,6 +89,36 @@ export function clearPayloadCache(): void {
   epoch += 1;
 }
 
+// Key prefixes whose cached payloads embed per-viewer state served by
+// PUBLIC endpoints (film detail's "your review" / watchlist membership,
+// review lists' currentUserReview, review detail's likes.liked). These
+// endpoints return 200 for an anonymous caller, so a payload fetched with
+// a stale access token silently cached the signed-out variant. Keys NOT
+// listed here are either viewer-neutral (category:*) or auth-required
+// (*:me keys, which 401 on a stale token and never cache anonymous data).
+const VIEWER_SCOPED_PREFIXES = ['film:', 'reviews:', 'review:'];
+
+function isViewerScopedKey(key: string): boolean {
+  return VIEWER_SCOPED_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
+/**
+ * Drop only the viewer-scoped entries (and their in-flight fetches).
+ * Called when a token refresh rotates the viewer's credentials: anything
+ * cached under these keys may be the anonymous variant fetched with the
+ * expired token, so the next read must refetch. Viewer-neutral keys and
+ * the auth-required *:me keys are left intact.
+ */
+export function clearViewerScopedCache(): void {
+  // Union of stored and in-flight keys: an in-flight anonymous fetch may
+  // not have landed in the store yet, but invalidate() bumps its
+  // generation so its eventual write is refused.
+  const keys = new Set([...store.keys(), ...inFlight.keys()]);
+  for (const key of keys) {
+    if (isViewerScopedKey(key)) invalidate(key);
+  }
+}
+
 /**
  * Run fetcher at most once per key while a call is in flight: concurrent
  * callers share the same promise (request de-dup). On success the result

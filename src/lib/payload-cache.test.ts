@@ -33,6 +33,49 @@ describe('payload-cache', () => {
     expect(PAYLOAD_TTL_MS).toBe(120000);
   });
 
+  describe('clearViewerScopedCache', () => {
+    it('drops film:/reviews:/review: entries and keeps neutral and *:me entries', () => {
+      cache.set('film:1', 'a');
+      cache.set('reviews:1:ex', 'b');
+      cache.set('reviews:1:all', 'c');
+      cache.set('review:9', 'd');
+      cache.set('category:drama', 'e');
+      cache.set('profile:me', 'f');
+      cache.set('films:me', 'g');
+      cache.set('watchlist:me', 'h');
+      cache.set('lists:me', 'i');
+
+      cache.clearViewerScopedCache();
+
+      expect(cache.get('film:1')).toBeUndefined();
+      expect(cache.get('reviews:1:ex')).toBeUndefined();
+      expect(cache.get('reviews:1:all')).toBeUndefined();
+      expect(cache.get('review:9')).toBeUndefined();
+      expect(cache.get('category:drama')).toBe('e');
+      expect(cache.get('profile:me')).toBe('f');
+      // Prefix matching is literal including the colon, so films:me does
+      // NOT match film: and lists:me does not match any cleared prefix.
+      expect(cache.get('films:me')).toBe('g');
+      expect(cache.get('watchlist:me')).toBe('h');
+      expect(cache.get('lists:me')).toBe('i');
+    });
+
+    it('refuses the write of an in-flight viewer-scoped fetch that started before the clear', async () => {
+      const d = deferred<string>();
+      const fetcher = vi.fn(() => d.promise);
+      const pending = cache.getWithRevalidate('film:1', fetcher, 1000);
+
+      // The clear lands while the (potentially anonymous) fetch is still
+      // in flight; its result must not repopulate the store.
+      cache.clearViewerScopedCache();
+      d.resolve('anonymous-variant');
+      await pending;
+      await flush();
+
+      expect(cache.get('film:1')).toBeUndefined();
+    });
+  });
+
   it('get returns undefined when cold and the value after set', () => {
     expect(cache.get('k')).toBeUndefined();
     cache.set('k', { a: 1 });
