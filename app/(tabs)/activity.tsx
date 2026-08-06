@@ -23,16 +23,8 @@ import {
 } from '../../src/lib/api';
 import { getUnreadActivity, setUnreadActivity } from '../../src/lib/unread-activity';
 import { timeAgo } from '../../src/lib/time-ago';
+import { getInitials } from '../../src/lib/initials';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 // ---------------------------------------------------------------------------
 // Per-tab feed state. Same paginated machine as app/section.tsx (flags,

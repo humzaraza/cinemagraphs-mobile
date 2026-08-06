@@ -36,6 +36,7 @@ import { useToast } from '../../src/components/ui/Toast';
 import ReviewBeatArc from '../../src/components/ReviewBeatArc';
 import { formatScore } from '../../src/lib/score-format';
 import { stitchReviewProse } from '../../src/lib/review-prose';
+import { getInitials } from '../../src/lib/initials';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import { timeAgo } from '../../src/lib/time-ago';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
@@ -55,15 +56,6 @@ const COUNTER_THRESHOLD = 1800;
 // Helpers
 // ---------------------------------------------------------------------------
 
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 // One FlatList row per rendered comment. Children carry their top-level
 // comment's id so delete can prune the right branch; top-level rows carry
