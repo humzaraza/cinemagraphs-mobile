@@ -36,6 +36,7 @@ import { addRecentlyViewed } from '../../src/lib/recentlyViewed';
 import * as payloadCache from '../../src/lib/payload-cache';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+import { timeAgo } from '../../src/lib/time-ago';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
 import { BlindModeTooltip } from '../../src/components/BlindModeTooltip';
 import { BlindModeToggle } from '../../src/components/film-detail/BlindModeToggle';
@@ -79,17 +80,6 @@ function formatTimestamp(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
   return `${h}h ${m}m`;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return `${Math.floor(days / 30)}mo ago`;
 }
 
 function getInitials(name: string): string {

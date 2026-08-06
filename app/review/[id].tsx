@@ -37,6 +37,7 @@ import ReviewBeatArc from '../../src/components/ReviewBeatArc';
 import { formatScore } from '../../src/lib/score-format';
 import { stitchReviewProse } from '../../src/lib/review-prose';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+import { timeAgo } from '../../src/lib/time-ago';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
 import {
@@ -54,18 +55,6 @@ const COUNTER_THRESHOLD = 1800;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function timeAgo(dateStr: string): string {
-  // Clamped at zero: a just-posted comment carries the server's clock, and
-  // a device running behind it would otherwise render "-1m ago".
-  const diff = Math.max(0, Date.now() - new Date(dateStr).getTime());
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 function getInitials(name: string): string {
   return name

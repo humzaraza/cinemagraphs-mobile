@@ -1153,3 +1153,93 @@ export async function fetchFollowing(userId: string, page?: number): Promise<any
   if (!res.ok) return { users: [], total: 0, page: 1, totalPages: 0 };
   return res.json();
 }
+
+// ---------------------------------------------------------------------------
+// Activity feed
+// ---------------------------------------------------------------------------
+
+export type ActivityTab = 'friends' | 'incoming';
+
+export interface FeedActor {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
+export interface FeedFilm {
+  id: string;
+  title: string;
+  posterUrl: string | null;
+}
+
+export interface FeedList {
+  id: string;
+  name: string;
+}
+
+// One activity row as shaped by GET /api/activity. The friends tab carries
+// review / follow / watchlist / list_add; incoming carries follow / like /
+// reply / reply_to_comment. Referent fields are per-type: review-linked
+// types carry review + film, list_add carries film + list, friends-tab
+// follow carries targetUser (incoming follow targets the viewer, so it is
+// null there), and reply types carry reply with a server-truncated body.
+export interface FeedItem {
+  id: string;
+  type: 'review' | 'follow' | 'watchlist' | 'list_add' | 'like' | 'reply' | 'reply_to_comment';
+  createdAt: string;
+  actor: FeedActor;
+  targetUser: FeedActor | null;
+  film: FeedFilm | null;
+  review: { id: string } | null;
+  list: FeedList | null;
+  reply: { id: string; body: string } | null;
+}
+
+export interface ActivityFeedPage {
+  items: FeedItem[];
+  page: number;
+  hasMore: boolean;
+}
+
+// The server over-fetches to backfill dropped referents, so consecutive
+// pages can overlap; callers must dedupe appended pages by item.id.
+export async function fetchActivityFeed(
+  tab: ActivityTab,
+  page: number,
+  signal?: AbortSignal,
+): Promise<ActivityFeedPage | null> {
+  try {
+    const res = await apiFetch(`/activity?tab=${tab}&page=${page}`, { signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data?.items)) return null;
+    return {
+      items: data.items as FeedItem[],
+      page: data.page ?? page,
+      hasMore: !!data.hasMore,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Whether the viewer has unread Incoming activity. Server guarantees the
+// flag only counts rows the Incoming tab would actually render.
+export async function fetchUnreadActivity(): Promise<boolean | null> {
+  try {
+    const res = await apiFetch('/activity/unread');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.unread === 'boolean' ? data.unread : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function markActivitySeen(): Promise<void> {
+  const res = await apiFetch('/activity/seen', { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to mark activity seen');
+  }
+}
