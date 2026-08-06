@@ -28,7 +28,11 @@ import {
   deleteReply,
   likeReview,
   unlikeReview,
+  decodeTokenExp,
+  isTokenExpiredOrExpiring,
+  refreshIfExpiringSoon,
 } from './api';
+import * as payloadCache from './payload-cache';
 
 const TOKENS_KEY = 'auth_tokens';
 
@@ -835,6 +839,323 @@ describe('review detail helpers', () => {
     it('unlikeReview throws on a non-ok response with no JSON body', async () => {
       stubFetch(new Response(null, { status: 500 }));
       await expect(unlikeReview('r1')).rejects.toThrow('Failed to unlike review');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Proactive token refresh (expiry-aware apiFetch)
+//
+// Viewer-personalized PUBLIC endpoints answer 200 to an expired token
+// (treated as anonymous), so the reactive 401 path never fires for them.
+// apiFetch therefore decodes the token's exp locally and refreshes BEFORE
+// attaching a token the server would silently reject.
+// ---------------------------------------------------------------------------
+
+// Build a structurally valid JWT whose payload carries the given exp
+// (epoch seconds). The signature is garbage; only the payload segment is
+// decoded client-side.
+function makeJwt(expSeconds: number): string {
+  const encode = (obj: object) =>
+    Buffer.from(JSON.stringify(obj)).toString('base64url');
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({
+    sub: 'u1',
+    exp: expSeconds,
+  })}.sig`;
+}
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+// Comfortably valid: 10 minutes out, far beyond the 30s skew window.
+const validJwt = () => makeJwt(nowSeconds() + 600);
+// Expired one minute ago.
+const expiredJwt = () => makeJwt(nowSeconds() - 60);
+
+describe('decodeTokenExp', () => {
+  it('extracts exp from a well-formed JWT payload', () => {
+    expect(decodeTokenExp(makeJwt(1234567890))).toBe(1234567890);
+  });
+
+  it('returns null for a token without a payload segment', () => {
+    expect(decodeTokenExp('not-a-jwt')).toBeNull();
+  });
+
+  it('returns null for a payload that is not valid base64url JSON', () => {
+    expect(decodeTokenExp('header.!!!invalid!!!.sig')).toBeNull();
+  });
+
+  it('returns null when exp is missing or not a number', () => {
+    const encode = (obj: object) =>
+      Buffer.from(JSON.stringify(obj)).toString('base64url');
+    expect(decodeTokenExp(`h.${encode({ sub: 'u1' })}.s`)).toBeNull();
+    expect(decodeTokenExp(`h.${encode({ exp: 'soon' })}.s`)).toBeNull();
+  });
+});
+
+describe('isTokenExpiredOrExpiring', () => {
+  it('is true for an already-expired token', () => {
+    expect(isTokenExpiredOrExpiring(expiredJwt())).toBe(true);
+  });
+
+  it('is true inside the skew window (expires in 10s)', () => {
+    expect(isTokenExpiredOrExpiring(makeJwt(nowSeconds() + 10))).toBe(true);
+  });
+
+  it('is false for a comfortably valid token', () => {
+    expect(isTokenExpiredOrExpiring(validJwt())).toBe(false);
+  });
+
+  it('is false on decode failure (attach and let the 401 path handle it)', () => {
+    expect(isTokenExpiredOrExpiring('garbage')).toBe(false);
+  });
+});
+
+describe('apiFetch proactive refresh', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  interface RecordedCall {
+    url: string;
+    method: string;
+    authorization: string | undefined;
+  }
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    setOnAuthFailure(null);
+    payloadCache.clearPayloadCache();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    setOnAuthFailure(null);
+    payloadCache.clearPayloadCache();
+  });
+
+  function storeTokens(accessToken: string) {
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue(
+      JSON.stringify({ accessToken, refreshToken: 'refresh-1' }),
+    );
+    vi.mocked(SecureStore.setItemAsync).mockResolvedValue(undefined);
+  }
+
+  // Route by URL instead of by call order so concurrency tests stay
+  // robust: the refresh endpoint answers with a rotated pair, everything
+  // else goes through `apiResponder` (default 200). Records every call.
+  function installFetch(options?: {
+    apiResponder?: (call: RecordedCall) => { status: number };
+    refreshStatus?: number;
+  }) {
+    const calls: RecordedCall[] = [];
+    const rotated = {
+      accessToken: makeJwt(nowSeconds() + 900),
+      refreshToken: 'refresh-2',
+    };
+    const fetchSpy = vi.fn(async (url: string, init?: RequestInit) => {
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      const call: RecordedCall = {
+        url: String(url),
+        method: init?.method ?? 'GET',
+        authorization: headers['Authorization'],
+      };
+      calls.push(call);
+      if (call.url.includes('/auth/mobile/refresh')) {
+        const status = options?.refreshStatus ?? 200;
+        return new Response(JSON.stringify(rotated), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const status = options?.apiResponder?.(call).status ?? 200;
+      return new Response(JSON.stringify({}), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+    return { calls, rotated };
+  }
+
+  const refreshCalls = (calls: RecordedCall[]) =>
+    calls.filter((c) => c.url.includes('/auth/mobile/refresh'));
+  const apiCalls = (calls: RecordedCall[]) =>
+    calls.filter((c) => !c.url.includes('/auth/mobile/refresh'));
+
+  it('an expired token triggers a refresh BEFORE the request, not after a 401', async () => {
+    storeTokens(expiredJwt());
+    const { calls, rotated } = installFetch();
+
+    const res = await apiFetch('/films/1');
+    expect(res.status).toBe(200);
+
+    // First wire call is the refresh; the API request follows with the
+    // rotated token attached. The server never had to say 401.
+    expect(calls[0].url).toContain('/auth/mobile/refresh');
+    expect(calls).toHaveLength(2);
+    expect(apiCalls(calls)[0].authorization).toBe(
+      `Bearer ${rotated.accessToken}`,
+    );
+
+    // The rotated pair is persisted.
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      'auth_tokens',
+      JSON.stringify(rotated),
+    );
+  });
+
+  it('a valid token is attached as-is with no refresh call', async () => {
+    const access = validJwt();
+    storeTokens(access);
+    const { calls } = installFetch();
+
+    const res = await apiFetch('/films/1');
+    expect(res.status).toBe(200);
+
+    expect(refreshCalls(calls)).toHaveLength(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].authorization).toBe(`Bearer ${access}`);
+  });
+
+  it('concurrent calls with an expired token share ONE refresh (single-flight)', async () => {
+    storeTokens(expiredJwt());
+    const { calls, rotated } = installFetch();
+
+    const results = await Promise.all([
+      apiFetch('/films/1'),
+      apiFetch('/films/2'),
+      apiFetch('/user/profile'),
+    ]);
+    for (const res of results) {
+      expect(res.status).toBe(200);
+    }
+
+    expect(refreshCalls(calls)).toHaveLength(1);
+    expect(apiCalls(calls)).toHaveLength(3);
+    // Every API request went out with the rotated token.
+    for (const call of apiCalls(calls)) {
+      expect(call.authorization).toBe(`Bearer ${rotated.accessToken}`);
+    }
+  });
+
+  it('a decode failure falls through to existing behavior: token attached, reactive 401 path still refreshes', async () => {
+    storeTokens('not-a-jwt');
+    const { calls, rotated } = installFetch({
+      apiResponder: (call) =>
+        // The undecodable token gets attached and rejected by an
+        // auth-required endpoint; the retry with the rotated token
+        // succeeds.
+        call.authorization === 'Bearer not-a-jwt'
+          ? { status: 401 }
+          : { status: 200 },
+    });
+
+    const res = await apiFetch('/user/profile');
+    expect(res.status).toBe(200);
+
+    // No proactive refresh: the FIRST wire call is the API request with
+    // the undecodable token attached verbatim.
+    expect(calls[0].url).not.toContain('/auth/mobile/refresh');
+    expect(calls[0].authorization).toBe('Bearer not-a-jwt');
+    // Then the existing 401-driven refresh and retry.
+    expect(calls[1].url).toContain('/auth/mobile/refresh');
+    expect(calls[2].authorization).toBe(`Bearer ${rotated.accessToken}`);
+  });
+
+  it('a decode failure with a 200 response makes no refresh call at all', async () => {
+    storeTokens('not-a-jwt');
+    const { calls } = installFetch();
+
+    const res = await apiFetch('/films/1');
+    expect(res.status).toBe(200);
+    expect(refreshCalls(calls)).toHaveLength(0);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('a failed proactive refresh attaches the stale token so the 401 fallback stays reachable', async () => {
+    const access = expiredJwt();
+    storeTokens(access);
+    const { calls } = installFetch({ refreshStatus: 500 });
+
+    const res = await apiFetch('/films/1');
+    // Public endpoint still answers 200 (anonymous); the request went out
+    // with the stale token rather than being dropped.
+    expect(res.status).toBe(200);
+    expect(refreshCalls(calls)).toHaveLength(1);
+    expect(apiCalls(calls)[0].authorization).toBe(`Bearer ${access}`);
+  });
+
+  describe('token rotation cache invalidation', () => {
+    it('rotation clears viewer-dependent keys and leaves viewer-neutral keys', async () => {
+      storeTokens(expiredJwt());
+      installFetch();
+
+      // Viewer-dependent payloads (potentially the anonymous variant,
+      // fetched while the token was expired).
+      payloadCache.set('film:42', { id: '42' });
+      payloadCache.set('reviews:42:ex', { reviews: [] });
+      payloadCache.set('reviews:42:all', { reviews: [] });
+      payloadCache.set('review:9', { id: '9', likes: { liked: false } });
+      // Viewer-neutral / auth-required payloads that must survive.
+      payloadCache.set('category:drama', { films: [] });
+      payloadCache.set('profile:me', { user: { id: 'u1' } });
+      payloadCache.set('films:me', []);
+      payloadCache.set('watchlist:me', []);
+      payloadCache.set('lists:me', []);
+
+      // Trigger the proactive refresh (which rotates the pair).
+      await apiFetch('/films/42');
+
+      expect(payloadCache.get('film:42')).toBeUndefined();
+      expect(payloadCache.get('reviews:42:ex')).toBeUndefined();
+      expect(payloadCache.get('reviews:42:all')).toBeUndefined();
+      expect(payloadCache.get('review:9')).toBeUndefined();
+
+      expect(payloadCache.get('category:drama')).toEqual({ films: [] });
+      expect(payloadCache.get('profile:me')).toEqual({ user: { id: 'u1' } });
+      expect(payloadCache.get('films:me')).toEqual([]);
+      expect(payloadCache.get('watchlist:me')).toEqual([]);
+      expect(payloadCache.get('lists:me')).toEqual([]);
+    });
+
+    it('a failed refresh does not touch the cache', async () => {
+      storeTokens(expiredJwt());
+      installFetch({ refreshStatus: 500 });
+
+      payloadCache.set('film:42', 'cached');
+      await apiFetch('/films/42');
+      expect(payloadCache.get('film:42')).toBe('cached');
+    });
+  });
+
+  describe('refreshIfExpiringSoon (foreground check)', () => {
+    it('refreshes when the stored token is expired and returns the new pair', async () => {
+      storeTokens(expiredJwt());
+      const { calls, rotated } = installFetch();
+
+      const pair = await refreshIfExpiringSoon();
+
+      expect(pair).toEqual(rotated);
+      expect(refreshCalls(calls)).toHaveLength(1);
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+        'auth_tokens',
+        JSON.stringify(rotated),
+      );
+    });
+
+    it('does nothing when the stored token is still valid', async () => {
+      storeTokens(validJwt());
+      const { calls } = installFetch();
+
+      const pair = await refreshIfExpiringSoon();
+
+      expect(pair).toBeNull();
+      expect(calls).toHaveLength(0);
+      expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when signed out (no stored tokens)', async () => {
+      vi.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
+      const { calls } = installFetch();
+      expect(await refreshIfExpiringSoon()).toBeNull();
+      expect(calls).toHaveLength(0);
     });
   });
 });

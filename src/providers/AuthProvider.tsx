@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -14,6 +15,7 @@ import {
   cleanupLegacyTokenKey,
   setOnAuthFailure,
   requestServerLogout,
+  refreshIfExpiringSoon,
   deleteAccount as deleteAccountApi,
   apiFetch,
   type AuthUser,
@@ -151,6 +153,31 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     })();
   }, []);
 
+  // --- Proactive token refresh on foreground ---
+  // The mount restore runs exactly once (didRestore), so after a long
+  // background nothing re-checks the 15-minute access token. And an
+  // expired token does not 401 on viewer-personalized public endpoints
+  // (the server treats it as anonymous), so the reactive refresh path
+  // never fires either. On every transition to 'active', refresh if the
+  // token is expired or near expiry. Deliberately NOT a re-run of the
+  // full restore: just the token check, which no-ops when signed out or
+  // when the token is still fresh.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return;
+      refreshIfExpiringSoon()
+        .then((pair) => {
+          // Keep the in-memory token in sync when a rotation happened.
+          if (pair) setTokenState(pair.accessToken);
+        })
+        .catch(() => {
+          // Best-effort: a failed refresh here leaves the stale token in
+          // place; apiFetch's 401 fallback (and auto-signout) still apply.
+        });
+    });
+    return () => subscription.remove();
+  }, []);
+
   // --- Register the auth-failure handler with apiFetch ---
   // apiFetch invokes this when a 401 + refresh attempt both fail. The
   // handler does local-only cleanup; apiFetch already proved the
@@ -169,6 +196,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   // --- Internal: store auth result and check onboarding ---
   const handlePostAuth = useCallback(async (data: AuthResponse) => {
+    // 0. Drop payloads cached while browsing signed out. Public screens
+    //    (film detail, reviews, review detail) cache the anonymous
+    //    variant of viewer-personalized data; without this, those
+    //    payloads survive into the fresh session and the new user sees
+    //    signed-out content until the TTL expires. Sign-out, auth
+    //    failure, and account delete already clear; sign-in must too.
+    clearPayloadCache();
+
     // 1. Store token to SecureStore
     await storeAuth(data);
 

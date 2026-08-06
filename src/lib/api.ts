@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { TERMS_VERSION } from '../constants/legal';
+import { clearViewerScopedCache } from './payload-cache';
 import type {
   Film,
   FilmDataPoint,
@@ -94,6 +95,77 @@ export async function cleanupLegacyTokenKey(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Access-token expiry inspection
+//
+// Viewer-personalized PUBLIC endpoints treat an expired access token as
+// anonymous and return 200, so the reactive 401-refresh path never fires
+// for them and the user silently sees signed-out content. To avoid ever
+// attaching a token the server will silently reject, apiFetch decodes the
+// token's exp claim locally and refreshes proactively when it is expired
+// or about to expire. No JWT library: the payload segment is base64url,
+// and any decode failure degrades to the existing 401-driven behavior.
+// ---------------------------------------------------------------------------
+
+// Refresh when the token expires within this window. Covers clock skew
+// between device and server plus request transit time, so a token that is
+// technically valid on send but expired on arrival still gets refreshed.
+export const TOKEN_EXPIRY_SKEW_MS = 30000;
+
+// Minimal base64url decode. Avoids depending on global atob (present in
+// Hermes and modern Node, but a hand-rolled table keeps this file free of
+// environment assumptions and lets malformed input throw predictably).
+const B64_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function base64UrlDecode(input: string): string {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  let bits = 0;
+  let buffer = 0;
+  let out = '';
+  for (const char of normalized) {
+    if (char === '=') break;
+    const value = B64_ALPHABET.indexOf(char);
+    if (value === -1) {
+      throw new Error('Invalid base64url character');
+    }
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+  return out;
+}
+
+/**
+ * Decode the exp claim (epoch seconds) from a JWT's payload segment.
+ * Returns null on any structural or parse failure; callers treat null as
+ * "cannot inspect, attach the token and let the 401 path handle it".
+ */
+export function decodeTokenExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const claims = JSON.parse(base64UrlDecode(payload));
+    return typeof claims?.exp === 'number' ? claims.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when the token is expired or expires within TOKEN_EXPIRY_SKEW_MS.
+ * A token whose exp cannot be decoded reports false: attach it and fall
+ * through to the reactive 401 path rather than refreshing blindly.
+ */
+export function isTokenExpiredOrExpiring(token: string): boolean {
+  const exp = decodeTokenExp(token);
+  if (exp === null) return false;
+  return exp * 1000 - Date.now() <= TOKEN_EXPIRY_SKEW_MS;
+}
+
+// ---------------------------------------------------------------------------
 // Refresh flow (added in PR 3b Chunk B3)
 //
 // refreshPromise serializes concurrent refresh attempts. When multiple
@@ -136,6 +208,11 @@ async function refreshTokensViaApi(): Promise<TokenPair | null> {
         refreshToken: data.refreshToken,
       };
       await setTokens(newPair);
+      // The rotation may follow a stretch where the old token was expired
+      // and viewer-personalized public endpoints served (and cached) the
+      // anonymous variant. Drop those entries so the next read refetches
+      // with the fresh token. Viewer-neutral keys are left intact.
+      clearViewerScopedCache();
       return newPair;
     } catch {
       return null;
@@ -145,6 +222,22 @@ async function refreshTokensViaApi(): Promise<TokenPair | null> {
   })();
 
   return refreshPromise;
+}
+
+/**
+ * Refresh the token pair if the stored access token is expired or within
+ * the skew window of expiring. No-op (resolves null) when signed out, when
+ * the token is still comfortably valid, or when its exp cannot be decoded.
+ * Returns the new pair when a refresh actually happened.
+ *
+ * Used by AuthProvider's AppState listener: after a long background the
+ * 15-minute access token is stale, but nothing 401s (public endpoints
+ * treat it as anonymous), so foregrounding must check proactively.
+ */
+export async function refreshIfExpiringSoon(): Promise<TokenPair | null> {
+  const token = await getAccessToken();
+  if (!token || !isTokenExpiredOrExpiring(token)) return null;
+  return refreshTokensViaApi();
 }
 
 type SignOutHandler = () => void | Promise<void>;
@@ -212,7 +305,20 @@ export async function apiFetch(
   // the token was rejected and we should try to refresh. If we did NOT
   // send a token, the 401 just means the endpoint requires auth and
   // we don't have any. Skip the refresh attempt.
-  const initialToken = await getAccessToken();
+  let initialToken = await getAccessToken();
+
+  // Proactive refresh: an expired token would not 401 on viewer-
+  // personalized public endpoints (the server treats it as anonymous and
+  // returns 200), so waiting for a 401 silently serves signed-out
+  // content. Refresh first when the token is expired or about to expire.
+  // Concurrent callers share the single-flight refreshPromise. If the
+  // refresh fails, attach the stale token anyway: the existing 401 path
+  // below remains the fallback (and drives auto-signout for endpoints
+  // that do reject).
+  if (initialToken && isTokenExpiredOrExpiring(initialToken)) {
+    const refreshed = await refreshTokensViaApi();
+    if (refreshed) initialToken = refreshed.accessToken;
+  }
   const firstRes = await attachAuthAndFetch(url, options, initialToken);
 
   if (firstRes.status !== 401 || !initialToken) {
