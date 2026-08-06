@@ -275,7 +275,7 @@ describe('FilmDetailScreen YourReview', () => {
     expect(pushSpy).toHaveBeenCalledWith('/review/r-mine');
   });
 
-  it('keeps the edit link routing to the composer, not the review detail', async () => {
+  it('routes the edit link to the composer in edit mode, not the review detail', async () => {
     const tree = await renderScreen();
 
     await TestRenderer.act(async () => {
@@ -283,9 +283,11 @@ describe('FilmDetailScreen YourReview', () => {
     });
 
     expect(pushSpy).toHaveBeenCalledTimes(1);
+    // reviewId puts the composer in edit mode so it seeds from the stored
+    // review instead of opening a blank create form.
     expect(pushSpy).toHaveBeenCalledWith({
       pathname: '/review',
-      params: { filmId: 'test-film' },
+      params: { filmId: 'test-film', reviewId: 'r-mine' },
     });
   });
 

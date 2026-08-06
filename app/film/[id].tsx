@@ -1144,10 +1144,12 @@ function YourReview({
           </Text>
           {/* Nested Pressable: the edit link claims the touch responder for
               its own bounds, so tapping it edits without also pushing the
-              review detail via the card's onPress. */}
+              review detail via the card's onPress. reviewId puts the
+              composer in edit mode so it seeds from the stored review
+              instead of opening a blank create form. */}
           <Pressable
             onPress={() =>
-              router.push({ pathname: '/review', params: { filmId } } as any)
+              router.push({ pathname: '/review', params: { filmId, reviewId: review.id } } as any)
             }
             style={styles.editReviewLink}
             accessibilityRole="button"
