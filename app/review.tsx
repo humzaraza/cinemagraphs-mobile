@@ -275,7 +275,10 @@ function ArcGraph({
     return padT + (1 - Math.max(0, Math.min(10, score)) / 10) * plotH;
   }
 
-  const scores = dataPoints.map((dp) => beatRatings[dp.label] ?? 5);
+  // Callers pass only dataPoints the user actually rated, so every label has
+  // an entry. No fallback here: filling a missing beat with a fabricated
+  // score would draw shape data the user never expressed.
+  const scores = dataPoints.map((dp) => beatRatings[dp.label]);
   const points = scores.map((s, i) => `${getX(i).toFixed(1)},${getY(s).toFixed(1)}`).join(' ');
 
   let peakIdx = 0;
@@ -286,7 +289,7 @@ function ArcGraph({
   });
 
   return (
-    <View style={styles.graphCard}>
+    <View style={styles.graphCard} testID="arc-graph-card">
       <Svg width={w} height={h}>
         {/* Y-axis line */}
         <Line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke="rgba(245,240,225,0.15)" strokeWidth={0.5} />
@@ -368,9 +371,12 @@ export default function ReviewScreen() {
 
         if (beats.length > 0) {
           setEffectiveBeats(beats);
-          const initial: Record<string, number> = {};
-          beats.forEach((p) => { initial[p.label] = 5; });
-          setBeatRatings(initial);
+          // Deliberately do NOT seed beatRatings here. The map records only
+          // beats the user actually moved (via updateBeat). Sliders show a
+          // starting position of 5 through the ?? 5 fallback at render time;
+          // a displayed default is a starting position, not an assertion, and
+          // submitting untouched beats would fabricate shape data (a flat
+          // all-5 arc) and drag every beat's audience average toward 5.
           setScreenState('form-a');
         } else {
           setEffectiveBeats([]);
@@ -390,9 +396,15 @@ export default function ReviewScreen() {
   // Submit handlers
   const handleSubmitA = useCallback(async () => {
     if (!film) return;
+    // Send beatRatings only when the user moved at least one slider. An empty
+    // map means no beat was rated; omitting the field lets the server store
+    // null instead of an empty object. updateBeat only ever writes labels of
+    // sliders that were rendered, and sliders render from
+    // selectBeats(effectiveBeats), so the map can never contain a beat the
+    // user did not see.
     const payload = {
       overallRating,
-      beatRatings,
+      ...(Object.keys(beatRatings).length > 0 ? { beatRatings } : {}),
       beginning: thoughts.trim() || undefined,
     };
     setSubmitting(true);
@@ -482,8 +494,15 @@ export default function ReviewScreen() {
 
   // ----- ARC REVEAL (State A post-submit) -----
   if (screenState === 'arc-reveal') {
-    const dp = effectiveBeats;
-    const scores = dp.map((p) => beatRatings[p.label] ?? 5);
+    // Render only the beats the user actually rated. beatRatings can only
+    // contain labels of sliders that were rendered (updateBeat is the sole
+    // writer, and sliders render from selectBeats(effectiveBeats)), so this
+    // filter is both the "rated only" rule and, by construction, a guarantee
+    // that no invisible beat appears here. Below two rated beats there is no
+    // arc to draw; do not invent points to make the graph look complete.
+    const dp = effectiveBeats.filter((p) => beatRatings[p.label] != null);
+    const hasArc = dp.length >= 2;
+    const scores = dp.map((p) => beatRatings[p.label]);
     let peakIdx = 0;
     let lowIdx = 0;
     scores.forEach((s, i) => {
@@ -500,10 +519,12 @@ export default function ReviewScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.postTitle}>Your arc for {film.title}</Text>
+          <Text style={styles.postTitle}>
+            {hasArc ? `Your arc for ${film.title}` : `Your review of ${film.title}`}
+          </Text>
           <Text style={styles.postSubtitle}>Review submitted</Text>
 
-          <ArcGraph dataPoints={dp} beatRatings={beatRatings} />
+          {hasArc && <ArcGraph dataPoints={dp} beatRatings={beatRatings} />}
 
           <View style={styles.scoreCardsRow}>
             <View style={styles.scoreCard}>
@@ -518,22 +539,33 @@ export default function ReviewScreen() {
             </View>
           </View>
 
-          <View style={styles.peakLowRow}>
-            <View style={styles.peakCard}>
-              <Text style={styles.peakLabel}>Your peak</Text>
-              <Text style={styles.peakTitle}>{peakDp?.label}</Text>
-              <Text style={styles.peakMeta}>
-                {peakDp ? formatTimestamp(peakDp.timeMidpoint) : ''} {'\u00B7'} {scores[peakIdx]}/10
-              </Text>
+          {stitchedText.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>YOUR REVIEW</Text>
+              <View style={styles.stitchedCard}>
+                <Text style={styles.stitchedText}>{stitchedText}</Text>
+              </View>
+            </>
+          )}
+
+          {hasArc && (
+            <View style={styles.peakLowRow}>
+              <View style={styles.peakCard}>
+                <Text style={styles.peakLabel}>Your peak</Text>
+                <Text style={styles.peakTitle}>{peakDp?.label}</Text>
+                <Text style={styles.peakMeta}>
+                  {peakDp ? formatTimestamp(peakDp.timeMidpoint) : ''} {'\u00B7'} {scores[peakIdx]}/10
+                </Text>
+              </View>
+              <View style={styles.lowCard}>
+                <Text style={styles.lowLabel}>Your low</Text>
+                <Text style={styles.lowTitle}>{lowDp?.label}</Text>
+                <Text style={styles.lowMeta}>
+                  {lowDp ? formatTimestamp(lowDp.timeMidpoint) : ''} {'\u00B7'} {scores[lowIdx]}/10
+                </Text>
+              </View>
             </View>
-            <View style={styles.lowCard}>
-              <Text style={styles.lowLabel}>Your low</Text>
-              <Text style={styles.lowTitle}>{lowDp?.label}</Text>
-              <Text style={styles.lowMeta}>
-                {lowDp ? formatTimestamp(lowDp.timeMidpoint) : ''} {'\u00B7'} {scores[lowIdx]}/10
-              </Text>
-            </View>
-          </View>
+          )}
 
           <View style={styles.actionRow}>
             <Pressable onPress={handleShare} style={styles.shareButton}>
@@ -643,6 +675,10 @@ export default function ReviewScreen() {
               <BeatCard
                 key={beat.label}
                 dp={beat}
+                // Untouched beats have no entry in beatRatings; the ?? 5 gives
+                // the slider its starting position. A displayed default is a
+                // starting position, not an assertion: it is never submitted,
+                // because submitting untouched beats fabricates shape data.
                 value={beatRatings[beat.label] ?? 5}
                 onChange={(v) => updateBeat(beat.label, v)}
               />
