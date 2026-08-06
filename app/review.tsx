@@ -22,8 +22,9 @@ import Svg, {
 } from 'react-native-svg';
 import Slider from '@react-native-community/slider';
 import { colors, fonts, borderRadius } from '../src/constants/theme';
-import { fetchFilmDetail, submitReview } from '../src/lib/api';
+import { fetchFilmDetail, fetchReviewDetail, submitReview } from '../src/lib/api';
 import { markReviewed } from '../src/lib/reviewed-films';
+import { stitchReviewProse } from '../src/lib/review-prose';
 import * as payloadCache from '../src/lib/payload-cache';
 import { getPosterUrl } from '../src/lib/tmdb-image';
 import type { FilmDetail, FilmDataPoint } from '../src/types/film';
@@ -72,7 +73,7 @@ function selectBeats(dataPoints: FilmDataPoint[]): FilmDataPoint[] {
   return [...picked].sort((a, b) => a - b).map((i) => dataPoints[i]);
 }
 
-type ScreenState = 'loading' | 'form-a' | 'form-b' | 'arc-reveal' | 'preview-b' | 'confirmed-b' | 'error';
+type ScreenState = 'loading' | 'form-a' | 'form-b' | 'arc-reveal' | 'preview-b' | 'confirmed-b' | 'edit-locked' | 'error';
 
 function formatTimestamp(minutes: number): string {
   if (minutes < 60) return `${Math.round(minutes)}m`;
@@ -105,7 +106,7 @@ function BackHeader() {
 // Film header row (shared by State A and B)
 // ---------------------------------------------------------------------------
 
-function FilmHeader({ film }: { film: FilmDetail }) {
+function FilmHeader({ film, title }: { film: FilmDetail; title: string }) {
   const posterUri = getPosterUrl(film, 'thumbnail');
 
   return (
@@ -116,7 +117,7 @@ function FilmHeader({ film }: { film: FilmDetail }) {
         <View style={[styles.filmPoster, { backgroundColor: 'rgba(30,30,60,0.8)' }]} />
       )}
       <View>
-        <Text style={styles.filmHeaderTitle}>Write your review</Text>
+        <Text style={styles.filmHeaderTitle}>{title}</Text>
         <Text style={styles.filmHeaderMeta}>
           {film.title} ({film.year})
         </Text>
@@ -322,9 +323,13 @@ function ArcGraph({
 // ---------------------------------------------------------------------------
 
 export default function ReviewScreen() {
-  const { filmId } = useLocalSearchParams<{ filmId: string }>();
+  const { filmId, reviewId } = useLocalSearchParams<{ filmId: string; reviewId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // A reviewId param means edit mode: seed the form from the stored review
+  // and update it, instead of starting a blank create form.
+  const isEdit = !!reviewId;
 
   const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [film, setFilm] = useState<FilmDetail | null>(null);
@@ -334,21 +339,34 @@ export default function ReviewScreen() {
 
   // Form state
   const [overallRating, setOverallRating] = useState(5.5);
+  const [ratingTouched, setRatingTouched] = useState(false);
   const [beatRatings, setBeatRatings] = useState<Record<string, number>>({});
   const [thoughts, setThoughts] = useState('');
 
-  // Load film
+  // Load film (and, in edit mode, the stored review to seed from)
   useEffect(() => {
     if (!filmId) {
       setScreenState('error');
       setErrorMsg('No film selected');
       return;
     }
-    fetchFilmDetail(filmId)
-      .then((data) => {
+    Promise.all([
+      fetchFilmDetail(filmId),
+      reviewId ? fetchReviewDetail(reviewId) : Promise.resolve(null),
+    ])
+      .then(([data, review]) => {
         if (!data) {
           setScreenState('error');
           setErrorMsg('Could not load film');
+          return;
+        }
+        // In edit mode a failed review fetch is a hard stop. Falling through
+        // to a blank create form would be data loss: the server POST is an
+        // upsert, so submitting that blank form would overwrite the stored
+        // review with defaults.
+        if (reviewId && !review) {
+          setScreenState('error');
+          setErrorMsg('Could not load your review');
           return;
         }
         setFilm(data);
@@ -369,14 +387,46 @@ export default function ReviewScreen() {
           }));
         }
 
+        if (review) {
+          setOverallRating(review.overallRating);
+          setThoughts(stitchReviewProse(review));
+          const stored = review.beatRatings ?? {};
+
+          // Seed only labels that are BOTH stored on the review AND present
+          // in the film's current beats. Nothing is defaulted: seeding every
+          // current beat to 5 or 5.5 would resubmit fabricated assertions
+          // the user never made, which is exactly the bug the touched-only
+          // submission change removed.
+          const seeded: Record<string, number> = {};
+          for (const beat of beats) {
+            const storedVal = stored[beat.label];
+            if (typeof storedVal === 'number') seeded[beat.label] = storedVal;
+          }
+          setBeatRatings(seeded);
+
+          if (beats.length === 0 && Object.keys(stored).length > 0) {
+            // Data-loss guard: the review has stored beat ratings but the
+            // film currently exposes no beats, so the composer would land in
+            // form-b, whose submit payload has no beatRatings field. The
+            // server writes DbNull when the field is absent, so a submit
+            // from that state would silently erase the stored ratings.
+            // Lock editing until the film's beats come back.
+            setEffectiveBeats([]);
+            setScreenState('edit-locked');
+            return;
+          }
+        }
+
         if (beats.length > 0) {
           setEffectiveBeats(beats);
-          // Deliberately do NOT seed beatRatings here. The map records only
-          // beats the user actually moved (via updateBeat). Sliders show a
-          // starting position of 5 through the ?? 5 fallback at render time;
-          // a displayed default is a starting position, not an assertion, and
-          // submitting untouched beats would fabricate shape data (a flat
-          // all-5 arc) and drag every beat's audience average toward 5.
+          // In create mode beatRatings starts empty and records only beats
+          // the user actually moved (via updateBeat); in edit mode it starts
+          // from the stored assertions seeded above. Sliders show a starting
+          // position of 5 through the ?? 5 fallback at render time; a
+          // displayed default is a starting position, not an assertion, and
+          // submitting untouched, unstored beats would fabricate shape data
+          // (a flat all-5 arc) and drag every beat's audience average
+          // toward 5.
           setScreenState('form-a');
         } else {
           setEffectiveBeats([]);
@@ -387,21 +437,26 @@ export default function ReviewScreen() {
         setScreenState('error');
         setErrorMsg('Could not load film');
       });
-  }, [filmId]);
+  }, [filmId, reviewId]);
 
   const updateBeat = useCallback((label: string, val: number) => {
     setBeatRatings((prev) => ({ ...prev, [label]: val }));
   }, []);
 
+  const handleOverallChange = useCallback((v: number) => {
+    setRatingTouched(true);
+    setOverallRating(v);
+  }, []);
+
   // Submit handlers
   const handleSubmitA = useCallback(async () => {
     if (!film) return;
-    // Send beatRatings only when the user moved at least one slider. An empty
-    // map means no beat was rated; omitting the field lets the server store
-    // null instead of an empty object. updateBeat only ever writes labels of
-    // sliders that were rendered, and sliders render from
-    // selectBeats(effectiveBeats), so the map can never contain a beat the
-    // user did not see.
+    // Send beatRatings only when the map is non-empty. The map holds the
+    // stored assertions seeded in edit mode plus any beats touched this
+    // session; an empty map means nothing is asserted, and omitting the
+    // field lets the server store null instead of an empty object. Omission
+    // is load-bearing on an edit: the server writes DbNull when the field is
+    // absent, so sending an edit without it erases the stored ratings.
     const payload = {
       overallRating,
       ...(Object.keys(beatRatings).length > 0 ? { beatRatings } : {}),
@@ -466,7 +521,13 @@ export default function ReviewScreen() {
   }, [router]);
 
   const stitchedText = thoughts.trim();
-  const canPreviewB = stitchedText.trim().length > 0 || overallRating !== 5.5;
+  // In create mode previewing requires the user to have provided something:
+  // text, or an actual move of the rating slider (tracked via ratingTouched
+  // rather than comparing against the 5.5 default, which would misread a
+  // seeded edit whose stored rating happens to be 5.5). In edit mode the
+  // form is seeded from a stored review, so there is always something to
+  // preview.
+  const canPreviewB = isEdit || stitchedText.length > 0 || ratingTouched;
 
   // ----- LOADING -----
   if (screenState === 'loading') {
@@ -492,14 +553,56 @@ export default function ReviewScreen() {
     );
   }
 
+  // ----- EDIT LOCKED (edit mode, stored beat ratings, film has no beats) -----
+  if (screenState === 'edit-locked') {
+    // Data-loss guard, render side: this review carries stored beat ratings
+    // but the film currently exposes no beats, so the editable composer
+    // would be form-b, whose submit payload has no beatRatings field. The
+    // server writes DbNull when the field is absent, so any submit from
+    // here would silently erase the stored ratings. Show the stored review
+    // read-only with no submit path instead.
+    return (
+      <View style={styles.container}>
+        <BackHeader />
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <FilmHeader film={film} title="Edit your review" />
+
+          <View style={styles.tealBanner}>
+            <Text style={styles.tealBannerText}>
+              This film's story beats are being regenerated. Your review can't be edited right now.
+            </Text>
+          </View>
+
+          <View style={styles.previewScoreCard}>
+            <Text style={styles.previewScoreValue}>{overallRating.toFixed(1)}</Text>
+            <Text style={styles.previewScoreLabel}>Your rating</Text>
+          </View>
+
+          {stitchedText.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>YOUR REVIEW</Text>
+              <View style={styles.stitchedCard}>
+                <Text style={styles.stitchedText}>{stitchedText}</Text>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
   // ----- ARC REVEAL (State A post-submit) -----
   if (screenState === 'arc-reveal') {
-    // Render only the beats the user actually rated. beatRatings can only
-    // contain labels of sliders that were rendered (updateBeat is the sole
-    // writer, and sliders render from selectBeats(effectiveBeats)), so this
-    // filter is both the "rated only" rule and, by construction, a guarantee
-    // that no invisible beat appears here. Below two rated beats there is no
-    // arc to draw; do not invent points to make the graph look complete.
+    // Render only the beats that carry a rating: stored assertions seeded in
+    // edit mode plus sliders the user moved this session. Every other writer
+    // is filtered against effectiveBeats (edit seeding intersects with it,
+    // and updateBeat only writes labels of rendered sliders), so no beat the
+    // film does not currently have appears here. Below two rated beats there
+    // is no arc to draw; do not invent points to make the graph look
+    // complete.
     const dp = effectiveBeats.filter((p) => beatRatings[p.label] != null);
     const hasArc = dp.length >= 2;
     const scores = dp.map((p) => beatRatings[p.label]);
@@ -522,7 +625,7 @@ export default function ReviewScreen() {
           <Text style={styles.postTitle}>
             {hasArc ? `Your arc for ${film.title}` : `Your review of ${film.title}`}
           </Text>
-          <Text style={styles.postSubtitle}>Review submitted</Text>
+          <Text style={styles.postSubtitle}>{isEdit ? 'Review updated' : 'Review submitted'}</Text>
 
           {hasArc && <ArcGraph dataPoints={dp} beatRatings={beatRatings} />}
 
@@ -608,7 +711,7 @@ export default function ReviewScreen() {
               <Text style={styles.homeText}>Edit</Text>
             </Pressable>
             <Pressable onPress={handleSubmitB} style={[styles.submitButton, submitting && { opacity: 0.5 }]} disabled={submitting}>
-              <Text style={styles.submitText}>Post review</Text>
+              <Text style={styles.submitText}>{isEdit ? 'Update review' : 'Post review'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -624,7 +727,7 @@ export default function ReviewScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 80 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.postTitle}>Review posted</Text>
+          <Text style={styles.postTitle}>{isEdit ? 'Review updated' : 'Review posted'}</Text>
           <Text style={styles.postSubtitle}>{film.title} ({film.year})</Text>
 
           <View style={styles.previewScoreCard}>
@@ -666,8 +769,8 @@ export default function ReviewScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <FilmHeader film={film} />
-          <OverallRatingCard value={overallRating} onChange={setOverallRating} />
+          <FilmHeader film={film} title={isEdit ? 'Edit your review' : 'Write your review'} />
+          <OverallRatingCard value={overallRating} onChange={handleOverallChange} />
 
           <Text style={styles.sectionLabel}>STORY BEATS</Text>
           <View style={{ gap: 8, marginBottom: 14 }}>
@@ -675,10 +778,11 @@ export default function ReviewScreen() {
               <BeatCard
                 key={beat.label}
                 dp={beat}
-                // Untouched beats have no entry in beatRatings; the ?? 5 gives
-                // the slider its starting position. A displayed default is a
-                // starting position, not an assertion: it is never submitted,
-                // because submitting untouched beats fabricates shape data.
+                // Beats with no entry in beatRatings (untouched in create
+                // mode, or unstored in edit mode) get their starting position
+                // from the ?? 5 fallback. A displayed default is a starting
+                // position, not an assertion: it is never submitted, because
+                // submitting unasserted beats fabricates shape data.
                 value={beatRatings[beat.label] ?? 5}
                 onChange={(v) => updateBeat(beat.label, v)}
               />
@@ -705,7 +809,7 @@ export default function ReviewScreen() {
             style={[styles.submitButton, submitting && { opacity: 0.5 }]}
             disabled={submitting}
           >
-            <Text style={styles.submitText}>Submit review</Text>
+            <Text style={styles.submitText}>{isEdit ? 'Update review' : 'Submit review'}</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -721,15 +825,19 @@ export default function ReviewScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <FilmHeader film={film} />
+        <FilmHeader film={film} title={isEdit ? 'Edit your review' : 'Write your review'} />
 
-        <View style={styles.tealBanner}>
-          <Text style={styles.tealBannerText}>
-            Help build this film's graph. Your review helps create one.
-          </Text>
-        </View>
+        {/* An edit is not building a new graph, so the recruitment banner
+            only makes sense in create mode. */}
+        {!isEdit && (
+          <View style={styles.tealBanner}>
+            <Text style={styles.tealBannerText}>
+              Help build this film's graph. Your review helps create one.
+            </Text>
+          </View>
+        )}
 
-        <OverallRatingCard value={overallRating} onChange={setOverallRating} />
+        <OverallRatingCard value={overallRating} onChange={handleOverallChange} />
 
         <Text style={styles.sectionLabel}>YOUR THOUGHTS</Text>
 

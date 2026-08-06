@@ -45,6 +45,7 @@ vi.mock('react-native-safe-area-context', () => ({
 
 vi.mock('../lib/api', () => ({
   fetchFilmDetail: vi.fn(),
+  fetchReviewDetail: vi.fn(),
   submitReview: vi.fn(),
 }));
 
