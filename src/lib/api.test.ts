@@ -519,13 +519,20 @@ describe('fetchFilmReviews', () => {
     globalThis.fetch = originalFetch;
   });
 
+  // Matches the wire shape of GET /api/films/[id]/reviews: the rating is
+  // overallRating and prose lives in the section fields plus the
+  // denormalized combinedText (the server never sends score/content).
   const sampleResponse = {
     reviews: [
       {
         id: 'r1',
         user: { id: 'u1', name: 'Other User' },
-        score: 8.5,
-        content: 'Great film',
+        overallRating: 8.5,
+        beginning: 'A gripping open.',
+        middle: null,
+        ending: 'Sticks the landing.',
+        otherThoughts: null,
+        combinedText: 'A gripping open.\n\nSticks the landing.',
         createdAt: '2026-01-01T00:00:00Z',
       },
     ],
@@ -533,8 +540,12 @@ describe('fetchFilmReviews', () => {
     myReview: {
       id: 'r-mine',
       user: { id: 'me', name: 'Me' },
-      score: 9.2,
-      content: 'My take',
+      overallRating: 9.2,
+      beginning: null,
+      middle: null,
+      ending: null,
+      otherThoughts: 'My take',
+      combinedText: 'My take',
       createdAt: '2026-02-01T00:00:00Z',
     },
   };
@@ -582,7 +593,7 @@ describe('fetchFilmReviews', () => {
     const result = await fetchFilmReviews('film-1', { excludeCurrentUser: true });
     expect(result?.reviews).toHaveLength(1);
     expect(result?.total).toBe(1);
-    expect(result?.myReview?.score).toBe(9.2);
+    expect(result?.myReview?.overallRating).toBe(9.2);
   });
 
   it('returns null on non-2xx', async () => {

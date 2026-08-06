@@ -35,6 +35,7 @@ import { useAuthGate } from '../../src/components/AuthGate';
 import { useToast } from '../../src/components/ui/Toast';
 import ReviewBeatArc from '../../src/components/ReviewBeatArc';
 import { formatScore } from '../../src/lib/score-format';
+import { stitchReviewProse } from '../../src/lib/review-prose';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
 import { EyeOffIcon } from '../../src/components/icons/EyeIcons';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
@@ -73,16 +74,6 @@ function getInitials(name: string): string {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-}
-
-// Mirrors the web's formatReviewProse (src/lib/review-prose.ts): stitch the
-// section fields in order, skipping empty ones, then fall back to the
-// denormalized combinedText when no section survives.
-function stitchReviewProse(review: ReviewDetail): string {
-  const stitched = [review.beginning, review.middle, review.ending, review.otherThoughts]
-    .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
-    .join('\n\n');
-  return stitched || review.combinedText || '';
 }
 
 // One FlatList row per rendered comment. Children carry their top-level
@@ -474,7 +465,15 @@ export default function ReviewDetailScreen() {
     <View>
       {/* Back chevron (same inline SVG and 44x44 target as the film screen) */}
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => {
+          // Deep links land here with no history; falling back to Explore
+          // keeps the chevron from being a dead control.
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)/explore');
+          }
+        }}
         style={styles.backButton}
         accessibilityRole="button"
         accessibilityLabel="Go back"
@@ -536,8 +535,12 @@ export default function ReviewDetailScreen() {
 
         {prose ? <Text style={styles.proseText}>{prose}</Text> : null}
 
-        {review.beatRatings !== null && dataPoints.length > 1 && (
-          <View style={styles.graphCard}>
+        {/* An empty beatRatings object has no beats to overlay, same as
+            null; skip the card so it never renders as an empty box. */}
+        {review.beatRatings !== null &&
+          Object.keys(review.beatRatings).length > 0 &&
+          dataPoints.length > 1 && (
+          <View style={styles.graphCard} testID="beat-arc-card">
             <ReviewBeatArc dataPoints={dataPoints} beatRatings={review.beatRatings} />
           </View>
         )}

@@ -27,9 +27,12 @@ export default function ReviewBeatArc({
   dataPoints: FilmDataPoint[];
   beatRatings: Record<string, number> | null;
 }) {
-  // A single point draws no line, and without beat ratings there is no
-  // second series to compare against; both cases render nothing.
-  if (!beatRatings || dataPoints.length <= 1) return null;
+  // A single point draws no line, and without beat ratings (null or an
+  // empty object) there is no second series to compare against; all of
+  // these cases render nothing.
+  if (!beatRatings || Object.keys(beatRatings).length === 0 || dataPoints.length <= 1) {
+    return null;
+  }
 
   const plotW = GRAPH_WIDTH - GRAPH_PAD * 2;
   const plotH = GRAPH_HEIGHT - GRAPH_PAD * 2;

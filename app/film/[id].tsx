@@ -43,6 +43,7 @@ import { SimilarFilmCard } from '../../src/components/film-detail/SimilarFilmCar
 import { useBlindToggle } from '../../src/components/film-detail/useBlindToggle';
 import { useToast } from '../../src/components/ui/Toast';
 import { formatScore } from '../../src/lib/score-format';
+import { stitchReviewProse } from '../../src/lib/review-prose';
 import {
   getBlindModeState,
   resolveBlindForFilm,
@@ -1051,22 +1052,23 @@ function AISummary({ summary }: { summary: string }) {
 // ---------------------------------------------------------------------------
 
 function ReviewCard({ review, blind }: { review: FilmReview; blind: boolean }) {
+  const name = review.user.name ?? 'Anonymous';
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
         <View style={styles.reviewAvatar}>
-          <Text style={styles.reviewAvatarText}>{getInitials(review.user.name)}</Text>
+          <Text style={styles.reviewAvatarText}>{getInitials(name)}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.reviewUsername}>{review.user.name}</Text>
+          <Text style={styles.reviewUsername}>{name}</Text>
           <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
         </View>
         {!blind && (
-          <Text style={styles.reviewScore}>{formatScore(review.score)}</Text>
+          <Text style={styles.reviewScore}>{formatScore(review.overallRating)}</Text>
         )}
       </View>
       <Text style={styles.reviewContent} numberOfLines={3}>
-        {review.content}
+        {stitchReviewProse(review)}
       </Text>
     </View>
   );
@@ -1110,41 +1112,51 @@ function YourReview({
   blind: boolean;
 }) {
   const router = useRouter();
+  const name = review.user.name ?? 'Anonymous';
 
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.reviewsHeader}>
         <Text style={styles.reviewsTitle}>Your review</Text>
       </View>
-      <View style={styles.reviewCard}>
-        <View style={styles.reviewHeader}>
-          <View style={styles.reviewAvatar}>
-            <Text style={styles.reviewAvatarText}>
-              {getInitials(review.user.name)}
-            </Text>
+      <Pressable
+        onPress={() => router.push(`/review/${review.id}` as any)}
+        accessibilityRole="button"
+        accessibilityLabel="View your review"
+      >
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <View style={styles.reviewAvatar}>
+              <Text style={styles.reviewAvatarText}>
+                {getInitials(name)}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reviewUsername}>{name}</Text>
+              <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
+            </View>
+            {!blind && (
+              <Text style={styles.reviewScore}>{formatScore(review.overallRating)}</Text>
+            )}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reviewUsername}>{review.user.name}</Text>
-            <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
-          </View>
-          {!blind && (
-            <Text style={styles.reviewScore}>{formatScore(review.score)}</Text>
-          )}
+          <Text style={styles.reviewContent} numberOfLines={3}>
+            {stitchReviewProse(review)}
+          </Text>
+          {/* Nested Pressable: the edit link claims the touch responder for
+              its own bounds, so tapping it edits without also pushing the
+              review detail via the card's onPress. */}
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/review', params: { filmId } } as any)
+            }
+            style={styles.editReviewLink}
+            accessibilityRole="button"
+            accessibilityLabel="Edit your review"
+          >
+            <Text style={styles.editReviewLinkText}>Edit your review</Text>
+          </Pressable>
         </View>
-        <Text style={styles.reviewContent} numberOfLines={3}>
-          {review.content}
-        </Text>
-        <Pressable
-          onPress={() =>
-            router.push({ pathname: '/review', params: { filmId } } as any)
-          }
-          style={styles.editReviewLink}
-          accessibilityRole="button"
-          accessibilityLabel="Edit your review"
-        >
-          <Text style={styles.editReviewLinkText}>Edit your review</Text>
-        </Pressable>
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -1302,10 +1314,10 @@ export default function FilmDetailScreen() {
         setMyReview(res.myReview ?? null);
       })
       .catch(() => {
-        // Dedicated reviews fetch failed with nothing cached: fall back to
-        // whatever the film-detail endpoint included so we still show
-        // *something* (e.g. when unauthenticated).
-        setReviews(film.reviews ?? []);
+        // Dedicated reviews fetch failed with nothing cached. There is no
+        // fallback source (GET /api/films/[id] carries no reviews), so
+        // render the empty state.
+        setReviews([]);
         setMyReview(null);
       });
   }, [id, film, optimisticReviewed]);

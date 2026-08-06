@@ -141,7 +141,6 @@ function makeFilm(populated: boolean): FilmDetail {
     genres: ['Drama'],
     director: 'A Director',
     sentimentGraph: makeGraph(populated),
-    reviews: [],
   };
 }
 
