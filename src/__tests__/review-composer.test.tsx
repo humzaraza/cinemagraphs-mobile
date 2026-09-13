@@ -103,6 +103,56 @@ async function moveBeat(tree: ReactTestRenderer, label: string, value: number) {
   });
 }
 
+/** The accessible slider wrapper for the beat card carrying `label`. */
+function beatWrapper(tree: ReactTestRenderer, label: string) {
+  const wrappers = tree.root.findAll(
+    (node) =>
+      node.props?.accessibilityRole === 'adjustable' &&
+      node.props?.accessibilityLabel === label,
+  );
+  expect(wrappers).toHaveLength(1);
+  return wrappers[0];
+}
+
+/**
+ * Every string rendered inside the beat card for `label`. The slider wrapper's
+ * parent is the card View, so its header (numeral / "Not rated") is in scope.
+ */
+function beatCardTexts(tree: ReactTestRenderer, label: string): string[] {
+  const card = beatWrapper(tree, label).parent;
+  if (!card) throw new Error(`beat card for ${label} has no parent`);
+  return card
+    .findAllByType('Text' as never)
+    .flatMap((node) => {
+      const children = node.props.children;
+      return Array.isArray(children) ? children : [children];
+    })
+    .filter((child): child is string => typeof child === 'string');
+}
+
+const NUMERAL = /^\d+\.\d$/;
+
+async function pressClear(tree: ReactTestRenderer, label: string) {
+  const buttons = tree.root.findAll(
+    (node) => node.props?.accessibilityLabel === `Clear your rating for ${label}`,
+  );
+  expect(buttons).toHaveLength(1);
+  await TestRenderer.act(async () => {
+    buttons[0].props.onPress();
+  });
+}
+
+function counterText(tree: ReactTestRenderer): string | undefined {
+  const nodes = tree.root.findAll(
+    (node) =>
+      node.type === ('Text' as never) &&
+      typeof node.props.children === 'string' &&
+      /^\d+ of \d+ rated$/.test(node.props.children),
+  );
+  expect(nodes.length).toBeLessThanOrEqual(1);
+  return nodes[0]?.props.children;
+}
+
 async function pressSubmit(tree: ReactTestRenderer) {
   const button = tree.root.findAll((node) => {
     if (node.type !== ('Pressable' as never)) return false;
@@ -156,6 +206,75 @@ describe('ReviewScreen touched-only beat submission', () => {
     expect(submitReview).toHaveBeenCalledTimes(1);
     const payload = vi.mocked(submitReview).mock.calls[0][1];
     expect(payload.beatRatings).toEqual({ Opening: 8, Climax: 9.5 });
+  });
+});
+
+describe('ReviewScreen unrated beat display', () => {
+  it('renders an untouched beat as "Not rated" with no numeral', async () => {
+    const tree = await renderScreen();
+
+    const texts = beatCardTexts(tree, 'Opening');
+    expect(texts).toContain('Not rated');
+    expect(texts.some((t) => NUMERAL.test(t))).toBe(false);
+  });
+
+  it('renders the numeral once the user moves a beat, and drops "Not rated"', async () => {
+    const tree = await renderScreen();
+
+    await moveBeat(tree, 'Opening', 8);
+
+    const texts = beatCardTexts(tree, 'Opening');
+    expect(texts).toContain('8.0');
+    expect(texts).not.toContain('Not rated');
+    // A sibling beat that was not moved is unaffected.
+    expect(beatCardTexts(tree, 'Midpoint')).toContain('Not rated');
+  });
+
+  it('clearing a rated beat removes it from the submitted payload', async () => {
+    const tree = await renderScreen();
+
+    await moveBeat(tree, 'Opening', 8);
+    await moveBeat(tree, 'Climax', 9.5);
+    await pressClear(tree, 'Climax');
+    await pressSubmit(tree);
+
+    expect(submitReview).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(submitReview).mock.calls[0][1];
+    expect(payload.beatRatings).toEqual({ Opening: 8 });
+  });
+
+  it('clearing the only rated beat omits the beatRatings key entirely', async () => {
+    const tree = await renderScreen();
+
+    await moveBeat(tree, 'Opening', 8);
+    await pressClear(tree, 'Opening');
+
+    expect(beatCardTexts(tree, 'Opening')).toContain('Not rated');
+    await pressSubmit(tree);
+
+    expect(submitReview).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(submitReview).mock.calls[0][1];
+    expect('beatRatings' in payload).toBe(false);
+  });
+
+  it('counts rated beats against the rendered beat total', async () => {
+    const tree = await renderScreen();
+
+    expect(counterText(tree)).toBe(`0 of ${DATA_POINTS.length} rated`);
+
+    await moveBeat(tree, 'Midpoint', 3);
+
+    expect(counterText(tree)).toBe(`1 of ${DATA_POINTS.length} rated`);
+  });
+
+  it('exposes an untouched beat to screen readers as "Not rated"', async () => {
+    const tree = await renderScreen();
+
+    expect(beatWrapper(tree, 'Resolution').props.accessibilityValue).toEqual({ text: 'Not rated' });
+
+    await moveBeat(tree, 'Resolution', 7);
+
+    expect(beatWrapper(tree, 'Resolution').props.accessibilityValue).toEqual({ text: '7.0 out of 10' });
   });
 });
 
