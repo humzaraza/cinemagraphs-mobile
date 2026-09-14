@@ -927,6 +927,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
+    // Hold the rated-state height (numeral plus clear button) even while
+    // unrated, so rating a beat never shifts the cards below it.
+    minHeight: 16,
     marginBottom: 6,
   },
   beatHeaderRight: {
