@@ -191,25 +191,50 @@ function BeatCard({
   dp,
   value,
   onChange,
+  onClear,
 }: {
   dp: FilmDataPoint;
-  value: number;
+  value: number | undefined;
   onChange: (v: number) => void;
+  onClear: () => void;
 }) {
+  // undefined means the user never rated this beat. The slider still rests at
+  // the neutral 5.5 (matching the overall slider), but the card must not claim
+  // a rating: no gold fill, no numeral, "Not rated" instead.
+  const isRated = value !== undefined;
+  const displayValue = value ?? 5.5;
+
   return (
     <View style={styles.beatCard}>
       <View style={styles.beatHeader}>
-        <Text style={styles.beatLabel}>
+        <Text style={styles.beatLabel} numberOfLines={1}>
           {dp.label}{' '}
           <Text style={styles.beatTimestamp}>{formatTimestamp(dp.timeMidpoint)}</Text>
         </Text>
-        <Text style={styles.beatScore}>{value.toFixed(1)}</Text>
+        <View style={styles.beatHeaderRight}>
+          {isRated ? (
+            <Text style={styles.beatScore}>{displayValue.toFixed(1)}</Text>
+          ) : (
+            <Text style={styles.beatNotRated}>Not rated</Text>
+          )}
+          {isRated && (
+            <Pressable
+              onPress={onClear}
+              style={styles.beatClearButton}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Clear your rating for ${dp.label}`}
+            >
+              <Text style={styles.beatClearIcon}>{'×'}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
       <View
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={dp.label}
-        accessibilityValue={{ text: `${value.toFixed(1)} out of 10` }}
+        accessibilityValue={{ text: isRated ? `${displayValue.toFixed(1)} out of 10` : 'Not rated' }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(event) => {
           // @react-native-community/slider does not reliably forward
@@ -218,22 +243,22 @@ function BeatCard({
           // Step and clamp match the Slider so touch and screen reader agree.
           const action = event.nativeEvent.actionName;
           if (action === 'increment') {
-            onChange(Math.min(10, value + 0.5));
+            onChange(Math.min(10, displayValue + 0.5));
           } else if (action === 'decrement') {
-            onChange(Math.max(1, value - 0.5));
+            onChange(Math.max(1, displayValue - 0.5));
           }
         }}
         importantForAccessibility="no-hide-descendants"
       >
         <Slider
-          value={value}
+          value={displayValue}
           onValueChange={onChange}
           minimumValue={1}
           maximumValue={10}
           step={0.5}
-          minimumTrackTintColor="#C8A951"
+          minimumTrackTintColor={isRated ? '#C8A951' : 'rgba(245,240,225,0.08)'}
           maximumTrackTintColor="rgba(245,240,225,0.08)"
-          thumbTintColor="#C8A951"
+          thumbTintColor={isRated ? '#C8A951' : 'rgba(245,240,225,0.55)'}
           style={{ height: 24 }}
         />
       </View>
@@ -372,11 +397,10 @@ export default function ReviewScreen() {
         if (beats.length > 0) {
           setEffectiveBeats(beats);
           // Deliberately do NOT seed beatRatings here. The map records only
-          // beats the user actually moved (via updateBeat). Sliders show a
-          // starting position of 5 through the ?? 5 fallback at render time;
-          // a displayed default is a starting position, not an assertion, and
-          // submitting untouched beats would fabricate shape data (a flat
-          // all-5 arc) and drag every beat's audience average toward 5.
+          // beats the user actually moved (via updateBeat). An untouched beat
+          // has no entry and BeatCard renders it as "Not rated"; submitting
+          // untouched beats would fabricate shape data (a flat arc) and drag
+          // every beat's audience average toward the resting value.
           setScreenState('form-a');
         } else {
           setEffectiveBeats([]);
@@ -391,6 +415,16 @@ export default function ReviewScreen() {
 
   const updateBeat = useCallback((label: string, val: number) => {
     setBeatRatings((prev) => ({ ...prev, [label]: val }));
+  }, []);
+
+  // Delete the key rather than writing a sentinel: "unrated" is the absence
+  // of an entry, which is what the payload and BeatCard both key off.
+  const clearBeat = useCallback((label: string) => {
+    setBeatRatings((prev) => {
+      const next = { ...prev };
+      delete next[label];
+      return next;
+    });
   }, []);
 
   // Submit handlers
@@ -657,6 +691,9 @@ export default function ReviewScreen() {
   // ----- FORM A (beats + text) -----
   if (screenState === 'form-a') {
     const dp = selectBeats(effectiveBeats);
+    // Count against the rendered beats, not Object.keys(beatRatings), so the
+    // numerator can never exceed the denominator.
+    const ratedCount = dp.filter((beat) => beatRatings[beat.label] !== undefined).length;
 
     return (
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -669,18 +706,22 @@ export default function ReviewScreen() {
           <FilmHeader film={film} />
           <OverallRatingCard value={overallRating} onChange={setOverallRating} />
 
-          <Text style={styles.sectionLabel}>STORY BEATS</Text>
+          <View style={styles.beatSectionRow}>
+            <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>STORY BEATS</Text>
+            <Text style={styles.beatCounter} accessibilityLiveRegion="polite">
+              {`${ratedCount} of ${dp.length} rated`}
+            </Text>
+          </View>
           <View style={{ gap: 8, marginBottom: 14 }}>
             {dp.map((beat) => (
               <BeatCard
                 key={beat.label}
                 dp={beat}
-                // Untouched beats have no entry in beatRatings; the ?? 5 gives
-                // the slider its starting position. A displayed default is a
-                // starting position, not an assertion: it is never submitted,
-                // because submitting untouched beats fabricates shape data.
-                value={beatRatings[beat.label] ?? 5}
+                // Untouched beats have no entry in beatRatings, and undefined
+                // must reach BeatCard intact so it can render them as unrated.
+                value={beatRatings[beat.label]}
                 onChange={(v) => updateBeat(beat.label, v)}
+                onClear={() => clearBeat(beat.label)}
               />
             ))}
           </View>
@@ -885,9 +926,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
+    // Hold the rated-state height (numeral plus clear button) even while
+    // unrated, so rating a beat never shifts the cards below it.
+    minHeight: 16,
     marginBottom: 6,
   },
+  beatHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   beatLabel: {
+    flex: 1,
     fontFamily: fonts.body,
     fontSize: 10,
     color: colors.ivory,
@@ -899,6 +950,38 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.gold,
+  },
+  beatNotRated: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.3)',
+  },
+  // 16pt visual, 44pt touch target via hitSlop, so the card height is unchanged.
+  beatClearButton: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(245,240,225,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  beatClearIcon: {
+    fontSize: 10,
+    color: 'rgba(245,240,225,0.45)',
+  },
+  beatSectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  beatCounter: {
+    fontSize: 9,
+    color: 'rgba(245,240,225,0.3)',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    fontFamily: fonts.body,
   },
 
   // Section label
