@@ -60,10 +60,14 @@ export interface ReviewUser {
 // Review row as returned by GET /api/films/[id]/reviews: the rating is
 // overallRating, and prose lives in the four section fields with the
 // denormalized combinedText as a fallback (there is no single `content`).
+// beatRatings is part of the web API's publicReviewSelect; null when the
+// reviewer rated no beats. The displayed score blends it with overallRating
+// (see src/lib/user-review-score.ts).
 export interface FilmReview {
   id: string;
   user: ReviewUser;
   overallRating: number;
+  beatRatings: Record<string, number> | null;
   beginning: string | null;
   middle: string | null;
   ending: string | null;

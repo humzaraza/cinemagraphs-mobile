@@ -103,6 +103,43 @@ async function moveBeat(tree: ReactTestRenderer, label: string, value: number) {
   });
 }
 
+/** The overall rating slider, found through its accessible wrapper. */
+async function moveOverall(tree: ReactTestRenderer, value: number) {
+  const wrappers = tree.root.findAll(
+    (node) =>
+      node.props?.accessibilityRole === 'adjustable' &&
+      node.props?.accessibilityLabel === 'Your rating',
+  );
+  expect(wrappers).toHaveLength(1);
+  const slider = wrappers[0].findByType('Slider' as never);
+  await TestRenderer.act(async () => {
+    slider.props.onValueChange(value);
+  });
+}
+
+/** The numeral rendered directly above the "Your score" label. */
+function yourScoreText(tree: ReactTestRenderer): string | undefined {
+  const labels = tree.root.findAll(
+    (node) => node.type === ('Text' as never) && node.props.children === 'Your score',
+  );
+  expect(labels).toHaveLength(1);
+  const card = labels[0].parent;
+  if (!card) throw new Error('Your score label has no parent');
+  const texts = card.findAllByType('Text' as never);
+  return texts[0]?.props.children;
+}
+
+/**
+ * Document-order index of the first Text node whose children equal `value`.
+ * Used to pin the vertical order of the form sections.
+ */
+function orderOf(tree: ReactTestRenderer, value: string): number {
+  const texts = tree.root.findAllByType('Text' as never);
+  const index = texts.findIndex((node) => node.props.children === value);
+  expect(index).toBeGreaterThanOrEqual(0);
+  return index;
+}
+
 /** The accessible slider wrapper for the beat card carrying `label`. */
 function beatWrapper(tree: ReactTestRenderer, label: string) {
   const wrappers = tree.root.findAll(
@@ -275,6 +312,58 @@ describe('ReviewScreen unrated beat display', () => {
     await moveBeat(tree, 'Resolution', 7);
 
     expect(beatWrapper(tree, 'Resolution').props.accessibilityValue).toEqual({ text: '7.0 out of 10' });
+  });
+});
+
+describe('ReviewScreen form order', () => {
+  it('renders the overall rating below the story beats and above your thoughts', async () => {
+    const tree = await renderScreen();
+
+    const beats = orderOf(tree, 'STORY BEATS');
+    const overall = orderOf(tree, 'Overall rating');
+    const thoughts = orderOf(tree, 'YOUR THOUGHTS');
+
+    expect(beats).toBeLessThan(overall);
+    expect(overall).toBeLessThan(thoughts);
+  });
+});
+
+describe('ReviewScreen blended score', () => {
+  it('shows the overall rating alone when no beat was rated', async () => {
+    const tree = await renderScreen();
+
+    await moveOverall(tree, 8);
+    await pressSubmit(tree);
+
+    expect(yourScoreText(tree)).toBe('8.0');
+  });
+
+  it('shows an even blend of the rated beats and the overall rating, rounded up at .5', async () => {
+    const tree = await renderScreen();
+
+    // (0.5 * 7) + (0.5 * 7.5) = 7.25 -> 7.3
+    await moveOverall(tree, 7.5);
+    await moveBeat(tree, 'Opening', 7);
+    await pressSubmit(tree);
+
+    expect(yourScoreText(tree)).toBe('7.3');
+    // The blend is display-only: the payload still carries both inputs.
+    const payload = vi.mocked(submitReview).mock.calls[0][1];
+    expect(payload.overallRating).toBe(7.5);
+    expect(payload.beatRatings).toEqual({ Opening: 7 });
+  });
+
+  it('averages several rated beats before blending', async () => {
+    const tree = await renderScreen();
+
+    // mean(8, 7, 9) = 8; (0.5 * 8) + (0.5 * 6) = 7.0
+    await moveOverall(tree, 6);
+    await moveBeat(tree, 'Opening', 8);
+    await moveBeat(tree, 'Midpoint', 7);
+    await moveBeat(tree, 'Climax', 9);
+    await pressSubmit(tree);
+
+    expect(yourScoreText(tree)).toBe('7.0');
   });
 });
 

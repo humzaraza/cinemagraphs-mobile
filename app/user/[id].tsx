@@ -24,6 +24,8 @@ import {
 } from '../../src/lib/api';
 import FollowersModal from '../../src/components/FollowersModal';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
+import { formatScore } from '../../src/lib/score-format';
+import { userReviewScore } from '../../src/lib/user-review-score';
 
 // TODO: Remove when getAvatarUrl helper ships. Avatar URL handling
 // is parked as a followup to refactor/tmdb-image-helper.
@@ -280,7 +282,9 @@ export default function PublicProfileScreen() {
                       {review.film?.title ?? 'Film'}
                     </Text>
                     {review.overallRating != null && (
-                      <Text style={styles.reviewRating}>{review.overallRating}/10</Text>
+                      <Text style={styles.reviewRating}>
+                        {formatScore(userReviewScore(review.overallRating, review.beatRatings))}/10
+                      </Text>
                     )}
                     {snippet ? (
                       <Text style={styles.reviewSnippet} numberOfLines={2}>{snippet}</Text>
