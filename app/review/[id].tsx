@@ -35,6 +35,7 @@ import { useAuthGate } from '../../src/components/AuthGate';
 import { useToast } from '../../src/components/ui/Toast';
 import ReviewBeatArc from '../../src/components/ReviewBeatArc';
 import { formatScore } from '../../src/lib/score-format';
+import { userReviewScore } from '../../src/lib/user-review-score';
 import { stitchReviewProse } from '../../src/lib/review-prose';
 import { getInitials } from '../../src/lib/initials';
 import { getPosterUrl } from '../../src/lib/tmdb-image';
@@ -510,7 +511,9 @@ export default function ReviewDetailScreen() {
           {blind ? (
             <EyeOffIcon color="rgba(245,240,225,0.3)" size={18} />
           ) : (
-            <Text style={styles.reviewScore}>{formatScore(review.overallRating)}</Text>
+            <Text style={styles.reviewScore}>
+              {formatScore(userReviewScore(review.overallRating, review.beatRatings))}
+            </Text>
           )}
         </View>
 

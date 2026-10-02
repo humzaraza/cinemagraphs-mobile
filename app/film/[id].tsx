@@ -45,6 +45,7 @@ import { SimilarFilmCard } from '../../src/components/film-detail/SimilarFilmCar
 import { useBlindToggle } from '../../src/components/film-detail/useBlindToggle';
 import { useToast } from '../../src/components/ui/Toast';
 import { formatScore } from '../../src/lib/score-format';
+import { userReviewScore } from '../../src/lib/user-review-score';
 import { stitchReviewProse } from '../../src/lib/review-prose';
 import {
   getBlindModeState,
@@ -1046,7 +1047,9 @@ function ReviewCard({ review, blind }: { review: FilmReview; blind: boolean }) {
           <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
         </View>
         {!blind && (
-          <Text style={styles.reviewScore}>{formatScore(review.overallRating)}</Text>
+          <Text style={styles.reviewScore}>
+            {formatScore(userReviewScore(review.overallRating, review.beatRatings))}
+          </Text>
         )}
       </View>
       <Text style={styles.reviewContent} numberOfLines={3}>
@@ -1118,7 +1121,9 @@ function YourReview({
               <Text style={styles.reviewTime}>{timeAgo(review.createdAt)}</Text>
             </View>
             {!blind && (
-              <Text style={styles.reviewScore}>{formatScore(review.overallRating)}</Text>
+              <Text style={styles.reviewScore}>
+                {formatScore(userReviewScore(review.overallRating, review.beatRatings))}
+              </Text>
             )}
           </View>
           <Text style={styles.reviewContent} numberOfLines={3}>

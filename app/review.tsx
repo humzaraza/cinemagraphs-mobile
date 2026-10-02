@@ -26,6 +26,7 @@ import { fetchFilmDetail, submitReview } from '../src/lib/api';
 import { markReviewed } from '../src/lib/reviewed-films';
 import * as payloadCache from '../src/lib/payload-cache';
 import { getPosterUrl } from '../src/lib/tmdb-image';
+import { userReviewScore } from '../src/lib/user-review-score';
 import type { FilmDetail, FilmDataPoint } from '../src/types/film';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -487,13 +488,19 @@ export default function ReviewScreen() {
     }
   }, [film, overallRating, thoughts]);
 
+  // The score a user sees for their own review blends the beats they rated
+  // with the overall slider (see userReviewScore). It is display-only; the
+  // payload still sends overallRating and beatRatings separately, and the
+  // audience graph is built from beatRatings alone.
+  const reviewScore = userReviewScore(overallRating, beatRatings);
+
   const handleShare = useCallback(async () => {
     if (!film) return;
     await Share.share({
-      message: `I just reviewed ${film.title} on Cinemagraphs and rated it ${overallRating.toFixed(1)}/10! Check out my sentiment arc at cinemagraphs.ca`,
+      message: `I just reviewed ${film.title} on Cinemagraphs and rated it ${reviewScore.toFixed(1)}/10! Check out my sentiment arc at cinemagraphs.ca`,
       url: 'https://cinemagraphs.ca',
     });
-  }, [film, overallRating]);
+  }, [film, reviewScore]);
 
   const handleHome = useCallback(() => {
     router.replace('/(tabs)/explore' as any);
@@ -562,7 +569,7 @@ export default function ReviewScreen() {
 
           <View style={styles.scoreCardsRow}>
             <View style={styles.scoreCard}>
-              <Text style={styles.scoreCardValue}>{overallRating.toFixed(1)}</Text>
+              <Text style={styles.scoreCardValue}>{reviewScore.toFixed(1)}</Text>
               <Text style={styles.scoreCardLabel}>Your score</Text>
             </View>
             <View style={styles.scoreCard}>
@@ -704,7 +711,6 @@ export default function ReviewScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <FilmHeader film={film} />
-          <OverallRatingCard value={overallRating} onChange={setOverallRating} />
 
           <View style={styles.beatSectionRow}>
             <Text style={[styles.sectionLabel, { marginBottom: 0 }]}>STORY BEATS</Text>
@@ -725,6 +731,11 @@ export default function ReviewScreen() {
               />
             ))}
           </View>
+
+          {/* The overall slider sits below the beats so the user rates the
+              shape first and the whole last. Both feed the displayed score;
+              only the beats feed the audience graph. */}
+          <OverallRatingCard value={overallRating} onChange={setOverallRating} />
 
           <Text style={styles.sectionLabel}>YOUR THOUGHTS</Text>
 

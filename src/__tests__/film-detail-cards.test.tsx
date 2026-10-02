@@ -166,6 +166,7 @@ const OTHER_REVIEW: FilmReview = {
   id: 'r1',
   user: { id: 'u1', name: 'Other User' },
   overallRating: 8.5,
+  beatRatings: null,
   beginning: 'A gripping open.',
   middle: null,
   ending: 'Sticks the landing.',
@@ -178,6 +179,7 @@ const MY_REVIEW: FilmReview = {
   id: 'r-mine',
   user: { id: 'me', name: 'Me' },
   overallRating: 9.2,
+  beatRatings: null,
   beginning: null,
   middle: null,
   ending: null,
@@ -231,6 +233,20 @@ describe("FilmDetailScreen ReviewCard (other users' reviews)", () => {
     ).toHaveLength(1);
   });
 
+  it('blends the rated beats evenly with overallRating for the displayed score', async () => {
+    // mean(8, 6) = 7; (0.5 * 7) + (0.5 * 8.5) = 7.75 -> 7.8
+    vi.mocked(fetchFilmReviews).mockResolvedValue({
+      reviews: [{ ...OTHER_REVIEW, beatRatings: { Opening: 8, Climax: 6 } }],
+      total: 1,
+      myReview: null,
+    });
+
+    const tree = await renderScreen();
+
+    expect(textNodes(tree, '7.8')).toHaveLength(1);
+    expect(textNodes(tree, '8.5')).toHaveLength(0);
+  });
+
   it('renders Anonymous for a null author name instead of crashing', async () => {
     vi.mocked(fetchFilmReviews).mockResolvedValue({
       reviews: [{ ...OTHER_REVIEW, user: { id: 'u1', name: null } }],
@@ -263,6 +279,20 @@ describe('FilmDetailScreen YourReview', () => {
     expect(
       textNodes(tree, 'Only the combined text survives.'),
     ).toHaveLength(1);
+  });
+
+  it('blends the rated beats evenly with overallRating for the displayed score', async () => {
+    // mean(8, 6) = 7; (0.5 * 7) + (0.5 * 9.2) = 8.1
+    vi.mocked(fetchFilmReviews).mockResolvedValue({
+      reviews: [],
+      total: 0,
+      myReview: { ...MY_REVIEW, beatRatings: { Opening: 8, Climax: 6 } },
+    });
+
+    const tree = await renderScreen();
+
+    expect(textNodes(tree, '8.1')).toHaveLength(1);
+    expect(textNodes(tree, '9.2')).toHaveLength(0);
   });
 
   it('navigates to the review detail when the card is tapped', async () => {

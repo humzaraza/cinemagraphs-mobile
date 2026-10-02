@@ -301,6 +301,33 @@ describe('ReviewDetailScreen blind mode', () => {
   });
 });
 
+describe('ReviewDetailScreen score blend', () => {
+  function textNodes(tree: ReactTestRenderer, value: string) {
+    return tree.root
+      .findAllByType('Text' as never)
+      .filter((node) => node.props.children === value);
+  }
+
+  it('shows overallRating alone when the review has no beat ratings', async () => {
+    const tree = await renderScreen();
+
+    expect(textNodes(tree, '8.5')).toHaveLength(1);
+  });
+
+  it('blends the rated beats evenly with overallRating', async () => {
+    // mean(6, 7) = 6.5; (0.5 * 6.5) + (0.5 * 8.5) = 7.5
+    vi.mocked(fetchReviewDetail).mockResolvedValue({
+      ...makeDetail(),
+      beatRatings: { Opening: 6, Resolution: 7 },
+    });
+
+    const tree = await renderScreen();
+
+    expect(textNodes(tree, '7.5')).toHaveLength(1);
+    expect(textNodes(tree, '8.5')).toHaveLength(0);
+  });
+});
+
 describe('ReviewDetailScreen back chevron', () => {
   function backButton(tree: ReactTestRenderer) {
     const matches = tree.root.findAll(
