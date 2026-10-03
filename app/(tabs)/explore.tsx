@@ -57,7 +57,7 @@ function calcDelta(dataPoints: { score: number }[]): number | null {
 
 const HERO_WHY: Record<string, { pre: string; bold: string; post: string }> = {
   "today's highest": {
-    pre: 'Critics rated no arc higher ',
+    pre: 'No arc scores higher ',
     bold: 'today',
     post: '. This is the one to beat.',
   },

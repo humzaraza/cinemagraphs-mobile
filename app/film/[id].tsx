@@ -560,7 +560,7 @@ export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsG
       return (
         <View style={styles.scoreHeaderContainer}>
           <View style={rowStyle}>
-            <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
+            <Text style={[labelStyle, { color: colors.gold }]}>Reviews</Text>
             {renderScore(criticsOverall, colors.gold)}
           </View>
         </View>
@@ -580,7 +580,7 @@ export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsG
       return (
         <View style={styles.scoreHeaderContainer}>
           <View style={rowStyle}>
-            <Text style={[labelStyle, { color: colors.gold }]}>Critics</Text>
+            <Text style={[labelStyle, { color: colors.gold }]}>Reviews</Text>
             {renderScore(criticsOverall, colors.gold, true)}
           </View>
           <View style={[rowStyle, { marginTop: -2 }]}>
@@ -671,7 +671,7 @@ export function SentimentArc({ film, activeBeatIndex, setActiveBeatIndex, setIsG
           </Text>
           <Text style={{ fontSize: 11, fontFamily: fonts.body, marginTop: 1 }}>
             <Text style={{ color: colors.gold, fontWeight: '600', fontFamily: fonts.bodyMedium }}>
-              Critics: {activeDp.score.toFixed(1)}
+              Reviews: {activeDp.score.toFixed(1)}
             </Text>
           </Text>
           {activeAudScore !== null && (

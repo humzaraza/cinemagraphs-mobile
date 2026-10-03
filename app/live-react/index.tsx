@@ -585,7 +585,7 @@ export default function LiveReactScreen() {
             </View>
             <View style={styles.scoreCard}>
               <Text style={styles.scoreCardValueWhite}>{criticsAvg.toFixed(1)}</Text>
-              <Text style={styles.scoreCardLabel}>Critics avg</Text>
+              <Text style={styles.scoreCardLabel}>Reviews avg</Text>
             </View>
           </View>
 
@@ -740,7 +740,7 @@ export default function LiveReactScreen() {
             </View>
             <View style={styles.scoreCard}>
               <Text style={styles.scoreCardValueWhite}>{criticsAvg.toFixed(1)}</Text>
-              <Text style={styles.scoreCardLabel}>Critics avg</Text>
+              <Text style={styles.scoreCardLabel}>Reviews avg</Text>
             </View>
           </View>
 

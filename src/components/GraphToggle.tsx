@@ -13,7 +13,7 @@ import { colors } from '../constants/theme';
 export type GraphMode = 'critics' | 'audience' | 'both' | 'merged';
 
 const MODE_CONFIG: Record<GraphMode, { label: string; color: string; borderColor: string }> = {
-  critics: { label: 'Critics', color: colors.gold, borderColor: 'rgba(200,169,81,0.3)' },
+  critics: { label: 'Reviews', color: colors.gold, borderColor: 'rgba(200,169,81,0.3)' },
   audience: { label: 'Audience', color: colors.teal, borderColor: 'rgba(45,212,168,0.3)' },
   both: { label: 'Both', color: colors.gold, borderColor: 'rgba(200,169,81,0.3)' },
   merged: { label: 'Merged', color: colors.ivory, borderColor: 'rgba(245,240,225,0.3)' },

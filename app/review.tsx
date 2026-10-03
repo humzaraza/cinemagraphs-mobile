@@ -576,7 +576,7 @@ export default function ReviewScreen() {
               <Text style={[styles.scoreCardValue, { color: colors.ivory }]}>
                 {criticsAvg != null ? criticsAvg.toFixed(1) : '--'}
               </Text>
-              <Text style={styles.scoreCardLabel}>Critics avg</Text>
+              <Text style={styles.scoreCardLabel}>Reviews avg</Text>
             </View>
           </View>
 
