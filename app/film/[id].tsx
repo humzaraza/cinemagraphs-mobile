@@ -23,7 +23,7 @@ import Svg, {
 } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
-import { colors, fonts, spacing, borderRadius } from '../../src/constants/theme';
+import { colors, fonts, spacing, borderRadius, tierColor, tierRgba } from '../../src/constants/theme';
 import { fetchFilmDetail, fetchFilmReviews, fetchUserLists, fetchUserWatchlist, addToWatchlist, removeFromWatchlist, addFilmToListAPI, createUserList, fetchAudienceData } from '../../src/lib/api';
 import FilmPicker from '../../src/components/FilmPicker';
 import type { AudienceData } from '../../src/lib/api';
@@ -921,18 +921,13 @@ function StoryBeatPills({ film, activeBeatIndex }: { film: FilmDetail; activeBea
         text: 'rgba(245,240,225,1.0)',
       };
     }
-    if (dp.label === peakLabel) {
+    // Peak and low pills take the beat's own tier colour and a text prefix,
+    // so a high-scoring low point never reads as Poor.
+    if (dp.label === peakLabel || dp.label === lowLabel) {
       return {
-        bg: 'rgba(45,212,168,0.1)',
-        border: 'rgba(45,212,168,0.2)',
-        text: colors.teal,
-      };
-    }
-    if (dp.label === lowLabel) {
-      return {
-        bg: 'rgba(226,75,74,0.1)',
-        border: 'rgba(226,75,74,0.2)',
-        text: colors.negativeRed,
+        bg: tierRgba(dp.score, 0.1),
+        border: tierRgba(dp.score, 0.2),
+        text: tierColor(dp.score),
       };
     }
     return {
@@ -972,6 +967,7 @@ function StoryBeatPills({ film, activeBeatIndex }: { film: FilmDetail; activeBea
             }}
           >
             <Text style={{ fontSize: 9, color: s.text, fontFamily: fonts.body }}>
+              {item.label === peakLabel ? `Peak \u00B7 ` : item.label === lowLabel ? `Low \u00B7 ` : ''}
               {item.label} {'\u00B7'} {formatTimestamp(item.timeMidpoint)}
             </Text>
           </View>
@@ -997,15 +993,25 @@ function PeakLowCards({ film }: { film: FilmDetail }) {
 
   return (
     <View style={styles.peakLowRow}>
-      <View style={styles.peakCard}>
-        <Text style={styles.peakLabel}>Peak moment</Text>
+      <View
+        style={[
+          styles.peakCard,
+          { backgroundColor: tierRgba(peak.score, 0.08), borderColor: tierRgba(peak.score, 0.2) },
+        ]}
+      >
+        <Text style={[styles.peakLabel, { color: tierColor(peak.score) }]}>Peak moment</Text>
         <Text style={styles.peakTitle}>{peak.label}</Text>
         <Text style={styles.peakMeta}>
           {`${formatTimestamp(peak.time)} \u00B7 ${formatScore(peak.score)}/10`}
         </Text>
       </View>
-      <View style={styles.lowCard}>
-        <Text style={styles.lowLabel}>Lowest point</Text>
+      <View
+        style={[
+          styles.lowCard,
+          { backgroundColor: tierRgba(low.score, 0.08), borderColor: tierRgba(low.score, 0.2) },
+        ]}
+      >
+        <Text style={[styles.lowLabel, { color: tierColor(low.score) }]}>Lowest point</Text>
         <Text style={styles.lowTitle}>{low.label}</Text>
         <Text style={styles.lowMeta}>
           {`${formatTimestamp(low.time)} \u00B7 ${formatScore(low.score)}/10`}
