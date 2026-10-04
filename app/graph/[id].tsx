@@ -245,7 +245,8 @@ export default function ExpandedGraphScreen() {
       <View style={styles.graphRow}>
         {/* Pinned Y-axis */}
         <View style={[styles.yAxis, { height: graphAreaHeight }]}>
-          {Array.from({ length: 10 - yFloor }, (_, i) => 10 - i).map((val) => (
+          {/* 10 down to yFloor inclusive, so the labels span the plotted range */}
+          {Array.from({ length: 10 - yFloor + 1 }, (_, i) => 10 - i).map((val) => (
             <Text key={val} style={styles.yLabel}>
               {val}
             </Text>
@@ -271,16 +272,18 @@ export default function ExpandedGraphScreen() {
                 strokeWidth={0.5}
               />
 
-              {/* Dashed midline at score 5 */}
-              <Line
-                x1={0}
-                y1={midY}
-                x2={svgWidth}
-                y2={midY}
-                stroke="rgba(245,240,225,0.12)"
-                strokeWidth={0.5}
-                strokeDasharray="4,4"
-              />
+              {/* Dashed midline at score 5, only when 5 is inside the plotted range */}
+              {yFloor <= 5 && (
+                <Line
+                  x1={0}
+                  y1={midY}
+                  x2={svgWidth}
+                  y2={midY}
+                  stroke="rgba(245,240,225,0.12)"
+                  strokeWidth={0.5}
+                  strokeDasharray="4,4"
+                />
+              )}
 
               {/* Gold polyline */}
               {n >= 2 && (
