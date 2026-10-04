@@ -32,7 +32,9 @@ vi.mock('react-native', () => ({
 
 vi.mock('expo-router', () => {
   const Tabs = ({ children }: { children?: React.ReactNode }) => children ?? null;
-  Tabs.Screen = () => null;
+  Tabs.Screen = function Screen() {
+    return null;
+  };
   return {
     Tabs,
     Redirect: () => null,
