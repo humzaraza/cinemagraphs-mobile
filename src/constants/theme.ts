@@ -39,6 +39,31 @@ export const colors = {
   labelGold: 'rgba(200,169,81,0.6)',
 } as const;
 
+// Score tiers, matching the web graph legend: 8+ Great, 6-8 Good, <6 Poor.
+// Colour on a graph always means the tier. Peak and lowest moments are marked
+// with an outlined ring and a label, never with a colour of their own: a
+// film's lowest moment can still be an 8.
+const TIER_RGB = {
+  teal: '45,212,168',
+  gold: '200,169,81',
+  red: '224,85,85',
+} as const;
+
+function scoreTier(score: number): keyof typeof TIER_RGB {
+  if (score >= 8) return 'teal';
+  if (score >= 6) return 'gold';
+  return 'red';
+}
+
+export function tierColor(score: number): string {
+  const tier = scoreTier(score);
+  return tier === 'teal' ? colors.teal : tier === 'gold' ? colors.gold : colors.negativeRed;
+}
+
+export function tierRgba(score: number, alpha: number): string {
+  return `rgba(${TIER_RGB[scoreTier(score)]},${alpha})`;
+}
+
 export const fonts = {
   body: 'DMSans_400Regular',
   bodyMedium: 'DMSans_500Medium',

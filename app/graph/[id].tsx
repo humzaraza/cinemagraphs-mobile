@@ -18,7 +18,7 @@ import Svg, {
   Rect,
   Path,
 } from 'react-native-svg';
-import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { colors, fonts, borderRadius, tierColor } from '../../src/constants/theme';
 import { fetchFilmDetail } from '../../src/lib/api';
 import type { FilmDetail, FilmDataPoint } from '../../src/types/film';
 
@@ -210,10 +210,11 @@ export default function ExpandedGraphScreen() {
   // X-axis label skip logic
   const labelEvery = n > 10 ? (n > 20 ? 3 : 2) : 1;
 
-  function dotColor(dp: FilmDataPoint): string {
-    if (dp.label === peakLabel) return colors.teal;
-    if (dp.label === lowLabel) return colors.negativeRed;
-    return colors.gold;
+  // Peak and low are marked with a ring and a label; dot colour is the tier.
+  function momentLabel(dp: FilmDataPoint): 'Peak' | 'Low' | null {
+    if (dp.label === peakLabel) return 'Peak';
+    if (dp.label === lowLabel) return 'Low';
+    return null;
   }
 
   function handleDotPress(index: number) {
@@ -295,6 +296,9 @@ export default function ExpandedGraphScreen() {
               {dataPoints.map((dp, i) => {
                 const cx = getX(i);
                 const cy = getY(dp.score);
+                const moment = momentLabel(dp);
+                // A peak at the top of the plot has no room above it.
+                const labelAbove = moment === 'Peak' && cy - 14 >= 8;
                 return (
                   <React.Fragment key={i}>
                     <Circle
@@ -308,9 +312,31 @@ export default function ExpandedGraphScreen() {
                       cx={cx}
                       cy={cy}
                       r={5}
-                      fill={dotColor(dp)}
+                      fill={tierColor(dp.score)}
                       onPress={() => handleDotPress(i)}
                     />
+                    {moment && (
+                      <>
+                        <Circle
+                          cx={cx}
+                          cy={cy}
+                          r={9}
+                          fill="none"
+                          stroke={tierColor(dp.score)}
+                          strokeWidth={1.5}
+                        />
+                        <SvgText
+                          x={cx}
+                          y={labelAbove ? cy - 14 : cy + 21}
+                          textAnchor="middle"
+                          fontSize={9}
+                          fontWeight="600"
+                          fill="rgba(245,240,225,0.7)"
+                        >
+                          {moment}
+                        </SvgText>
+                      </>
+                    )}
                   </React.Fragment>
                 );
               })}

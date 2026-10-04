@@ -21,7 +21,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import Slider from '@react-native-community/slider';
-import { colors, fonts, borderRadius } from '../src/constants/theme';
+import { colors, fonts, borderRadius, tierColor, tierRgba } from '../src/constants/theme';
 import { fetchFilmDetail, submitReview } from '../src/lib/api';
 import { markReviewed } from '../src/lib/reviewed-films';
 import * as payloadCache from '../src/lib/payload-cache';
@@ -330,8 +330,29 @@ function ArcGraph({
         {/* Polyline */}
         {n >= 2 && <Polyline points={points} fill="none" stroke={colors.gold} strokeWidth={1.5} />}
         {/* Peak and low dots */}
-        <Circle cx={getX(peakIdx)} cy={getY(scores[peakIdx])} r={3.5} fill={colors.teal} />
-        <Circle cx={getX(lowIdx)} cy={getY(scores[lowIdx])} r={3.5} fill={colors.negativeRed} />
+        {/* Outlined rings in each point's own tier colour, plus a label */}
+        <Circle cx={getX(peakIdx)} cy={getY(scores[peakIdx])} r={3.5} fill={colors.background} stroke={tierColor(scores[peakIdx])} strokeWidth={1.5} />
+        <Circle cx={getX(lowIdx)} cy={getY(scores[lowIdx])} r={3.5} fill={colors.background} stroke={tierColor(scores[lowIdx])} strokeWidth={1.5} />
+        <SvgText
+          x={getX(peakIdx)}
+          y={getY(scores[peakIdx]) - 7 >= 7 ? getY(scores[peakIdx]) - 7 : getY(scores[peakIdx]) + 13}
+          textAnchor={peakIdx === 0 ? 'start' : peakIdx === n - 1 ? 'end' : 'middle'}
+          fontSize={7}
+          fill="rgba(245,240,225,0.6)"
+        >
+          Peak
+        </SvgText>
+        {lowIdx !== peakIdx && (
+          <SvgText
+            x={getX(lowIdx)}
+            y={getY(scores[lowIdx]) + 13 <= padT + plotH - 1 ? getY(scores[lowIdx]) + 13 : getY(scores[lowIdx]) - 7}
+            textAnchor={lowIdx === 0 ? 'start' : lowIdx === n - 1 ? 'end' : 'middle'}
+            fontSize={7}
+            fill="rgba(245,240,225,0.6)"
+          >
+            Low
+          </SvgText>
+        )}
         {/* X timestamps */}
         {dataPoints.map((dp, i) => (
           <SvgText key={i} x={getX(i)} y={h - 2} textAnchor="middle" fontSize={7} fill="rgba(245,240,225,0.2)">
@@ -591,15 +612,25 @@ export default function ReviewScreen() {
 
           {hasArc && (
             <View style={styles.peakLowRow}>
-              <View style={styles.peakCard}>
-                <Text style={styles.peakLabel}>Your peak</Text>
+              <View
+                style={[
+                  styles.peakCard,
+                  { backgroundColor: tierRgba(scores[peakIdx], 0.08), borderColor: tierRgba(scores[peakIdx], 0.2) },
+                ]}
+              >
+                <Text style={[styles.peakLabel, { color: tierColor(scores[peakIdx]) }]}>Your peak</Text>
                 <Text style={styles.peakTitle}>{peakDp?.label}</Text>
                 <Text style={styles.peakMeta}>
                   {peakDp ? formatTimestamp(peakDp.timeMidpoint) : ''} {'\u00B7'} {scores[peakIdx]}/10
                 </Text>
               </View>
-              <View style={styles.lowCard}>
-                <Text style={styles.lowLabel}>Your low</Text>
+              <View
+                style={[
+                  styles.lowCard,
+                  { backgroundColor: tierRgba(scores[lowIdx], 0.08), borderColor: tierRgba(scores[lowIdx], 0.2) },
+                ]}
+              >
+                <Text style={[styles.lowLabel, { color: tierColor(scores[lowIdx]) }]}>Your low</Text>
                 <Text style={styles.lowTitle}>{lowDp?.label}</Text>
                 <Text style={styles.lowMeta}>
                   {lowDp ? formatTimestamp(lowDp.timeMidpoint) : ''} {'\u00B7'} {scores[lowIdx]}/10

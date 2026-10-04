@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
-import { colors, fonts, borderRadius } from '../../src/constants/theme';
+import { colors, fonts, borderRadius, tierColor } from '../../src/constants/theme';
 import Sparkline, { formatRuntime } from '../../src/components/Sparkline';
 import TicketStub from '../../src/components/TicketStub';
 import { useIsReviewed } from '../../src/lib/reviewed-films';
@@ -484,10 +484,24 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
           strokeLinecap="round"
         />
         {peak && (
-          <Circle cx={getX(peak.time)} cy={getY(peak.score)} r={4} fill={colors.teal} />
+          <Circle
+            cx={getX(peak.time)}
+            cy={getY(peak.score)}
+            r={4}
+            fill={colors.background}
+            stroke={tierColor(peak.score)}
+            strokeWidth={1.5}
+          />
         )}
         {lowest && (
-          <Circle cx={getX(lowest.time)} cy={getY(lowest.score)} r={3.5} fill={colors.negativeRed} />
+          <Circle
+            cx={getX(lowest.time)}
+            cy={getY(lowest.score)}
+            r={3.5}
+            fill={colors.background}
+            stroke={tierColor(lowest.score)}
+            strokeWidth={1.5}
+          />
         )}
         {peak && peakLabel && (
           <SvgText
@@ -496,9 +510,9 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
             textAnchor={peakLabel.anchor}
             fontSize={10}
             fontWeight="600"
-            fill={colors.teal}
+            fill={tierColor(peak.score)}
           >
-            {peak.score.toFixed(1)}
+            {`Peak ${peak.score.toFixed(1)}`}
           </SvgText>
         )}
         {lowest && lowLabel && (
@@ -508,9 +522,9 @@ function HeroGraph({ hero }: { hero: HeroResponse }) {
             textAnchor={lowLabel.anchor}
             fontSize={10}
             fontWeight="600"
-            fill={colors.negativeRed}
+            fill={tierColor(lowest.score)}
           >
-            {lowest.score.toFixed(1)}
+            {`Low ${lowest.score.toFixed(1)}`}
           </SvgText>
         )}
       </Svg>
